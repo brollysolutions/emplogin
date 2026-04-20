@@ -47,8 +47,10 @@ const FALLBACK_CREDS = [
 ];
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxNHIX32g4_K2FlxAJO6g0XpEdUW7ennEEnwH-0XK_SoecTAzZ66hcRIhGh2HxCYsGj/exec";
-// const BACKEND_URL = "http://localhost:8001/api/v1/attendance/";
-const BACKEND_URL = "/login/api/v1/attendance/"
+// Use relative path in production to work behind the /login/ proxy
+const BACKEND_URL = window.location.hostname === "localhost" 
+  ? "http://localhost:8000/api/v1/attendance/" 
+  : "/api/v1/attendance/";
 
 /* ── Avatar ────────────────────────────────────────────────── */
 function Avatar({ name, size = 40, accent = T.accent }) {
@@ -363,13 +365,29 @@ function Dashboard({ employee, onSignOut }) {
   })();
 
   const [now, setNow] = useState(new Date());
+  
+  // New States for cumulative tracking
+  const [totalWorkSeconds, setTotalWorkSeconds] = useState(savedSession?.totalWorkSeconds || 0);
+  const [totalBreakSeconds, setTotalBreakSeconds] = useState(savedSession?.totalBreakSeconds || 0);
+  const [sessionStartTime, setSessionStartTime] = useState(savedSession?.sessionStartTime ? new Date(savedSession.sessionStartTime) : null);
+  const [breakStartTime, setBreakStartTime] = useState(savedSession?.breakStartTime ? new Date(savedSession.breakStartTime) : null);
+  
   const [loginTime, setLT] = useState(savedSession?.loginTime ? new Date(savedSession.loginTime) : null);
   const [logoutTime, setLOT] = useState(savedSession?.logoutTime ? new Date(savedSession.logoutTime) : null);
-  const [status, setStatus] = useState(savedSession?.status || "idle");
+  const [status, setStatus] = useState(savedSession?.status || "idle"); // idle, working, break, loggedOut
+  
   const [taskInput, setTask] = useState(savedSession?.taskInput || "");
   const [toast, setToast] = useState(null);
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // Helper to format seconds to HMS
+  const secondsToHMS = (totalSeconds) => {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    return { h, m, s, total: totalSeconds / 3600 };
+  };
 
   // Prevention of multiple clock-ins today
   useEffect(() => {
@@ -382,14 +400,25 @@ function Dashboard({ employee, onSignOut }) {
           const today = fmtDate(new Date());
           const todayRec = data.find(r => (r.id === employee.id || r.employeeid === employee.id) && r.date === today);
 
-          if (todayRec) {
-            // Already clocked in today
-            setLT(new Date(today + " " + (todayRec.logint || todayRec.login_time)));
-            if (todayRec.logoutt && todayRec.logoutt !== "—") {
+          if (todayRec && !savedSession) {
+            // Restore from server if local session is empty
+            const parseHMS = (str) => {
+              if (!str || str === "—") return 0;
+              const [h, m, s] = str.split(":").map(Number);
+              return (h * 3600) + (m * 60) + s;
+            };
+            setTotalWorkSeconds(parseHMS(todayRec.hours));
+            setTotalBreakSeconds(parseHMS(todayRec.break_time));
+            setLT(new Date(today + " " + todayRec.logint));
+            if (todayRec.status === "Active") {
+              setStatus("working");
+              setSessionStartTime(new Date());
+            } else if (todayRec.status === "On Break") {
+              setStatus("break");
+              setBreakStartTime(new Date());
+            } else if (todayRec.logoutt && todayRec.logoutt !== "—") {
               setLOT(new Date(today + " " + todayRec.logoutt));
               setStatus("loggedOut");
-            } else {
-              setStatus("loggedIn");
             }
           }
         }
@@ -400,25 +429,30 @@ function Dashboard({ employee, onSignOut }) {
     };
     checkTodayStatus();
   }, [employee.id]);
+
   const [xlWb, setXlWb] = useState(null);
   const [xlName, setXlName] = useState(null);
   const [activeTab, setTab] = useState("today");
   const fileRef = useRef(null);
 
-  // ── Persist session to localStorage whenever it changes ──
+  // Persist session
   useEffect(() => {
     if (status === "idle" && !loginTime) {
       localStorage.removeItem("wt_session");
       return;
     }
     localStorage.setItem("wt_session", JSON.stringify({
+      totalWorkSeconds,
+      totalBreakSeconds,
+      sessionStartTime: sessionStartTime?.toISOString() || null,
+      breakStartTime: breakStartTime?.toISOString() || null,
       loginTime: loginTime?.toISOString() || null,
       logoutTime: logoutTime?.toISOString() || null,
       status,
       taskInput,
       employeeId: employee.id
     }));
-  }, [loginTime, logoutTime, status, taskInput]);
+  }, [totalWorkSeconds, totalBreakSeconds, sessionStartTime, breakStartTime, loginTime, logoutTime, status, taskInput]);
 
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
 
@@ -427,23 +461,59 @@ function Dashboard({ employee, onSignOut }) {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const liveHrs = calcHrs(loginTime, status === "loggedIn" ? now : logoutTime);
+  // Live work calculation
+  const currentTotalWorkSeconds = status === "working" && sessionStartTime
+    ? totalWorkSeconds + Math.floor((now - sessionStartTime) / 1000)
+    : totalWorkSeconds;
+  
+  const currentTotalBreakSeconds = status === "break" && breakStartTime
+    ? totalBreakSeconds + Math.floor((now - breakStartTime) / 1000)
+    : totalBreakSeconds;
+
+  const liveHrs = secondsToHMS(currentTotalWorkSeconds);
+  const liveBreakHrs = secondsToHMS(currentTotalBreakSeconds);
 
   const handleLogin = () => {
     const t = new Date();
-    setLT(t);
-    setStatus("loggedIn");
-    showToast("Clock-in recorded successfully", "success");
-    // Trigger immediate sync to show status in Admin Dashboard
-    setTimeout(() => {
-      triggerAutoSync(t, null, "loggedIn");
-    }, 100);
+    if (!loginTime) setLT(t);
+    setSessionStartTime(t);
+    setStatus("working");
+    showToast("Session started", "success");
+    setTimeout(() => triggerAutoSync(loginTime || t, null, "working"), 100);
+  };
+
+  const handleBreak = () => {
+    const t = new Date();
+    if (status === "working" && sessionStartTime) {
+      setTotalWorkSeconds(v => v + Math.floor((t - sessionStartTime) / 1000));
+      setSessionStartTime(null);
+      setBreakStartTime(t);
+      setStatus("break");
+      showToast("Break started", "amber");
+      setTimeout(() => triggerAutoSync(loginTime, null, "break"), 100);
+    } else if (status === "break" && breakStartTime) {
+      setTotalBreakSeconds(v => v + Math.floor((t - breakStartTime) / 1000));
+      setBreakStartTime(null);
+      setSessionStartTime(t);
+      setStatus("working");
+      showToast("Work resumed", "success");
+      setTimeout(() => triggerAutoSync(loginTime, null, "working"), 100);
+    }
   };
 
   const triggerAutoSync = (lt, lot, curStatus) => {
-    const hrs = calcHrs(lt, lot || now);
+    const tWork = curStatus === "working" && sessionStartTime
+      ? totalWorkSeconds + Math.floor((new Date() - sessionStartTime) / 1000)
+      : totalWorkSeconds;
+    
+    const tBreak = curStatus === "break" && breakStartTime
+      ? totalBreakSeconds + Math.floor((new Date() - breakStartTime) / 1000)
+      : totalBreakSeconds;
+
+    const hrs = secondsToHMS(tWork);
+    const brk = secondsToHMS(tBreak);
     const WORK_GOAL = 9;
-    const dayStatus = hrs && hrs.total >= WORK_GOAL ? "Full Day" : "Half Day";
+    const dayStatus = hrs.total >= WORK_GOAL ? "Full Day" : "Half Day";
 
     const payload = {
       date: fmtDate(lt),
@@ -453,9 +523,10 @@ function Dashboard({ employee, onSignOut }) {
       loginT: fmtTime(lt),
       logoutT: lot ? fmtTime(lot) : "—",
       hours: hmsStr(hrs),
+      breakTime: hmsStr(brk),
       extraHours: "—",
       tasks: taskInput || "—",
-      status: curStatus === "loggedIn" ? "Active" : dayStatus
+      status: curStatus === "working" ? "Active" : curStatus === "break" ? "On Break" : dayStatus
     };
 
     // Fast sync to local backend
@@ -466,12 +537,25 @@ function Dashboard({ employee, onSignOut }) {
     }).catch(e => console.warn("Auto-sync failed", e));
   };
   const handleLogout = () => {
-    if (!loginTime) return;
+    if (status !== "working" && status !== "break") return;
     const t = new Date();
+    
+    let finalWork = totalWorkSeconds;
+    let finalBreak = totalBreakSeconds;
+
+    if (status === "working" && sessionStartTime) {
+      finalWork += Math.floor((t - sessionStartTime) / 1000);
+    } else if (status === "break" && breakStartTime) {
+      finalBreak += Math.floor((t - breakStartTime) / 1000);
+    }
+
+    setTotalWorkSeconds(finalWork);
+    setTotalBreakSeconds(finalBreak);
+    setSessionStartTime(null);
+    setBreakStartTime(null);
     setLOT(t);
     setStatus("loggedOut");
-    showToast("Clock-out recorded. Click Sync to save!", "info");
-    // Immediate sync for logout
+    showToast("Session paused. Click Sync to save!", "info");
     triggerAutoSync(loginTime, t, "loggedOut");
   };
 
@@ -494,20 +578,17 @@ function Dashboard({ employee, onSignOut }) {
 
   const handleSave = async () => {
     if (!loginTime) { showToast("Please clock in first", "error"); return; }
-    // Allowing sync even while logged in so admin can track progress
-
+    
     showToast("Syncing to Google Sheets...", "info");
     const lt = logoutTime || new Date();
-    const hrs = calcHrs(loginTime, lt);
-    const WORK_GOAL = 9; // 9-hour working day
-    const dayStatus = hrs && hrs.total >= WORK_GOAL ? "Full Day" : "Half Day";
+    
+    const WORK_GOAL = 9;
+    const dayStatus = liveHrs.total >= WORK_GOAL ? "Full Day" : "Half Day";
 
     // Calculate extra hours beyond the 9h goal
-    const extraHrsFloat = hrs ? Math.max(0, hrs.total - WORK_GOAL) : 0;
-    const extraHrsTotal = Math.floor(extraHrsFloat * 3600); // convert to seconds
-    const extraHrsStr = extraHrsFloat > 0
-      ? `${pad(Math.floor(extraHrsTotal / 3600))}:${pad(Math.floor((extraHrsTotal % 3600) / 60))}:${pad(extraHrsTotal % 60)}`
-      : "—";
+    const extraHrsFloat = Math.max(0, liveHrs.total - WORK_GOAL);
+    const extraHrsTotal = Math.floor(extraHrsFloat * 3600);
+    const extraHrsStr = extraHrsFloat > 0 ? hmsStr(secondsToHMS(extraHrsTotal)) : "—";
 
     const payload = {
       date: fmtDate(loginTime),
@@ -516,57 +597,38 @@ function Dashboard({ employee, onSignOut }) {
       dept: employee.dept,
       loginT: fmtTime(loginTime),
       logoutT: fmtTime(lt),
-      hours: hmsStr(hrs),
+      hours: hmsStr(liveHrs),
+      breakTime: hmsStr(liveBreakHrs),
       extraHours: extraHrsStr,
       tasks: taskInput || "—",
       status: dayStatus
     };
 
     try {
-      // 1. Try syncing to local backend first (Real Database)
-      try {
-        await fetch(BACKEND_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-        console.log("Synced to local database");
-      } catch (e) {
-        console.warn("Local database sync failed, continuing to cloud...", e);
-      }
+      await fetch(BACKEND_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
 
-      // 2. Sync to Google Sheets (Cloud Backup)
       if (SCRIPT_URL && !SCRIPT_URL.includes("YOUR_SCRIPT_URL_HERE")) {
-        // Use text/plain to avoid CORS preflight which Apps Script doesn't support
-        const response = await fetch(SCRIPT_URL, {
+        await fetch(SCRIPT_URL, {
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify(payload)
         });
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       setHistory(prev => [...prev, { date: payload.date, loginT: payload.loginT, logoutT: payload.logoutT, hours: payload.hours, extraHours: extraHrsStr, tasks: payload.tasks, status: dayStatus }]);
       showToast("Attendance synced to Cloud!", "success");
-      // Clear session from localStorage after successful sync
-      localStorage.removeItem("wt_session");
     } catch (err) {
-      console.error("Cloud sync failed:", err);
-      showToast("Cloud sync failed. Downloading Excel instead.", "error");
-      // Fallback to Excel download
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Date", "ID", "Name", "Dept", "In", "Out", "Hrs", "Extra Hrs", "Tasks", "Status"], [payload.date, payload.id, payload.name, payload.dept, payload.loginT, payload.logoutT, payload.hours, payload.extraHours, payload.tasks, payload.status]]), "Attendance");
-      XLSX.writeFile(wb, "AttendanceFallback.xlsx");
+      console.error("Sync failed:", err);
+      showToast("Sync failed. Check connection.", "error");
     }
   };
 
-  /* ── Progress bar for hours ── */
-  const hoursGoal = 9; // 9-hour working day
-  const hrsFloat = liveHrs ? Math.min(liveHrs.total, hoursGoal) : 0;
-  const pct = Math.round((hrsFloat / hoursGoal) * 100);
-  const extraFloat = liveHrs ? Math.max(0, liveHrs.total - hoursGoal) : 0;
-  const extraSec = Math.floor(extraFloat * 3600);
-  const extraStr = extraFloat > 0 ? `${pad(Math.floor(extraSec / 3600))}:${pad(Math.floor((extraSec % 3600) / 60))}:${pad(extraSec % 60)}` : null;
+  const pct = Math.round((Math.min(liveHrs.total, 9) / 9) * 100);
+  const extraStr = liveHrs.total > 9 ? hmsStr(secondsToHMS(Math.floor((liveHrs.total - 9) * 3600))) : null;
 
   const greetHour = now.getHours();
   const greeting = greetHour < 12 ? "Good morning" : greetHour < 17 ? "Good afternoon" : "Good evening";
@@ -591,6 +653,7 @@ function Dashboard({ employee, onSignOut }) {
         .hist-row:hover{background:${T.surface};}
         @keyframes slideIn{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+        .pulse-active{animation: pulse 2s infinite;}
       `}</style>
 
       {/* ── Toast ── */}
@@ -599,7 +662,7 @@ function Dashboard({ employee, onSignOut }) {
           position: "fixed", top: 20, right: 20, zIndex: 999,
           padding: "12px 20px", borderRadius: 12, fontSize: 13, fontWeight: 600,
           display: "flex", alignItems: "center", gap: 10, animation: "slideIn 0.25s ease",
-          background: toast.type === "success" ? T.green : toast.type === "error" ? T.red : T.accent,
+          background: toast.type === "success" ? T.green : toast.type === "error" ? T.red : toast.type === "amber" ? T.amber : T.accent,
           color: "white", boxShadow: "0 4px 20px rgba(0,0,0,0.15)"
         }}>
           <Icon d={toast.type === "success" ? icons.check : icons.info} size={15} color="white" />
@@ -631,11 +694,11 @@ function Dashboard({ employee, onSignOut }) {
         }}>
           <div style={{
             width: 6, height: 6, borderRadius: "50%",
-            background: status === "loggedIn" ? T.green : T.faint,
-            animation: status === "loggedIn" ? "pulse 2s infinite" : "none"
+            background: status === "working" ? T.green : status === "break" ? T.amber : T.faint,
+            animation: (status === "working" || status === "break") ? "pulse 2s infinite" : "none"
           }} />
           <span style={{ fontSize: 12, color: T.muted }}>
-            {status === "loggedIn" ? "Active" : status === "loggedOut" ? "Session Ended" : "Not Clocked In"}
+            {status === "working" ? "Working" : status === "break" ? "On Break" : status === "loggedOut" ? "Session Ended" : "Not Clocked In"}
           </span>
         </div>
 
@@ -671,7 +734,6 @@ function Dashboard({ employee, onSignOut }) {
             </p>
           </div>
 
-          {/* Live clock */}
           <div style={{ background: T.ink, borderRadius: 14, padding: "14px 22px", textAlign: "right" }}>
             <div style={{
               fontSize: 26, fontWeight: 700, color: "white",
@@ -685,27 +747,8 @@ function Dashboard({ employee, onSignOut }) {
           </div>
         </div>
 
-        {/* Stat cards */}
-        <div style={{ display: "flex", gap: 14, marginBottom: 22 }}>
-          <StatCard label="Login Time" value={loginTime ? fmtTime(loginTime) : "—"}
-            sub={loginTime ? fmtDate(loginTime) : "Not clocked in yet"}
-            icon={icons.clock} color={T.green} bg={T.greenBg} />
-          <StatCard label="Logout Time" value={logoutTime ? fmtTime(logoutTime) : "—"}
-            sub={logoutTime ? "Session complete" : "In progress"}
-            icon={icons.logout} color={T.red} bg={T.redBg} />
-          <StatCard label="Hours Worked" value={hmsStr(liveHrs)}
-            sub={`${pct}% of daily goal (9h)`}
-            icon={icons.chart} color={T.accent} bg="#e8f0fc" />
-          <StatCard label="Extra Hours" value={extraStr || "—"}
-            sub={extraStr ? "Beyond 9h goal" : "No overtime yet"}
-            icon={icons.refresh} color={T.amber} bg={T.amberBg} />
-          <StatCard label="Total Records" value={String(history.length)}
-            sub="in attendance log"
-            icon={icons.calendar} color={T.purple} bg={T.purpleBg} />
-        </div>
-
         {/* Progress bar */}
-        {status !== "idle" && (
+        {(status !== "idle") && (
           <div style={{
             background: T.white, borderRadius: 14, padding: "16px 20px",
             border: `1px solid ${T.border}`, marginBottom: 22
@@ -724,14 +767,14 @@ function Dashboard({ employee, onSignOut }) {
                 <span style={{ fontSize: 13, fontWeight: 700, color: pct >= 100 ? T.green : T.accent }}>{pct}%</span>
               </div>
             </div>
-            <div style={{ height: 8, background: T.surface, borderRadius: 99, overflow: "hidden" }}>
+            <div style={{ height: 10, background: T.surface, borderRadius: 99, overflow: "hidden" }}>
               <div style={{
                 height: "100%", width: `${pct}%`, borderRadius: 99,
-                background: pct >= 100 ? T.green : T.accent, transition: "width 1s linear"
+                background: pct >= 100 ? T.green : T.accent, transition: "width 0.5s ease"
               }} />
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 11, color: T.muted }}>
-              <span>{hmsStr(liveHrs)} elapsed</span>
+              <span>{hmsStr(liveHrs)} worked</span>
               <span>Goal: 9:00:00</span>
             </div>
           </div>
@@ -748,10 +791,29 @@ function Dashboard({ employee, onSignOut }) {
           ))}
         </div>
 
+        {/* Stat cards */}
+        <div style={{ display: "flex", gap: 14, marginBottom: 22 }}>
+          <StatCard label="Work Time" value={hmsStr(liveHrs)}
+            sub={`${pct}% of daily goal (9h)`}
+            icon={icons.clock} color={T.green} bg={T.greenBg} />
+          <StatCard label="Break Time" value={hmsStr(liveBreakHrs)}
+            sub="Total break duration today"
+            icon={icons.refresh} color={T.amber} bg={T.amberBg} />
+          <StatCard label="Login Status" value={status === "working" ? "Working" : status === "break" ? "Gap / Break" : "Paused"}
+            sub={loginTime ? `Started at ${fmtTime(loginTime)}` : "Not started"}
+            icon={icons.user} color={T.accent} bg="#e8f0fc" />
+          <StatCard label="Overtime" value={extraStr || "—"}
+            sub={extraStr ? "Completed 9h goal" : "No overtime yet"}
+            icon={icons.refresh} color={T.purple} bg={T.purpleBg} />
+          <StatCard label="Log Count" value={String(history.length)}
+            sub="Daily entries sync"
+            icon={icons.calendar} color={T.purple} bg={T.purpleBg} />
+        </div>
+
         {activeTab === "today" && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
 
-            {/* Clock-in / out */}
+            {/* Control Panel */}
             <div style={{
               background: T.white, borderRadius: 16, padding: "24px",
               border: `1px solid ${T.border}`
@@ -764,36 +826,48 @@ function Dashboard({ employee, onSignOut }) {
                   <Icon d={icons.clock} size={18} color={T.accent} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: T.ink }}>Attendance</div>
-                  <div style={{ fontSize: 12, color: T.muted }}>Record your working hours</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: T.ink }}>Active Tracking</div>
+                  <div style={{ fontSize: 12, color: T.muted }}>Manage sessions and breaks</div>
                 </div>
               </div>
 
               <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-                <button className="act-btn" disabled={status !== "idle"} onClick={handleLogin}
-                  style={{
-                    flex: 1, background: status === "idle" ? T.green : "#e0e0e0",
-                    color: status === "idle" ? "white" : "#aaa", justifyContent: "center"
-                  }}>
-                  <Icon d={icons.check} size={16} color={status === "idle" ? "white" : "#aaa"} />
-                  Clock In
-                </button>
-                <button className="act-btn" disabled={status !== "loggedIn"} onClick={handleLogout}
-                  style={{
-                    flex: 1, background: status === "loggedIn" ? T.red : "#e0e0e0",
-                    color: status === "loggedIn" ? "white" : "#aaa", justifyContent: "center"
-                  }}>
-                  <Icon d={icons.logout} size={16} color={status === "loggedIn" ? "white" : "#aaa"} />
-                  Clock Out
-                </button>
+                {(status === "idle" || status === "loggedOut") ? (
+                  <button className="act-btn" onClick={handleLogin}
+                    style={{ flex: 1, background: T.green, color: "white", justifyContent: "center" }}>
+                    <Icon d={icons.check} size={16} color="white" />
+                    Start Working
+                  </button>
+                ) : (
+                  <>
+                    {status === "working" ? (
+                      <button className="act-btn" onClick={handleBreak}
+                        style={{ flex: 1, background: T.amber, color: "white", justifyContent: "center" }}>
+                        <Icon d={icons.refresh} size={16} color="white" />
+                        Take Break
+                      </button>
+                    ) : (
+                      <button className="act-btn" onClick={handleBreak}
+                        style={{ flex: 1, background: T.green, color: "white", justifyContent: "center" }}>
+                        <Icon d={icons.check} size={16} color="white" />
+                        Resume Work
+                      </button>
+                    )}
+                    <button className="act-btn" onClick={handleLogout}
+                      style={{ flex: 1, background: T.red, color: "white", justifyContent: "center" }}>
+                      <Icon d={icons.logout} size={16} color="white" />
+                      Pause Work
+                    </button>
+                  </>
+                )}
               </div>
 
               {/* Status timeline */}
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {[
-                  { label: "Clocked in", time: loginTime ? fmtTime(loginTime) : null, done: !!loginTime, color: T.green },
-                  { label: "Clocked out", time: logoutTime ? fmtTime(logoutTime) : null, done: !!logoutTime, color: T.red },
-                  { label: "Hours logged", time: hmsStr(liveHrs) === "—" ? null : hmsStr(liveHrs), done: !!logoutTime, color: T.accent },
+                  { label: "Today's First Login", time: loginTime ? fmtTime(loginTime) : null, done: !!loginTime, color: T.accent },
+                  { label: "Active Work Duration", time: hmsStr(liveHrs), done: liveHrs.total > 0, color: T.green },
+                  { label: "Total Break Time", time: hmsStr(liveBreakHrs), done: liveBreakHrs.total > 0, color: T.amber },
                 ].map((s, i) => (
                   <div key={i} style={{
                     display: "flex", alignItems: "center", gap: 12,
@@ -812,7 +886,7 @@ function Dashboard({ employee, onSignOut }) {
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: s.done ? s.color : T.muted }}>{s.label}</div>
-                      {s.time && <div style={{ fontSize: 13, fontWeight: 700, color: T.ink, marginTop: 1 }}>{s.time}</div>}
+                      <div style={{ fontSize: 13, fontWeight: 700, color: T.ink, marginTop: 1 }}>{s.time || "—"}</div>
                     </div>
                   </div>
                 ))}
@@ -1040,7 +1114,7 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
 
   useEffect(() => {
     fetchAttendance();
-    const t = setInterval(fetchAttendance, 60000); // auto-refresh every 60s
+    const t = setInterval(fetchAttendance, 10000); // auto-refresh every 10s
     return () => clearInterval(t);
   }, []);
 

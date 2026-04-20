@@ -25,11 +25,15 @@ SECRET_KEY = "django-insecure-v6g_!z5vxg%&09^e8q+jyejtog2t*$@h%cdyc*3=au&7aek@=t
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["*","brollysolutions.in"]
 CORS_ALLOW_ALL_ORIGINS = True
 
-
-# Application definition
+CORS_ALLOWED_ORIGINS = [
+    "https://brollysolutions.in",
+    "http://localhost:3001",
+    "http://localhost:8001",
+    
+]# Application definition
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -121,6 +125,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
