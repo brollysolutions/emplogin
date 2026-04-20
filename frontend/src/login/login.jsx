@@ -50,7 +50,7 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxNHIX32g4_K2FlxAJO6
 // Use relative path in production to work behind the /login/ proxy
 const BACKEND_URL = window.location.hostname === "localhost" 
   ? "http://localhost:8000/api/v1/attendance/" 
-  : "/api/v1/attendance/";
+  : "api/v1/attendance/";
 
 /* ── Avatar ────────────────────────────────────────────────── */
 function Avatar({ name, size = 40, accent = T.accent }) {
