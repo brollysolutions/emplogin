@@ -86,52 +86,56 @@ def attendance_list(request):
         return Response({"error": str(e), "traceback": traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 @api_view(['POST'])
 def request_password_reset(request):
-    email = request.data.get('email')
-    if not email:
-        return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
-    
-    # Check if email settings are configured
-    if settings.EMAIL_HOST_USER == 'your-email@gmail.com' or settings.EMAIL_HOST_PASSWORD == 'your-app-password':
-        return Response({"error": "Email server is not configured. Please contact administrator (Setup .env file)."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
     try:
-        # Search by email OR username
-        user = User.objects.get(Q(email=email) | Q(username=email))
-        target_email = user.email
-        if not target_email:
-             return Response({"error": f"No email associated with account '{email}'."}, status=status.HTTP_400_BAD_REQUEST)
-    except User.DoesNotExist:
-        # To avoid email enumeration
-        return Response({"message": "If this account/email exists in our system, a reset link has been sent."}, status=status.HTTP_200_OK)
+        email = request.data.get('email')
+        if not email:
+            return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if email settings are configured
+        if settings.EMAIL_HOST_USER == 'your-email@gmail.com' or settings.EMAIL_HOST_PASSWORD == 'your-app-password':
+            return Response({"error": "Email server is not configured. Please contact administrator (Setup .env file)."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    token = str(uuid.uuid4())
-    PasswordResetToken.objects.create(email=target_email, token=token)
+        try:
+            # Search by email OR username
+            user = User.objects.get(Q(email=email) | Q(username=email))
+            target_email = user.email
+            if not target_email:
+                 return Response({"error": f"No email associated with account '{email}'."}, status=status.HTTP_400_BAD_REQUEST)
+        except User.DoesNotExist:
+            # To avoid email enumeration
+            return Response({"message": "If this account/email exists in our system, a reset link has been sent."}, status=status.HTTP_200_OK)
 
-    # In local development, the link below should match your frontend URL
-    # For production, use your actual domain
-    origin = request.headers.get('Origin', 'http://localhost:3000')
-    
-    # If the origin is from a development server (Vite usually uses 5173 or 3001)
-    # and we have a subpath (from vite.config.js), we should account for it.
-    # For now, let's make it flexible.
-    if "/login" not in origin and "localhost" in origin:
-        reset_link = f"{origin}/login/reset-password/{token}"
-    else:
-        reset_link = f"{origin}/reset-password/{token}"
-    
-    # Fallback to query param if internal routing doesn't pick it up
-    reset_link = f"{origin}/login/?token={token}"
+        token = str(uuid.uuid4())
+        PasswordResetToken.objects.create(email=target_email, token=token)
 
-    subject = "Password Reset Request - Brolly Solutions"
-    message = f"Hello {user.username},\n\nYou requested a password reset for your Brolly Solutions portal account.\n\nPlease click the link below to set a new password:\n\n{reset_link}\n\nIf you did not request this, please ignore this email."
-    
-    try:
-        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [target_email])
-        print(f"DEBUG: Password reset email sent to {target_email}")
-        return Response({"message": "Password reset link sent to your email."}, status=status.HTTP_200_OK)
+        # In local development, the link below should match your frontend URL
+        # For production, use your actual domain
+        origin = request.headers.get('Origin', 'http://localhost:3000')
+        
+        # If the origin is from a development server (Vite usually uses 5173 or 3001)
+        # and we have a subpath (from vite.config.js), we should account for it.
+        # For now, let's make it flexible.
+        if "/login" not in origin and "localhost" in origin:
+            reset_link = f"{origin}/login/reset-password/{token}"
+        else:
+            reset_link = f"{origin}/reset-password/{token}"
+        
+        # Fallback to query param if internal routing doesn't pick it up
+        reset_link = f"{origin}/login/?token={token}"
+
+        subject = "Password Reset Request - Brolly Solutions"
+        message = f"Hello {user.username},\n\nYou requested a password reset for your Brolly Solutions portal account.\n\nPlease click the link below to set a new password:\n\n{reset_link}\n\nIf you did not request this, please ignore this email."
+        
+        try:
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [target_email])
+            print(f"DEBUG: Password reset email sent to {target_email}")
+            return Response({"message": "Password reset link sent to your email."}, status=status.HTTP_200_OK)
+        except Exception as e:
+            print(f"ERROR sending mail: {str(e)}")
+            return Response({"error": f"Failed to send email: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     except Exception as e:
-        print(f"ERROR sending mail: {str(e)}")
-        return Response({"error": f"Failed to send email: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        import traceback
+        return Response({"error": str(e), "traceback": traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 def reset_password(request):
