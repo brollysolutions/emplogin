@@ -13,6 +13,10 @@ from django.db.models import Q
 import requests
 import json
 
+@api_view(['GET'])
+def health_check(request):
+    return Response({"status": "ok", "message": "API is alive and picking up changes!"}, status=status.HTTP_200_OK)
+
 @api_view(['GET', 'POST'])
 def attendance_list(request):
     try:
