@@ -294,7 +294,7 @@ function LoginPage({ onLogin, error, isSyncing, onForgot }) {
         </div>
 
         <div style={{ position: "relative", zIndex: 1, color: "rgba(168,188,212,0.5)", fontSize: 11, letterSpacing: 0.3 }}>
-          © 2025 Brolly Software Solutions. All rights reserved.
+          © 2026 Brolly Software Solutions. All rights reserved.
         </div>
       </div>
 
