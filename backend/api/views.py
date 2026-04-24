@@ -84,61 +84,83 @@ def attendance_list(request):
         print(f"ERROR in attendance_list: {str(e)}")
         print(traceback.format_exc())
         return Response({"error": str(e), "traceback": traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 @api_view(['POST'])
 def request_password_reset(request):
     try:
         email = request.data.get('email')
         if not email:
             return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Check if email settings are configured
-        if settings.EMAIL_HOST_USER == 'your-email@gmail.com' or settings.EMAIL_HOST_PASSWORD == 'your-app-password':
-            return Response({"error": "Email server is not configured. Please contact administrator (Setup .env file)."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         try:
             # Search by email OR username safely
             user = User.objects.filter(Q(email=email) | Q(username=email)).first()
-            
+
             if not user:
                 # To avoid email enumeration, still return a success message
                 return Response({"message": "If this account exists in our system, a reset link has been sent."}, status=status.HTTP_200_OK)
 
             target_email = user.email
             if not target_email:
-                 return Response({"error": f"Account '{email}' found, but it has no email address associated with it."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": f"Account '{email}' found, but it has no email address associated with it."}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            # Catch unexpected DB errors
             import traceback
             return Response({"error": f"Database error: {str(e)}", "traceback": traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         token = str(uuid.uuid4())
         PasswordResetToken.objects.create(email=target_email, token=token)
 
-        # In local development, the link below should match your frontend URL
-        # For production, use your actual domain
-        origin = request.headers.get('Origin', 'http://localhost:3000')
-        
-        # If the origin is from a development server (Vite usually uses 5173 or 3001)
-        # and we have a subpath (from vite.config.js), we should account for it.
-        # For now, let's make it flexible.
-        if "/login" not in origin and "localhost" in origin:
-            reset_link = f"{origin}/login/reset-password/{token}"
-        else:
-            reset_link = f"{origin}/reset-password/{token}"
-        
-        # Fallback to query param if internal routing doesn't pick it up
+        # Build the reset link
+        origin = request.headers.get('Origin', 'https://brollysolutions.in')
         reset_link = f"{origin}/login/?token={token}"
 
         subject = "Password Reset Request - Brolly Solutions"
-        message = f"Hello {user.username},\n\nYou requested a password reset for your Brolly Solutions portal account.\n\nPlease click the link below to set a new password:\n\n{reset_link}\n\nIf you did not request this, please ignore this email."
-        
+        body = (
+            f"Hello {user.username},\n\n"
+            f"You requested a password reset for your Brolly Solutions portal account.\n\n"
+            f"Click the link below to set a new password:\n\n{reset_link}\n\n"
+            f"This link expires in 1 hour.\n\n"
+            f"If you did not request this, please ignore this email.\n\n"
+            f"— Brolly Solutions Team"
+        )
+
+        # Send via Google Apps Script (uses HTTPS port 443, never blocked)
+        script_url = settings.GOOGLE_SCRIPT_URL
+        if not script_url:
+            return Response({"error": "GOOGLE_SCRIPT_URL is not configured in .env"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         try:
-            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [target_email])
-            print(f"DEBUG: Password reset email sent to {target_email}")
-            return Response({"message": "Password reset link sent to your email."}, status=status.HTTP_200_OK)
+            gs_response = requests.post(
+                script_url,
+                data=json.dumps({
+                    "action": "sendEmail",
+                    "to": target_email,
+                    "subject": subject,
+                    "body": body
+                }),
+                headers={"Content-Type": "text/plain"},
+                allow_redirects=True,
+                timeout=15
+            )
+            print(f"DEBUG GAS email: status={gs_response.status_code} body={gs_response.text}")
+
+            # Google Apps Script returns 200 even on errors sometimes, check the body
+            try:
+                gs_json = gs_response.json()
+                if gs_json.get("success"):
+                    return Response({"message": "Password reset link sent to your email."}, status=status.HTTP_200_OK)
+                else:
+                    return Response({"error": f"Script error: {gs_json}"}, status=status.HTTP_400_BAD_REQUEST)
+            except Exception:
+                # If response isn't JSON, treat 200 as success
+                if gs_response.status_code == 200:
+                    return Response({"message": "Password reset link sent to your email."}, status=status.HTTP_200_OK)
+                return Response({"error": f"Script returned: {gs_response.text}"}, status=status.HTTP_400_BAD_REQUEST)
+
         except Exception as e:
-            print(f"ERROR sending mail: {str(e)}")
-            return Response({"error": f"Email Error: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+            print(f"ERROR calling Google Script: {str(e)}")
+            return Response({"error": f"Failed to call email script: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
     except Exception as e:
         import traceback
         return Response({"error": f"System Error: {str(e)}", "traceback": traceback.format_exc()}, status=status.HTTP_400_BAD_REQUEST)
