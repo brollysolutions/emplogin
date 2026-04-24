@@ -140,10 +140,12 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Email Settings for Password Reset
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
+EMAIL_PORT = 465
+EMAIL_USE_TLS = False
+EMAIL_USE_SSL = True
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'your-email@gmail.com')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'your-app-password')
+EMAIL_TIMEOUT = 10  # 10 second timeout to prevent gunicorn worker from being killed
 DEFAULT_FROM_EMAIL = f"Brolly Solutions <{EMAIL_HOST_USER}>"
 
 # Google Sheets Sync API
