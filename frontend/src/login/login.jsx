@@ -50,7 +50,7 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxNHIX32g4_K2FlxAJO6
 // Use relative path in production to work behind the /login/ proxy
 const API_BASE = window.location.hostname === "localhost"
   ? "http://localhost:8001/api/v1/"
-  : "/api/v1/";
+  : window.location.origin + "/api/v1/";
 const BACKEND_URL = API_BASE + "attendance/";
 
 /* ── Avatar ────────────────────────────────────────────────── */
