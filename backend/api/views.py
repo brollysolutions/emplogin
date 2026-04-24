@@ -138,10 +138,10 @@ def request_password_reset(request):
             return Response({"message": "Password reset link sent to your email."}, status=status.HTTP_200_OK)
         except Exception as e:
             print(f"ERROR sending mail: {str(e)}")
-            return Response({"error": f"Failed to send email: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": f"Email Error: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         import traceback
-        return Response({"error": str(e), "traceback": traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({"error": f"System Error: {str(e)}", "traceback": traceback.format_exc()}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 def reset_password(request):

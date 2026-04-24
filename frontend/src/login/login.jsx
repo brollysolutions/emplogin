@@ -1593,12 +1593,12 @@ function ForgotPasswordPage({ onBack, onSendLink }) {
   const submit = async () => {
     if (!email) return;
     setLoading(true);
-    const success = await onSendLink(email);
+    const result = await onSendLink(email);
     setLoading(false);
-    if (success) {
+    if (result.success) {
       setMsg({ text: "Reset link sent! Check your inbox (and spam folder).", type: "success" });
     } else {
-      setMsg({ text: "Failed to send link. Please try again later.", type: "error" });
+      setMsg({ text: result.error || "Failed to send link. Please try again later.", type: "error" });
     }
   };
 
@@ -2200,8 +2200,12 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email })
       });
-      return resp.ok;
-    } catch (e) { return false; }
+      if (resp.ok) return { success: true };
+      const data = await resp.json();
+      return { success: false, error: data.error || "Server error" };
+    } catch (e) { 
+      return { success: false, error: "Network error. Please check your connection." }; 
+    }
   };
 
   const resetPassword = async (token, password) => {
