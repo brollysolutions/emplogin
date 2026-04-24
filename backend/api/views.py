@@ -96,14 +96,20 @@ def request_password_reset(request):
             return Response({"error": "Email server is not configured. Please contact administrator (Setup .env file)."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         try:
-            # Search by email OR username
-            user = User.objects.get(Q(email=email) | Q(username=email))
+            # Search by email OR username safely
+            user = User.objects.filter(Q(email=email) | Q(username=email)).first()
+            
+            if not user:
+                # To avoid email enumeration, still return a success message
+                return Response({"message": "If this account exists in our system, a reset link has been sent."}, status=status.HTTP_200_OK)
+
             target_email = user.email
             if not target_email:
-                 return Response({"error": f"No email associated with account '{email}'."}, status=status.HTTP_400_BAD_REQUEST)
-        except User.DoesNotExist:
-            # To avoid email enumeration
-            return Response({"message": "If this account/email exists in our system, a reset link has been sent."}, status=status.HTTP_200_OK)
+                 return Response({"error": f"Account '{email}' found, but it has no email address associated with it."}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            # Catch unexpected DB errors
+            import traceback
+            return Response({"error": f"Database error: {str(e)}", "traceback": traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         token = str(uuid.uuid4())
         PasswordResetToken.objects.create(email=target_email, token=token)
