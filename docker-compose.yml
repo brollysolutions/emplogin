@@ -4,14 +4,12 @@ services:
   backend:
     build: ./backend
     container_name: brolly-login-backend
+    network_mode: host
     volumes:
       - ./backend/db.sqlite3:/app/db.sqlite3
     ports:
       - "8001:8001"
     restart: always
-    dns:
-      - 8.8.8.8
-      - 8.8.4.4
 
   frontend:
     build: ./frontend
