@@ -48,9 +48,10 @@ const FALLBACK_CREDS = [
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxNHIX32g4_K2FlxAJO6g0XpEdUW7ennEEnwH-0XK_SoecTAzZ66hcRIhGh2HxCYsGj/exec";
 // Use relative path in production to work behind the /login/ proxy
-const BACKEND_URL = window.location.hostname === "localhost" 
-  ? "http://localhost:8000/api/v1/attendance/" 
-  : "api/v1/attendance/";
+const API_BASE = window.location.hostname === "localhost"
+  ? "http://:8000/api/v1/"
+  : "api/v1/";
+const BACKEND_URL = API_BASE + "attendance/";
 
 /* ── Avatar ────────────────────────────────────────────────── */
 function Avatar({ name, size = 40, accent = T.accent }) {
@@ -94,213 +95,393 @@ const icons = {
 };
 
 /* ══════════════════════════════════════════════════════════════
-   LOGIN PAGE
+   LOGIN PAGE – Premium Animated Redesign
 ══════════════════════════════════════════════════════════════ */
-function LoginPage({ onLogin, error, isSyncing }) {
+const LOGIN_STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+  @keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }
+  @keyframes spin { to { transform: rotate(360deg) } }
+  @keyframes fadeInUp { from { opacity:0; transform:translateY(24px) } to { opacity:1; transform:translateY(0) } }
+  @keyframes fadeInLeft { from { opacity:0; transform:translateX(-30px) } to { opacity:1; transform:translateX(0) } }
+  @keyframes float1 { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-22px) rotate(6deg)} }
+  @keyframes float2 { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(18px) rotate(-8deg)} }
+  @keyframes float3 { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-14px) scale(1.06)} }
+  @keyframes pulse-ring { 0%{transform:scale(0.8);opacity:1} 100%{transform:scale(1.6);opacity:0} }
+  @keyframes gradientBG { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+  @keyframes shimmer { 0%{left:-100%} 100%{left:200%} }
+  @keyframes pillSlide { from{opacity:0;transform:translateX(-20px)} to{opacity:1;transform:translateX(0)} }
+  @keyframes glowPulse { 0%,100%{box-shadow:0 0 0 0 rgba(21,96,189,0.3)} 50%{box-shadow:0 0 0 8px rgba(21,96,189,0)} }
+  @keyframes logoSpin { 0%{transform:rotateY(0deg)} 100%{transform:rotateY(360deg)} }
+  @keyframes dotPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
+
+  .login-inp {
+    width:100%; padding:13px 16px; border-radius:12px;
+    border:2px solid #e2ebf6; font-size:14px; font-family:'Inter',sans-serif;
+    outline:none; box-sizing:border-box; color:#0b1f35; background:#fafcff;
+    transition:all 0.25s cubic-bezier(0.4,0,0.2,1);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .login-inp:focus {
+    border-color:#1560bd;
+    background:white;
+    box-shadow: 0 0 0 4px rgba(21,96,189,0.1), 0 1px 8px rgba(21,96,189,0.15);
+    transform: translateY(-1px);
+  }
+  .login-inp::placeholder { color:#a8bcd4; }
+  .login-inp.error { border-color:#f87171; background:#fff8f8; }
+  .login-inp.error:focus { box-shadow: 0 0 0 4px rgba(248,113,113,0.15); }
+
+  .login-btn {
+    width:100%; padding:14px; border-radius:12px; border:none;
+    background: linear-gradient(135deg, #1560bd 0%, #0ea5e9 100%);
+    color:white; font-weight:700; font-size:15px; font-family:'Inter',sans-serif;
+    cursor:pointer; letter-spacing:0.3px; position:relative; overflow:hidden;
+    transition: transform 0.15s, box-shadow 0.2s;
+    box-shadow: 0 4px 15px rgba(21,96,189,0.4);
+  }
+  .login-btn::after {
+    content:''; position:absolute; top:0; left:-100%;
+    width:60%; height:100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+    animation: shimmer 2.5s infinite;
+  }
+  .login-btn:hover { transform:translateY(-2px); box-shadow:0 8px 25px rgba(21,96,189,0.5); }
+  .login-btn:active { transform:scale(0.98) translateY(0); }
+
+  .forgot-btn {
+    background:none; border:none; color:#1560bd; font-size:13px;
+    cursor:pointer; font-weight:600; font-family:'Inter',sans-serif;
+    padding:2px 0; position:relative;
+    transition: color 0.2s;
+  }
+  .forgot-btn::after {
+    content:''; position:absolute; bottom:-1px; left:0; width:0; height:1.5px;
+    background:#1560bd; transition:width 0.25s ease;
+  }
+  .forgot-btn:hover::after { width:100%; }
+  .forgot-btn:hover { color:#0d48a8; }
+
+  .feature-pill {
+    display:flex; align-items:center; gap:12px; margin-bottom:14px;
+    animation: pillSlide 0.5s ease both;
+  }
+  .feature-pill:nth-child(1){animation-delay:0.1s}
+  .feature-pill:nth-child(2){animation-delay:0.2s}
+  .feature-pill:nth-child(3){animation-delay:0.3s}
+  .feature-pill:nth-child(4){animation-delay:0.4s}
+
+  .eye-btn {
+    position:absolute; right:14px; top:50%; transform:translateY(-50%);
+    background:none; border:none; cursor:pointer; padding:4px;
+    color:#a8bcd4; border-radius:6px;
+    transition: color 0.2s, background 0.2s;
+  }
+  .eye-btn:hover { color:#1560bd; background:rgba(21,96,189,0.08); }
+`;
+
+function LoginPage({ onLogin, error, isSyncing, onForgot }) {
   const [u, setU] = useState("");
   const [p, setP] = useState("");
   const [show, setShow] = useState(false);
   const [shake, setShake] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [uFocus, setUFocus] = useState(false);
+  const [pFocus, setPFocus] = useState(false);
 
   useEffect(() => {
-    if (error) { setShake(true); setTimeout(() => setShake(false), 500); }
+    if (error) {
+      setShake(true);
+      setLoading(false);
+      setTimeout(() => setShake(false), 500);
+    }
   }, [error]);
 
-  const submit = () => onLogin(u, p);
+  const submit = async () => {
+    if (!u || !p) return;
+    setLoading(true);
+    onLogin(u, p);
+  };
 
-  /* ── Sidebar illustration dots ── */
-  const dots = Array.from({ length: 30 }, (_, i) => ({
-    cx: 10 + Math.sin(i * 0.7) * 80 + 100, cy: 20 + i * 22,
-    r: 2 + Math.sin(i * 1.3) * 1.5, op: 0.08 + Math.sin(i * 0.5) * 0.07
-  }));
+  const orbs = [
+    { w: 280, h: 280, top: -80, left: -80, bg: "rgba(21,96,189,0.2)", anim: "float1 8s ease-in-out infinite" },
+    { w: 220, h: 220, bottom: -60, right: -60, bg: "rgba(14,165,233,0.15)", anim: "float2 10s ease-in-out infinite" },
+    { w: 160, h: 160, top: "38%", right: -40, bg: "rgba(21,96,189,0.12)", anim: "float3 7s ease-in-out infinite" },
+    { w: 100, h: 100, top: "20%", left: "55%", bg: "rgba(109,40,217,0.08)", anim: "float1 12s ease-in-out infinite 2s" },
+  ];
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", fontFamily: "'Segoe UI',system-ui,sans-serif", background: "#f0f4fa" }}>
+    <div style={{
+      minHeight: "100vh", display: "flex",
+      fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+      background: "linear-gradient(135deg, #f0f4fa 0%, #e8f0fe 100%)"
+    }}>
+      <style>{LOGIN_STYLES}</style>
 
-      {/* ── Left panel ── */}
+      {/* ── Left Panel ── */}
       <div style={{
-        flex: "0 0 420px", background: T.ink, display: "flex", flexDirection: "column",
-        justifyContent: "space-between", padding: "48px 40px", position: "relative", overflow: "hidden"
+        flex: "0 0 440px",
+        background: "linear-gradient(160deg, #0b1f35 0%, #0d2b4e 50%, #0f3460 100%)",
+        display: "flex", flexDirection: "column", justifyContent: "space-between",
+        padding: "52px 44px", position: "relative", overflow: "hidden"
       }}>
 
-        {/* decorative circles */}
+        {/* Animated Orbs */}
+        {orbs.map((o, i) => (
+          <div key={i} style={{
+            position: "absolute", borderRadius: "50%", background: o.bg,
+            width: o.w, height: o.h,
+            top: o.top, bottom: o.bottom, left: o.left, right: o.right,
+            animation: o.anim
+          }} />
+        ))}
+
+        {/* Grid overlay */}
         <div style={{
-          position: "absolute", top: -80, left: -80, width: 280, height: 280,
-          borderRadius: "50%", background: "rgba(21,96,189,0.18)"
-        }} />
-        <div style={{
-          position: "absolute", bottom: -60, right: -60, width: 220, height: 220,
-          borderRadius: "50%", background: "rgba(14,165,233,0.12)"
-        }} />
-        <div style={{
-          position: "absolute", top: "40%", right: -40, width: 160, height: 160,
-          borderRadius: "50%", background: "rgba(21,96,189,0.1)"
+          position: "absolute", inset: 0, opacity: 0.04,
+          backgroundImage: "linear-gradient(rgba(255,255,255,0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.8) 1px, transparent 1px)",
+          backgroundSize: "40px 40px"
         }} />
 
         {/* Logo */}
-        <div style={{ position: "relative", zIndex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 56 }}>
+        <div style={{ position: "relative", zIndex: 1, animation: "fadeInLeft 0.7s ease both" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 60 }}>
             <div style={{
-              width: 44, height: 44, borderRadius: 12, background: "#fff",
-              display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden"
+              width: 50, height: 50, borderRadius: 14, background: "white",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.2)"
             }}>
               <img src={logo} alt="Brolly Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             </div>
             <div>
-              <div style={{ color: "white", fontWeight: 700, fontSize: 16, letterSpacing: 0.3 }}>Brolly Software Solutions</div>
-              <div style={{ color: T.faint, fontSize: 11, letterSpacing: 0.5 }}>ATTENDANCE SYSTEM</div>
+              <div style={{ color: "white", fontWeight: 800, fontSize: 16, letterSpacing: 0.2 }}>Brolly Software Solutions</div>
+              <div style={{ color: "rgba(168,188,212,0.8)", fontSize: 10, letterSpacing: 1.5, marginTop: 2 }}>ATTENDANCE MANAGEMENT</div>
             </div>
           </div>
 
-          <h1 style={{ color: "white", fontSize: 32, fontWeight: 700, lineHeight: 1.25, margin: "0 0 16px" }}>
-            Track time.<br />Manage work.<br />Stay ahead.
+          <h1 style={{
+            color: "white", fontSize: 34, fontWeight: 800, lineHeight: 1.2,
+            margin: "0 0 18px", letterSpacing: -0.5
+          }}>
+            Track time.<br />
+            <span style={{ color: "#38bdf8" }}>Manage work.</span><br />
+            Stay ahead.
           </h1>
-          <p style={{ color: T.faint, fontSize: 14, lineHeight: 1.7, margin: 0 }}>
+          <p style={{ color: "rgba(168,188,212,0.85)", fontSize: 13.5, lineHeight: 1.75, margin: 0 }}>
             A complete employee attendance and task management platform — login, track hours, and export to Excel seamlessly.
           </p>
         </div>
 
-        {/* Feature pills */}
+        {/* Feature Pills */}
         <div style={{ position: "relative", zIndex: 1 }}>
           {[
-            { icon: icons.clock, text: "Real-time clock-in / clock-out" },
-            { icon: icons.chart, text: "Auto working hours calculation" },
-            { icon: icons.save, text: "One-click Excel export" },
-            { icon: icons.tasks, text: "Daily task logging" },
+            { icon: icons.clock, text: "Real-time clock-in / clock-out", color: "#38bdf8" },
+            { icon: icons.chart, text: "Auto working hours calculation", color: "#34d399" },
+            { icon: icons.save, text: "One-click Excel export", color: "#a78bfa" },
+            { icon: icons.tasks, text: "Daily task logging", color: "#fb923c" },
           ].map((f, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+            <div key={i} className="feature-pill">
               <div style={{
-                width: 32, height: 32, borderRadius: 8, background: "rgba(21,96,189,0.35)",
+                width: 36, height: 36, borderRadius: 10,
+                background: `${f.color}20`, border: `1px solid ${f.color}30`,
                 display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
               }}>
-                <Icon d={f.icon} size={15} color={T.accent2} />
+                <Icon d={f.icon} size={16} color={f.color} />
               </div>
-              <span style={{ color: "rgba(255,255,255,0.75)", fontSize: 13 }}>{f.text}</span>
+              <span style={{ color: "rgba(255,255,255,0.78)", fontSize: 13.5, fontWeight: 500 }}>{f.text}</span>
             </div>
           ))}
         </div>
 
-        <div style={{ position: "relative", zIndex: 1, color: T.faint, fontSize: 11 }}>
+        <div style={{ position: "relative", zIndex: 1, color: "rgba(168,188,212,0.5)", fontSize: 11, letterSpacing: 0.3 }}>
           © 2025 Brolly Software Solutions. All rights reserved.
         </div>
       </div>
 
-      {/* ── Right panel ── */}
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 24px" }}>
+      {/* ── Right Panel ── */}
+      <div style={{
+        flex: 1, display: "flex", alignItems: "center",
+        justifyContent: "center", padding: "40px 24px"
+      }}>
         <div style={{
-          width: "100%", maxWidth: 400,
-          background: T.white, borderRadius: 20,
-          border: `1px solid ${T.border}`,
-          padding: "40px 36px",
-          animation: shake ? "shake 0.4s ease" : "none"
+          width: "100%", maxWidth: 420,
+          animation: shake ? "shake 0.42s ease" : "fadeInUp 0.6s cubic-bezier(0.4,0,0.2,1) both"
         }}>
-          <style>{`
-            @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
-            .inp{width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid #dce8f4;font-size:14px;
-              outline:none;box-sizing:border-box;color:${T.ink};background:white;transition:border 0.2s;}
-            .inp:focus{border-color:${T.accent};}
-            .inp::placeholder{color:${T.faint};}
-            .btn-primary{width:100%;padding:13px;border-radius:10px;border:none;
-              background:${T.accent};color:white;font-weight:700;font-size:15px;
-              cursor:pointer;letter-spacing:0.3px;transition:background 0.15s,transform 0.1s;}
-            .btn-primary:hover{background:#1255a8;}
-            .btn-primary:active{transform:scale(0.98);}
-            .btn-ghost{background:none;border:1.5px solid ${T.border};border-radius:10px;
-              padding:9px 16px;font-size:13px;color:${T.ink2};cursor:pointer;
-              display:flex;align-items:center;gap:8px;transition:border 0.2s,background 0.15s;}
-            .btn-ghost:hover{background:${T.surface};border-color:${T.accent};}
-          `}</style>
 
-          <div style={{ marginBottom: 32 }}>
-            <div style={{
-              width: 48, height: 48, borderRadius: 13, background: T.surface,
-              border: `1.5px solid ${T.border}`, display: "flex", alignItems: "center",
-              justifyContent: "center", marginBottom: 20
-            }}>
-              <Icon d={icons.user} size={22} color={T.accent} />
-            </div>
-            <h2 style={{ margin: "0 0 6px", fontSize: 22, fontWeight: 700, color: T.ink }}>Sign in</h2>
-            <p style={{ margin: 0, fontSize: 13, color: T.muted }}>Enter your credentials to access the portal</p>
-          </div>
+          {/* Card */}
+          <div style={{
+            background: "white", borderRadius: 24,
+            border: "1px solid rgba(220,232,244,0.8)",
+            padding: "44px 40px",
+            boxShadow: "0 20px 60px rgba(11,31,53,0.1), 0 4px 20px rgba(11,31,53,0.06)"
+          }}>
 
-          {/* Username */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: T.ink2, marginBottom: 7, letterSpacing: 0.4 }}>
-              USERNAME
-            </label>
-            <div style={{ position: "relative" }}>
-              <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }}>
-                <Icon d={icons.user} size={15} color={T.faint} />
+            {/* Header */}
+            <div style={{ marginBottom: 36 }}>
+              <div style={{
+                width: 56, height: 56, borderRadius: 16,
+                background: "linear-gradient(135deg, #e8f0fe, #dbeafe)",
+                border: "2px solid #bfdbfe",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                marginBottom: 22, position: "relative"
+              }}>
+                <Icon d={icons.user} size={24} color="#1560bd" />
+                {/* Pulse ring */}
+                <div style={{
+                  position: "absolute", inset: -4, borderRadius: 20,
+                  border: "2px solid rgba(21,96,189,0.3)",
+                  animation: "pulse-ring 2s ease-out infinite"
+                }} />
               </div>
-              <input className="inp" placeholder="your.username" value={u}
-                onChange={e => setU(e.target.value)}
-                style={{ paddingLeft: 38, borderColor: error ? "#f09595" : "" }} />
+              <h2 style={{
+                margin: "0 0 8px", fontSize: 26, fontWeight: 800,
+                color: "#0b1f35", letterSpacing: -0.5
+              }}>
+                Welcome back 👋
+              </h2>
+              <p style={{ margin: 0, fontSize: 14, color: "#6b82a0", lineHeight: 1.5 }}>
+                Sign in using your <strong style={{ color: "#1560bd" }}>username or email</strong> to access the portal
+              </p>
             </div>
-          </div>
 
-          {/* Password */}
-          <div style={{ marginBottom: 24 }}>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: T.ink2, marginBottom: 7, letterSpacing: 0.4 }}>
-              PASSWORD
-            </label>
-            <div style={{ position: "relative" }}>
-              <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }}>
-                <Icon d={icons.lock} size={15} color={T.faint} />
-              </div>
-              <input className="inp" type={show ? "text" : "password"} placeholder="••••••••" value={p}
-                onChange={e => setP(e.target.value)} onKeyDown={e => e.key === "Enter" && submit()}
-                style={{ paddingLeft: 38, paddingRight: 42, borderColor: error ? "#f09595" : "" }} />
-              <button onClick={() => setShow(v => !v)}
-                style={{
-                  position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
-                  background: "none", border: "none", cursor: "pointer", padding: 0, color: T.faint
+            {/* Username / Email Input */}
+            <div style={{ marginBottom: 18, animation: "fadeInUp 0.5s ease 0.1s both" }}>
+              <label style={{
+                display: "block", fontSize: 11.5, fontWeight: 700,
+                color: uFocus ? "#1560bd" : "#2c4a6e",
+                marginBottom: 8, letterSpacing: 0.8, textTransform: "uppercase",
+                transition: "color 0.2s"
+              }}>
+                Username or Email
+              </label>
+              <div style={{ position: "relative" }}>
+                <div style={{
+                  position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)",
+                  transition: "color 0.2s"
                 }}>
-                <Icon d={show ? icons.eyeOff : icons.eye} size={16} color={T.faint} />
+                  <Icon d={icons.user} size={16} color={uFocus ? "#1560bd" : "#a8bcd4"} />
+                </div>
+                <input
+                  className={`login-inp${error ? " error" : ""}`}
+                  placeholder="your.username or email@company.com"
+                  value={u}
+                  onChange={e => setU(e.target.value)}
+                  onFocus={() => setUFocus(true)}
+                  onBlur={() => setUFocus(false)}
+                  onKeyDown={e => e.key === "Enter" && submit()}
+                  style={{ paddingLeft: 44 }}
+                />
+              </div>
+            </div>
+
+            {/* Password Input */}
+            <div style={{ marginBottom: 12, animation: "fadeInUp 0.5s ease 0.15s both" }}>
+              <label style={{
+                display: "block", fontSize: 11.5, fontWeight: 700,
+                color: pFocus ? "#1560bd" : "#2c4a6e",
+                marginBottom: 8, letterSpacing: 0.8, textTransform: "uppercase",
+                transition: "color 0.2s"
+              }}>
+                Password
+              </label>
+              <div style={{ position: "relative" }}>
+                <div style={{
+                  position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)"
+                }}>
+                  <Icon d={icons.lock} size={16} color={pFocus ? "#1560bd" : "#a8bcd4"} />
+                </div>
+                <input
+                  className={`login-inp${error ? " error" : ""}`}
+                  type={show ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={p}
+                  onChange={e => setP(e.target.value)}
+                  onFocus={() => setPFocus(true)}
+                  onBlur={() => setPFocus(false)}
+                  onKeyDown={e => e.key === "Enter" && submit()}
+                  style={{ paddingLeft: 44, paddingRight: 48 }}
+                />
+                <button className="eye-btn" onClick={() => setShow(v => !v)}>
+                  <Icon d={show ? icons.eyeOff : icons.eye} size={16} color="currentColor" />
+                </button>
+              </div>
+            </div>
+
+            {/* Forgot Password */}
+            <div style={{ textAlign: "right", marginBottom: 22, animation: "fadeInUp 0.5s ease 0.2s both" }}>
+              <button className="forgot-btn" onClick={onForgot}>Forgot Password?</button>
+            </div>
+
+            {/* Error */}
+            {error && (
+              <div style={{
+                display: "flex", alignItems: "center", gap: 10, padding: "12px 16px",
+                borderRadius: 12, background: "#fff1f1",
+                border: "1.5px solid #fca5a5",
+                marginBottom: 20, fontSize: 13, color: "#d93b3b",
+                animation: "fadeInUp 0.3s ease both"
+              }}>
+                <Icon d={icons.info} size={16} color="#d93b3b" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {/* Submit Button */}
+            <div style={{ animation: "fadeInUp 0.5s ease 0.25s both" }}>
+              <button className="login-btn" onClick={submit} disabled={loading}>
+                {loading ? (
+                  <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                    <span style={{
+                      width: 16, height: 16, border: "2.5px solid rgba(255,255,255,0.4)",
+                      borderTopColor: "white", borderRadius: "50%",
+                      display: "inline-block", animation: "spin 0.8s linear infinite"
+                    }} />
+                    Signing in...
+                  </span>
+                ) : "Sign in to Brolly Portal"}
               </button>
             </div>
+
+            {/* Divider */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "24px 0 14px" }}>
+              <div style={{ flex: 1, height: 1, background: "#e2ebf6" }} />
+              <span style={{ fontSize: 11, color: "#a8bcd4", fontWeight: 500 }}>STATUS</span>
+              <div style={{ flex: 1, height: 1, background: "#e2ebf6" }} />
+            </div>
+
+            {/* Sync Status */}
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              padding: "10px 16px", borderRadius: 10,
+              background: isSyncing ? "#eff6ff" : "#f0fdf4",
+              border: `1px solid ${isSyncing ? "#bfdbfe" : "#bbf7d0"}`
+            }}>
+              {isSyncing ? (
+                <>
+                  <span style={{
+                    width: 10, height: 10, border: "2px solid #93c5fd",
+                    borderTopColor: "#1560bd", borderRadius: "50%",
+                    display: "inline-block", animation: "spin 0.9s linear infinite"
+                  }} />
+                  <span style={{ fontSize: 12, color: "#1560bd", fontWeight: 600 }}>Syncing with Google Sheets...</span>
+                </>
+              ) : (
+                <>
+                  <span style={{
+                    width: 8, height: 8, borderRadius: "50%", background: "#22c55e",
+                    animation: "glowPulse 2s ease infinite"
+                  }} />
+                  <span style={{ fontSize: 12, color: "#15803d", fontWeight: 600 }}>Cloud connection active</span>
+                </>
+              )}
+            </div>
           </div>
 
-          {/* Error */}
-          {error && (
-            <div style={{
-              display: "flex", alignItems: "center", gap: 8, padding: "10px 14px",
-              borderRadius: 10, background: T.redBg, border: `1px solid #fca5a5`,
-              marginBottom: 18, fontSize: 13, color: T.red
-            }}>
-              <Icon d={icons.info} size={15} color={T.red} />
-              {error}
-            </div>
-          )}
-
-          <button className="btn-primary" onClick={submit}>Sign in to Brolly Portal</button>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "20px 0" }}>
-            <div style={{ flex: 1, height: 1, background: T.border }} />
-            <span style={{ fontSize: 12, color: T.faint }}>or</span>
-            <div style={{ flex: 1, height: 1, background: T.border }} />
-          </div>
-
-          {isSyncing ? (
-            <div style={{
-              display: "flex", alignItems: "center", gap: 8, marginTop: 10,
-              fontSize: 12, color: T.accent, justifyContent: "center"
-            }}>
-              <div style={{ width: 12, height: 12, border: `2px solid ${T.accent}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-              Syncing with Google Sheets...
-            </div>
-          ) : (
-            <div style={{
-              display: "flex", alignItems: "center", gap: 6, marginTop: 10,
-              fontSize: 12, color: T.green, justifyContent: "center"
-            }}>
-              <Icon d={icons.check} size={13} color={T.green} />
-              Cloud connection active
-            </div>
-          )}
-          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-
-          <p style={{ textAlign: "center", marginTop: 20, fontSize: 11, color: T.faint, lineHeight: 1.6 }}>
-            Contact your administrator to reset credentials or add new accounts to the Excel file.
+          {/* Below card hint */}
+          <p style={{
+            textAlign: "center", marginTop: 20, fontSize: 12, color: "#6b82a0", lineHeight: 1.6
+          }}>
+            Having issues? Contact your administrator.
           </p>
         </div>
       </div>
@@ -365,17 +546,17 @@ function Dashboard({ employee, onSignOut }) {
   })();
 
   const [now, setNow] = useState(new Date());
-  
+
   // New States for cumulative tracking
   const [totalWorkSeconds, setTotalWorkSeconds] = useState(savedSession?.totalWorkSeconds || 0);
   const [totalBreakSeconds, setTotalBreakSeconds] = useState(savedSession?.totalBreakSeconds || 0);
   const [sessionStartTime, setSessionStartTime] = useState(savedSession?.sessionStartTime ? new Date(savedSession.sessionStartTime) : null);
   const [breakStartTime, setBreakStartTime] = useState(savedSession?.breakStartTime ? new Date(savedSession.breakStartTime) : null);
-  
+
   const [loginTime, setLT] = useState(savedSession?.loginTime ? new Date(savedSession.loginTime) : null);
   const [logoutTime, setLOT] = useState(savedSession?.logoutTime ? new Date(savedSession.logoutTime) : null);
   const [status, setStatus] = useState(savedSession?.status || "idle"); // idle, working, break, loggedOut
-  
+
   const [taskInput, setTask] = useState(savedSession?.taskInput || "");
   const [toast, setToast] = useState(null);
   const [history, setHistory] = useState([]);
@@ -465,7 +646,7 @@ function Dashboard({ employee, onSignOut }) {
   const currentTotalWorkSeconds = status === "working" && sessionStartTime
     ? totalWorkSeconds + Math.floor((now - sessionStartTime) / 1000)
     : totalWorkSeconds;
-  
+
   const currentTotalBreakSeconds = status === "break" && breakStartTime
     ? totalBreakSeconds + Math.floor((now - breakStartTime) / 1000)
     : totalBreakSeconds;
@@ -505,7 +686,7 @@ function Dashboard({ employee, onSignOut }) {
     const tWork = curStatus === "working" && sessionStartTime
       ? totalWorkSeconds + Math.floor((new Date() - sessionStartTime) / 1000)
       : totalWorkSeconds;
-    
+
     const tBreak = curStatus === "break" && breakStartTime
       ? totalBreakSeconds + Math.floor((new Date() - breakStartTime) / 1000)
       : totalBreakSeconds;
@@ -539,7 +720,7 @@ function Dashboard({ employee, onSignOut }) {
   const handleLogout = () => {
     if (status !== "working" && status !== "break") return;
     const t = new Date();
-    
+
     let finalWork = totalWorkSeconds;
     let finalBreak = totalBreakSeconds;
 
@@ -578,10 +759,10 @@ function Dashboard({ employee, onSignOut }) {
 
   const handleSave = async () => {
     if (!loginTime) { showToast("Please clock in first", "error"); return; }
-    
+
     showToast("Syncing to Google Sheets...", "info");
     const lt = logoutTime || new Date();
-    
+
     const WORK_GOAL = 9;
     const dayStatus = liveHrs.total >= WORK_GOAL ? "Full Day" : "Half Day";
 
@@ -1204,6 +1385,24 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
             <Icon d={icons.save} size={13} color="white" />
             Export Excel
           </button>
+          <button onClick={async () => {
+            if (!allEmployees.length) return;
+            const resp = await fetch(API_BASE + "sync-users/", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ users: allEmployees })
+            });
+            const res = await resp.json();
+            alert(res.message);
+          }}
+            style={{
+              display: "flex", alignItems: "center", gap: 6, padding: "7px 14px",
+              borderRadius: 9, border: "none", background: T.green,
+              color: "white", cursor: "pointer", fontSize: 12, fontWeight: 600
+            }}>
+            <Icon d={icons.refresh} size={13} color="white" />
+            Sync Accounts
+          </button>
           <button onClick={onSignOut}
             style={{
               display: "flex", alignItems: "center", gap: 6, padding: "7px 14px",
@@ -1383,23 +1582,559 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
 }
 
 /* ══════════════════════════════════════════════════════════════
+   FORGOT PASSWORD PAGE – Premium Design
+══════════════════════════════════════════════════════════════ */
+function ForgotPasswordPage({ onBack, onSendLink }) {
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState(null);
+  const [focused, setFocused] = useState(false);
+
+  const submit = async () => {
+    if (!email) return;
+    setLoading(true);
+    const success = await onSendLink(email);
+    setLoading(false);
+    if (success) {
+      setMsg({ text: "Reset link sent! Check your inbox (and spam folder).", type: "success" });
+    } else {
+      setMsg({ text: "Failed to send link. Please try again later.", type: "error" });
+    }
+  };
+
+  return (
+    <div style={{
+      minHeight: "100vh", display: "flex",
+      fontFamily: "'Inter','Segoe UI',system-ui,sans-serif",
+      background: "linear-gradient(135deg, #f0f4fa 0%, #e8f0fe 100%)"
+    }}>
+      <style>{LOGIN_STYLES}</style>
+
+      {/* Left decorative panel */}
+      <div style={{
+        flex: "0 0 440px",
+        background: "linear-gradient(160deg, #0b1f35 0%, #0d2b4e 50%, #0f3460 100%)",
+        display: "flex", flexDirection: "column", justifyContent: "center",
+        padding: "52px 44px", position: "relative", overflow: "hidden"
+      }}>
+        {/* Animated orbs */}
+        {[
+          { w: 280, h: 280, top: -80, left: -80, bg: "rgba(21,96,189,0.2)", anim: "float1 8s ease-in-out infinite" },
+          { w: 200, h: 200, bottom: -50, right: -50, bg: "rgba(14,165,233,0.15)", anim: "float2 10s ease-in-out infinite" },
+          { w: 140, h: 140, top: "40%", right: -30, bg: "rgba(109,40,217,0.1)", anim: "float3 7s ease-in-out infinite" },
+        ].map((o, i) => (
+          <div key={i} style={{
+            position: "absolute", borderRadius: "50%", background: o.bg,
+            width: o.w, height: o.h, top: o.top, bottom: o.bottom, left: o.left, right: o.right,
+            animation: o.anim
+          }} />
+        ))}
+        {/* Grid */}
+        <div style={{
+          position: "absolute", inset: 0, opacity: 0.04,
+          backgroundImage: "linear-gradient(rgba(255,255,255,0.8) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.8) 1px,transparent 1px)",
+          backgroundSize: "40px 40px"
+        }} />
+
+        <div style={{ position: "relative", zIndex: 1, animation: "fadeInLeft 0.7s ease both" }}>
+          {/* Logo */}
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 56 }}>
+            <div style={{
+              width: 50, height: 50, borderRadius: 14, background: "white",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.2)"
+            }}>
+              <img src={logo} alt="Brolly Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            </div>
+            <div>
+              <div style={{ color: "white", fontWeight: 800, fontSize: 16 }}>Brolly Software Solutions</div>
+              <div style={{ color: "rgba(168,188,212,0.8)", fontSize: 10, letterSpacing: 1.5, marginTop: 2 }}>ATTENDANCE MANAGEMENT</div>
+            </div>
+          </div>
+
+          {/* Icon + heading */}
+          <div style={{
+            width: 64, height: 64, borderRadius: 18,
+            background: "rgba(21,96,189,0.25)", border: "1.5px solid rgba(21,96,189,0.4)",
+            display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 28
+          }}>
+            <Icon d={icons.lock} size={28} color="#38bdf8" />
+          </div>
+
+          <h2 style={{ color: "white", fontSize: 30, fontWeight: 800, lineHeight: 1.2, margin: "0 0 16px", letterSpacing: -0.5 }}>
+            Forgot your<br /><span style={{ color: "#38bdf8" }}>password?</span>
+          </h2>
+          <p style={{ color: "rgba(168,188,212,0.85)", fontSize: 14, lineHeight: 1.75, margin: 0 }}>
+            No worries! Enter your registered email or username and we'll send you a secure reset link instantly.
+          </p>
+
+          <div style={{ marginTop: 40, display: "flex", flexDirection: "column", gap: 14 }}>
+            {[
+              { icon: icons.check, text: "Secure token-based reset link" },
+              { icon: icons.clock, text: "Link expires in 1 hour" },
+              { icon: icons.lock, text: "Password encrypted on save" },
+            ].map((f, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, animation: `pillSlide 0.4s ease ${i * 0.1 + 0.1}s both` }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 9,
+                  background: "rgba(56,189,248,0.15)", border: "1px solid rgba(56,189,248,0.25)",
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
+                }}>
+                  <Icon d={f.icon} size={14} color="#38bdf8" />
+                </div>
+                <span style={{ color: "rgba(255,255,255,0.75)", fontSize: 13.5, fontWeight: 500 }}>{f.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Right form panel */}
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 24px" }}>
+        <div style={{ width: "100%", maxWidth: 420, animation: "fadeInUp 0.6s cubic-bezier(0.4,0,0.2,1) both" }}>
+
+          <div style={{
+            background: "white", borderRadius: 24,
+            border: "1px solid rgba(220,232,244,0.8)",
+            padding: "44px 40px",
+            boxShadow: "0 20px 60px rgba(11,31,53,0.1), 0 4px 20px rgba(11,31,53,0.06)"
+          }}>
+
+            {/* Header */}
+            <div style={{ marginBottom: 32 }}>
+              <div style={{
+                width: 56, height: 56, borderRadius: 16,
+                background: "linear-gradient(135deg, #eff6ff, #dbeafe)",
+                border: "2px solid #bfdbfe",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                marginBottom: 22, position: "relative"
+              }}>
+                <Icon d={icons.lock} size={24} color="#1560bd" />
+                <div style={{
+                  position: "absolute", inset: -4, borderRadius: 20,
+                  border: "2px solid rgba(21,96,189,0.25)",
+                  animation: "pulse-ring 2s ease-out infinite"
+                }} />
+              </div>
+              <h2 style={{ margin: "0 0 8px", fontSize: 26, fontWeight: 800, color: "#0b1f35", letterSpacing: -0.5 }}>
+                Reset Password 🔑
+              </h2>
+              <p style={{ margin: 0, fontSize: 14, color: "#6b82a0", lineHeight: 1.6 }}>
+                Enter your <strong style={{ color: "#1560bd" }}>email or username</strong> and we'll send a reset link to your inbox.
+              </p>
+            </div>
+
+            {/* Success / Error message */}
+            {msg && (
+              <div style={{
+                display: "flex", alignItems: "flex-start", gap: 10,
+                padding: "14px 16px", borderRadius: 12, marginBottom: 24,
+                background: msg.type === "success" ? "#f0fdf4" : "#fff1f1",
+                border: `1.5px solid ${msg.type === "success" ? "#86efac" : "#fca5a5"}`,
+                animation: "fadeInUp 0.3s ease both"
+              }}>
+                <Icon d={msg.type === "success" ? icons.check : icons.info} size={16}
+                  color={msg.type === "success" ? "#16a34a" : "#d93b3b"} />
+                <span style={{ fontSize: 13.5, color: msg.type === "success" ? "#15803d" : "#d93b3b", lineHeight: 1.5, fontWeight: 500 }}>
+                  {msg.text}
+                </span>
+              </div>
+            )}
+
+            {/* Input */}
+            <div style={{ marginBottom: 24, animation: "fadeInUp 0.5s ease 0.1s both" }}>
+              <label style={{
+                display: "block", fontSize: 11.5, fontWeight: 700,
+                color: focused ? "#1560bd" : "#2c4a6e",
+                marginBottom: 8, letterSpacing: 0.8, textTransform: "uppercase",
+                transition: "color 0.2s"
+              }}>Email or Username</label>
+              <div style={{ position: "relative" }}>
+                <div style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }}>
+                  <Icon d={icons.user} size={16} color={focused ? "#1560bd" : "#a8bcd4"} />
+                </div>
+                <input
+                  className="login-inp"
+                  type="text"
+                  placeholder="your.username or email@company.com"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  onFocus={() => setFocused(true)}
+                  onBlur={() => setFocused(false)}
+                  onKeyDown={e => e.key === "Enter" && submit()}
+                  style={{ paddingLeft: 44 }}
+                />
+              </div>
+            </div>
+
+            {/* Send Button */}
+            <div style={{ animation: "fadeInUp 0.5s ease 0.15s both" }}>
+              <button className="login-btn" onClick={submit} disabled={loading || !!msg?.type === "success"}>
+                {loading ? (
+                  <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                    <span style={{
+                      width: 16, height: 16, border: "2.5px solid rgba(255,255,255,0.4)",
+                      borderTopColor: "white", borderRadius: "50%",
+                      display: "inline-block", animation: "spin 0.8s linear infinite"
+                    }} />
+                    Sending Reset Link...
+                  </span>
+                ) : "Send Reset Link"}
+              </button>
+            </div>
+
+            {/* Divider */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "24px 0 0" }}>
+              <div style={{ flex: 1, height: 1, background: "#e2ebf6" }} />
+              <span style={{ fontSize: 11, color: "#a8bcd4", fontWeight: 500 }}>OR</span>
+              <div style={{ flex: 1, height: 1, background: "#e2ebf6" }} />
+            </div>
+
+            {/* Back button */}
+            <button onClick={onBack} style={{
+              width: "100%", background: "none",
+              border: "2px solid #e2ebf6", borderRadius: 12,
+              color: "#6b82a0", fontSize: 14, marginTop: 16,
+              cursor: "pointer", fontWeight: 600, padding: "11px",
+              fontFamily: "'Inter',sans-serif",
+              transition: "all 0.2s"
+            }}
+              onMouseOver={e => { e.target.style.borderColor = "#1560bd"; e.target.style.color = "#1560bd"; }}
+              onMouseOut={e => { e.target.style.borderColor = "#e2ebf6"; e.target.style.color = "#6b82a0"; }}
+            >
+              ← Back to Sign In
+            </button>
+          </div>
+
+          <p style={{ textAlign: "center", marginTop: 20, fontSize: 12, color: "#6b82a0" }}>
+            Didn't get the email? Check your spam folder.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RESET PASSWORD PAGE – Premium Design
+══════════════════════════════════════════════════════════════ */
+function ResetPasswordPage({ token, onReset }) {
+  const [p, setP] = useState("");
+  const [p2, setP2] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const [pFocus, setPFocus] = useState(false);
+  const [p2Focus, setP2Focus] = useState(false);
+  const [showP, setShowP] = useState(false);
+  const [showP2, setShowP2] = useState(false);
+
+  const strength = p.length === 0 ? 0 : p.length < 6 ? 1 : p.length < 10 ? 2 : 3;
+  const strengthLabel = ["", "Weak", "Good", "Strong"];
+  const strengthColor = ["", "#f87171", "#fb923c", "#22c55e"];
+
+  const submit = async () => {
+    if (p !== p2) { setError("Passwords do not match"); return; }
+    if (p.length < 6) { setError("Password must be at least 6 characters"); return; }
+    setLoading(true); setError("");
+    const ok = await onReset(token, p);
+    setLoading(false);
+    if (ok) { setSuccess(true); }
+    else { setError("Failed to reset. The link may have expired. Please request a new one."); }
+  };
+
+  return (
+    <div style={{
+      minHeight: "100vh", display: "flex",
+      fontFamily: "'Inter','Segoe UI',system-ui,sans-serif",
+      background: "linear-gradient(135deg, #f0f4fa 0%, #e8f0fe 100%)"
+    }}>
+      <style>{LOGIN_STYLES}</style>
+
+      {/* Left decorative panel */}
+      <div style={{
+        flex: "0 0 440px",
+        background: "linear-gradient(160deg, #0b1f35 0%, #0d2b4e 50%, #0f3460 100%)",
+        display: "flex", flexDirection: "column", justifyContent: "center",
+        padding: "52px 44px", position: "relative", overflow: "hidden"
+      }}>
+        {[
+          { w: 280, h: 280, top: -80, left: -80, bg: "rgba(21,96,189,0.2)", anim: "float1 8s ease-in-out infinite" },
+          { w: 200, h: 200, bottom: -50, right: -50, bg: "rgba(14,165,233,0.15)", anim: "float2 10s ease-in-out infinite" },
+          { w: 140, h: 140, top: "40%", right: -30, bg: "rgba(34,197,94,0.08)", anim: "float3 7s ease-in-out infinite" },
+        ].map((o, i) => (
+          <div key={i} style={{
+            position: "absolute", borderRadius: "50%", background: o.bg,
+            width: o.w, height: o.h, top: o.top, bottom: o.bottom, left: o.left, right: o.right,
+            animation: o.anim
+          }} />
+        ))}
+        <div style={{
+          position: "absolute", inset: 0, opacity: 0.04,
+          backgroundImage: "linear-gradient(rgba(255,255,255,0.8) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.8) 1px,transparent 1px)",
+          backgroundSize: "40px 40px"
+        }} />
+
+        <div style={{ position: "relative", zIndex: 1, animation: "fadeInLeft 0.7s ease both" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 56 }}>
+            <div style={{
+              width: 50, height: 50, borderRadius: 14, background: "white",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.2)"
+            }}>
+              <img src={logo} alt="Brolly Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            </div>
+            <div>
+              <div style={{ color: "white", fontWeight: 800, fontSize: 16 }}>Brolly Software Solutions</div>
+              <div style={{ color: "rgba(168,188,212,0.8)", fontSize: 10, letterSpacing: 1.5, marginTop: 2 }}>ATTENDANCE MANAGEMENT</div>
+            </div>
+          </div>
+
+          <div style={{
+            width: 64, height: 64, borderRadius: 18,
+            background: "rgba(34,197,94,0.2)", border: "1.5px solid rgba(34,197,94,0.35)",
+            display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 28
+          }}>
+            <Icon d={icons.check} size={30} color="#4ade80" />
+          </div>
+
+          <h2 style={{ color: "white", fontSize: 30, fontWeight: 800, lineHeight: 1.2, margin: "0 0 16px", letterSpacing: -0.5 }}>
+            Set your<br /><span style={{ color: "#4ade80" }}>new password</span>
+          </h2>
+          <p style={{ color: "rgba(168,188,212,0.85)", fontSize: 14, lineHeight: 1.75, margin: 0 }}>
+            Choose a strong password that you haven't used before to keep your account secure.
+          </p>
+
+          <div style={{ marginTop: 40, display: "flex", flexDirection: "column", gap: 14 }}>
+            {[
+              { icon: icons.check, text: "Minimum 6 characters required" },
+              { icon: icons.lock, text: "Password is encrypted on save" },
+              { icon: icons.save, text: "Sheet is updated automatically" },
+            ].map((f, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, animation: `pillSlide 0.4s ease ${i * 0.1 + 0.1}s both` }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 9,
+                  background: "rgba(74,222,128,0.12)", border: "1px solid rgba(74,222,128,0.25)",
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
+                }}>
+                  <Icon d={f.icon} size={14} color="#4ade80" />
+                </div>
+                <span style={{ color: "rgba(255,255,255,0.75)", fontSize: 13.5, fontWeight: 500 }}>{f.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Right form panel */}
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 24px" }}>
+        <div style={{ width: "100%", maxWidth: 420, animation: "fadeInUp 0.6s cubic-bezier(0.4,0,0.2,1) both" }}>
+
+          <div style={{
+            background: "white", borderRadius: 24,
+            border: "1px solid rgba(220,232,244,0.8)",
+            padding: "44px 40px",
+            boxShadow: "0 20px 60px rgba(11,31,53,0.1), 0 4px 20px rgba(11,31,53,0.06)"
+          }}>
+
+            {success ? (
+              /* Success state */
+              <div style={{ textAlign: "center", animation: "fadeInUp 0.5s ease both" }}>
+                <div style={{
+                  width: 72, height: 72, borderRadius: "50%",
+                  background: "linear-gradient(135deg, #dcfce7, #bbf7d0)",
+                  border: "3px solid #86efac",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  margin: "0 auto 24px"
+                }}>
+                  <Icon d={icons.check} size={34} color="#16a34a" stroke={2.5} />
+                </div>
+                <h2 style={{ fontSize: 24, fontWeight: 800, color: "#0b1f35", margin: "0 0 10px" }}>Password Updated!</h2>
+                <p style={{ fontSize: 14, color: "#6b82a0", lineHeight: 1.6, marginBottom: 32 }}>
+                  Your password has been reset successfully and your Excel sheet has been updated. You can now sign in with your new password.
+                </p>
+                <button className="login-btn" onClick={() => window.location.href = window.location.origin + window.location.pathname}>
+                  Go to Sign In
+                </button>
+              </div>
+            ) : (
+              /* Form state */
+              <>
+                <div style={{ marginBottom: 32 }}>
+                  <div style={{
+                    width: 56, height: 56, borderRadius: 16,
+                    background: "linear-gradient(135deg, #f0fdf4, #dcfce7)",
+                    border: "2px solid #86efac",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    marginBottom: 22, position: "relative"
+                  }}>
+                    <Icon d={icons.lock} size={24} color="#16a34a" />
+                    <div style={{
+                      position: "absolute", inset: -4, borderRadius: 20,
+                      border: "2px solid rgba(22,163,74,0.2)",
+                      animation: "pulse-ring 2s ease-out infinite"
+                    }} />
+                  </div>
+                  <h2 style={{ margin: "0 0 8px", fontSize: 26, fontWeight: 800, color: "#0b1f35", letterSpacing: -0.5 }}>
+                    New Password 🔒
+                  </h2>
+                  <p style={{ margin: 0, fontSize: 14, color: "#6b82a0", lineHeight: 1.5 }}>
+                    Choose a <strong style={{ color: "#16a34a" }}>strong password</strong> for your account.
+                  </p>
+                </div>
+
+                {error && (
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 10, padding: "12px 16px",
+                    borderRadius: 12, background: "#fff1f1", border: "1.5px solid #fca5a5",
+                    marginBottom: 20, fontSize: 13, color: "#d93b3b", animation: "fadeInUp 0.3s ease both"
+                  }}>
+                    <Icon d={icons.info} size={16} color="#d93b3b" />
+                    <span>{error}</span>
+                  </div>
+                )}
+
+                {/* New Password */}
+                <div style={{ marginBottom: 16, animation: "fadeInUp 0.5s ease 0.1s both" }}>
+                  <label style={{
+                    display: "block", fontSize: 11.5, fontWeight: 700,
+                    color: pFocus ? "#16a34a" : "#2c4a6e",
+                    marginBottom: 8, letterSpacing: 0.8, textTransform: "uppercase", transition: "color 0.2s"
+                  }}>New Password</label>
+                  <div style={{ position: "relative" }}>
+                    <div style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }}>
+                      <Icon d={icons.lock} size={16} color={pFocus ? "#16a34a" : "#a8bcd4"} />
+                    </div>
+                    <input className="login-inp" type={showP ? "text" : "password"}
+                      placeholder="Enter new password"
+                      value={p} onChange={e => setP(e.target.value)}
+                      onFocus={() => setPFocus(true)} onBlur={() => setPFocus(false)}
+                      style={{
+                        paddingLeft: 44, paddingRight: 48,
+                        borderColor: p.length > 0 ? strengthColor[strength] : undefined
+                      }}
+                    />
+                    <button className="eye-btn" onClick={() => setShowP(v => !v)}>
+                      <Icon d={showP ? icons.eyeOff : icons.eye} size={16} color="currentColor" />
+                    </button>
+                  </div>
+                  {/* Strength bar */}
+                  {p.length > 0 && (
+                    <div style={{ marginTop: 8 }}>
+                      <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
+                        {[1, 2, 3].map(i => (
+                          <div key={i} style={{
+                            flex: 1, height: 3, borderRadius: 99,
+                            background: strength >= i ? strengthColor[strength] : "#e2ebf6",
+                            transition: "background 0.3s"
+                          }} />
+                        ))}
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: strengthColor[strength] }}>
+                        {strengthLabel[strength]} password
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Confirm Password */}
+                <div style={{ marginBottom: 28, animation: "fadeInUp 0.5s ease 0.15s both" }}>
+                  <label style={{
+                    display: "block", fontSize: 11.5, fontWeight: 700,
+                    color: p2Focus ? "#16a34a" : "#2c4a6e",
+                    marginBottom: 8, letterSpacing: 0.8, textTransform: "uppercase", transition: "color 0.2s"
+                  }}>Confirm Password</label>
+                  <div style={{ position: "relative" }}>
+                    <div style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }}>
+                      <Icon d={icons.lock} size={16} color={p2Focus ? "#16a34a" : "#a8bcd4"} />
+                    </div>
+                    <input className="login-inp" type={showP2 ? "text" : "password"}
+                      placeholder="Repeat your new password"
+                      value={p2} onChange={e => setP2(e.target.value)}
+                      onFocus={() => setP2Focus(true)} onBlur={() => setP2Focus(false)}
+                      onKeyDown={e => e.key === "Enter" && submit()}
+                      style={{
+                        paddingLeft: 44, paddingRight: 48,
+                        borderColor: p2.length > 0 ? (p === p2 ? "#22c55e" : "#f87171") : undefined
+                      }}
+                    />
+                    <button className="eye-btn" onClick={() => setShowP2(v => !v)}>
+                      <Icon d={showP2 ? icons.eyeOff : icons.eye} size={16} color="currentColor" />
+                    </button>
+                  </div>
+                  {p2.length > 0 && p !== p2 && (
+                    <p style={{ margin: "6px 0 0", fontSize: 12, color: "#f87171", fontWeight: 500 }}>
+                      Passwords don't match
+                    </p>
+                  )}
+                </div>
+
+                {/* Update Button */}
+                <div style={{ animation: "fadeInUp 0.5s ease 0.2s both" }}>
+                  <button
+                    className="login-btn"
+                    onClick={submit}
+                    disabled={loading}
+                    style={{
+                      background: loading ? "#94a3b8" :
+                        "linear-gradient(135deg, #16a34a 0%, #22c55e 100%)",
+                      boxShadow: "0 4px 15px rgba(22,163,74,0.4)"
+                    }}
+                  >
+                    {loading ? (
+                      <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                        <span style={{
+                          width: 16, height: 16, border: "2.5px solid rgba(255,255,255,0.4)",
+                          borderTopColor: "white", borderRadius: "50%",
+                          display: "inline-block", animation: "spin 0.8s linear infinite"
+                        }} />
+                        Updating Password...
+                      </span>
+                    ) : "Update Password"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
    ROOT
 ══════════════════════════════════════════════════════════════ */
 export default function App() {
-  // ── Admin credentials (hardcoded, never sent to sheet) ──
+  const [view, setView] = useState("login"); // login, dashboard, admin, forgot, reset
+  const [resetToken, setResetToken] = useState(null);
+
+  // ── Admin credentials ──
   const ADMIN_USER = "brolly@admin";
   const ADMIN_PASS = "Brolly@pass";
 
-  // ── Restore logged-in user from localStorage ──
-  const savedState = (() => {
-    try { return JSON.parse(localStorage.getItem("wt_user") || "null"); } catch { return null; }
-  })();
-
-  const [employee, setEmployee] = useState(savedState?.role === "employee" ? savedState.data : null);
-  const [isAdmin, setIsAdmin] = useState(savedState?.role === "admin");
+  // ── Restore state ──
+  const [employee, setEmployee] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState("");
   const [creds, setCreds] = useState(FALLBACK_CREDS);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  useEffect(() => {
+    const saved = JSON.parse(localStorage.getItem("wt_user") || "null");
+    if (saved) {
+      if (saved.role === "admin") setIsAdmin(true);
+      else setEmployee(saved.data);
+    }
+
+    // Handle reset password URL
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token") || window.location.pathname.split("/reset-password/")[1];
+    if (token) {
+      setResetToken(token);
+      setView("reset");
+    }
+  }, []);
 
   useEffect(() => {
     if (!SCRIPT_URL || SCRIPT_URL.includes("YOUR_SCRIPT_URL_HERE")) return;
@@ -1427,7 +2162,6 @@ export default function App() {
     const userInp = u.trim().toLowerCase();
     const passInp = p.trim();
 
-    // Check admin first
     if (userInp === ADMIN_USER && passInp === ADMIN_PASS) {
       setIsAdmin(true);
       setEmployee(null);
@@ -1436,10 +2170,12 @@ export default function App() {
       return;
     }
 
-    // Check employee credentials
+    // Support login by Username OR Email
     const found = creds.find(c => {
-      return String(c.username || c.UserName || "").trim().toLowerCase() === userInp
-        && String(c.password || c.Password || "").trim() === passInp;
+      const usernameMatch = (c.username || c.UserName || "").trim().toLowerCase() === userInp;
+      const emailMatch = (c.email || c.Email || "").trim().toLowerCase() === userInp;
+      const passwordMatch = (c.password || c.Password || "").trim() === passInp;
+      return (usernameMatch || emailMatch) && passwordMatch;
     });
     if (found) {
       setEmployee(found);
@@ -1447,23 +2183,55 @@ export default function App() {
       setError("");
       localStorage.setItem("wt_user", JSON.stringify({ role: "employee", data: found }));
     } else {
-      setError("Invalid username or password. Please try again.");
+      setError("Invalid username or password.");
     }
   };
 
   const handleSignOut = () => {
-    setEmployee(null);
-    setIsAdmin(false);
-    setError("");
+    setEmployee(null); setIsAdmin(false); setError("");
     localStorage.removeItem("wt_user");
-    localStorage.removeItem("wt_employee"); // legacy key cleanup
     localStorage.removeItem("wt_session");
+  };
+
+  const sendResetLink = async (email) => {
+    try {
+      const resp = await fetch(API_BASE + "forgot-password/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+      return resp.ok;
+    } catch (e) { return false; }
+  };
+
+  const resetPassword = async (token, password) => {
+    try {
+      const resp = await fetch(API_BASE + "reset-password/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, password })
+      });
+      if (resp.ok) {
+        alert("Password updated! Please log in with your new password.");
+        window.location.href = window.location.origin + window.location.pathname; // Clean URL
+        return true;
+      }
+      return false;
+    } catch (e) { return false; }
   };
 
   if (isAdmin) return <AdminDashboard onSignOut={handleSignOut} allEmployees={creds} />;
   if (employee) return <Dashboard employee={employee} onSignOut={handleSignOut} />;
 
+  if (view === "forgot") return <ForgotPasswordPage onBack={() => setView("login")} onSendLink={sendResetLink} />;
+  if (view === "reset") return <ResetPasswordPage token={resetToken} onReset={resetPassword} />;
+
   return (
-    <LoginPage onLogin={handleLogin} error={error} isSyncing={isSyncing} />
+    <LoginPage
+      onLogin={handleLogin}
+      error={error}
+      isSyncing={isSyncing}
+      onForgot={() => setView("forgot")}
+    />
   );
 }
