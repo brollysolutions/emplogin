@@ -178,6 +178,13 @@ const LOGIN_STYLES = `
     transition: color 0.2s, background 0.2s;
   }
   .eye-btn:hover { color:#1560bd; background:rgba(21,96,189,0.08); }
+
+  @media (max-width: 900px) {
+    .login-left-panel { display: none !important; }
+    .login-right-panel { padding: 24px 16px !important; }
+    .login-card { padding: 32px 24px !important; border-radius: 20px !important; }
+    .login-title { fontSize: 22px !important; }
+  }
 `;
 
 function LoginPage({ onLogin, error, isSyncing, onForgot }) {
@@ -219,7 +226,7 @@ function LoginPage({ onLogin, error, isSyncing, onForgot }) {
       <style>{LOGIN_STYLES}</style>
 
       {/* ── Left Panel ── */}
-      <div style={{
+      <div className="login-left-panel" style={{
         flex: "0 0 440px",
         background: "linear-gradient(160deg, #0b1f35 0%, #0d2b4e 50%, #0f3460 100%)",
         display: "flex", flexDirection: "column", justifyContent: "space-between",
@@ -299,7 +306,7 @@ function LoginPage({ onLogin, error, isSyncing, onForgot }) {
       </div>
 
       {/* ── Right Panel ── */}
-      <div style={{
+      <div className="login-right-panel" style={{
         flex: 1, display: "flex", alignItems: "center",
         justifyContent: "center", padding: "40px 24px"
       }}>
@@ -309,7 +316,7 @@ function LoginPage({ onLogin, error, isSyncing, onForgot }) {
         }}>
 
           {/* Card */}
-          <div style={{
+          <div className="login-card" style={{
             background: "white", borderRadius: 24,
             border: "1px solid rgba(220,232,244,0.8)",
             padding: "44px 40px",
@@ -333,7 +340,7 @@ function LoginPage({ onLogin, error, isSyncing, onForgot }) {
                   animation: "pulse-ring 2s ease-out infinite"
                 }} />
               </div>
-              <h2 style={{
+              <h2 className="login-title" style={{
                 margin: "0 0 8px", fontSize: 26, fontWeight: 800,
                 color: "#0b1f35", letterSpacing: -0.5
               }}>
@@ -542,7 +549,18 @@ function Badge({ status }) {
 function Dashboard({ employee, onSignOut }) {
   // ── Restore session from localStorage on mount ──
   const savedSession = (() => {
-    try { return JSON.parse(localStorage.getItem("wt_session") || "null"); } catch { return null; }
+    try { 
+      const session = JSON.parse(localStorage.getItem("wt_session") || "null");
+      if (session && session.loginTime) {
+        const sessionDate = new Date(session.loginTime).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+        const todayDate = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+        if (sessionDate !== todayDate) {
+          localStorage.removeItem("wt_session");
+          return null;
+        }
+      }
+      return session;
+    } catch { return null; }
   })();
 
   const [now, setNow] = useState(new Date());
@@ -693,7 +711,7 @@ function Dashboard({ employee, onSignOut }) {
 
     const hrs = secondsToHMS(tWork);
     const brk = secondsToHMS(tBreak);
-    const WORK_GOAL = 9;
+    const WORK_GOAL = 8;
     const dayStatus = hrs.total >= WORK_GOAL ? "Full Day" : "Half Day";
 
     const payload = {
@@ -763,8 +781,7 @@ function Dashboard({ employee, onSignOut }) {
     showToast("Syncing to Google Sheets...", "info");
     const lt = logoutTime || new Date();
 
-    const WORK_GOAL = 9;
-    const dayStatus = liveHrs.total >= WORK_GOAL ? "Full Day" : "Half Day";
+    const WORK_GOAL = 8;
 
     // Calculate extra hours beyond the 9h goal
     const extraHrsFloat = Math.max(0, liveHrs.total - WORK_GOAL);
@@ -808,8 +825,8 @@ function Dashboard({ employee, onSignOut }) {
     }
   };
 
-  const pct = Math.round((Math.min(liveHrs.total, 9) / 9) * 100);
-  const extraStr = liveHrs.total > 9 ? hmsStr(secondsToHMS(Math.floor((liveHrs.total - 9) * 3600))) : null;
+  const pct = Math.round((Math.min(liveHrs.total, 8) / 8) * 100);
+  const extraStr = liveHrs.total > 8 ? hmsStr(secondsToHMS(Math.floor((liveHrs.total - 8) * 3600))) : null;
 
   const greetHour = now.getHours();
   const greeting = greetHour < 12 ? "Good morning" : greetHour < 17 ? "Good afternoon" : "Good evening";
@@ -835,6 +852,27 @@ function Dashboard({ employee, onSignOut }) {
         @keyframes slideIn{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
         .pulse-active{animation: pulse 2s infinite;}
+
+        /* Mobile Responsive Adjustments */
+        @media (max-width: 768px) {
+          .stat-grid { grid-template-columns: 1fr 1fr !important; }
+          .main-grid { grid-template-columns: 1fr !important; }
+          .top-bar { padding: 8px 12px !important; height: auto !important; flex-wrap: wrap !important; gap: 8px !important; }
+          .top-bar-title { display: none !important; }
+          .top-bar-user { order: 2; width: 100%; justify-content: space-between !important; border-top: 1px solid ${T.border}; padding-top: 8px !important; margin-top: 4px; }
+          .top-bar-status { order: 3; width: 100%; justify-content: center !important; }
+          .dashboard-content { padding: 12px 10px !important; }
+          .greeting-row { flex-direction: column; align-items: stretch !important; gap: 12px; }
+          .greeting-text { font-size: 18px !important; }
+          .time-display { width: 100% !important; text-align: center !important; padding: 10px !important; }
+          .time-text { font-size: 20px !important; }
+          .profile-footer { flex-direction: column !important; align-items: flex-start !important; gap: 20px; }
+          .profile-footer-stats { width: 100%; justify-content: space-between !important; }
+          .name-label { display: none !important; }
+        }
+        @media (max-width: 480px) {
+          .stat-grid { grid-template-columns: 1fr !important; }
+        }
       `}</style>
 
       {/* ── Toast ── */}
@@ -852,7 +890,7 @@ function Dashboard({ employee, onSignOut }) {
       )}
 
       {/* ── Topbar ── */}
-      <div style={{
+      <div className="top-bar" style={{
         background: T.white, borderBottom: `1px solid ${T.border}`,
         padding: "0 28px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60
       }}>
@@ -863,13 +901,13 @@ function Dashboard({ employee, onSignOut }) {
           }}>
             <img src={logo} alt="Brolly Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </div>
-          <div>
+          <div className="top-bar-title">
             <div style={{ fontWeight: 700, fontSize: 15, color: T.ink, letterSpacing: 0.2 }}>Brolly Software Solutions</div>
             <div style={{ fontSize: 10, color: T.muted, letterSpacing: 0.5 }}>ATTENDANCE SYSTEM</div>
           </div>
         </div>
 
-        <div style={{
+        <div className="top-bar-status" style={{
           display: "flex", alignItems: "center", gap: 8, padding: "6px 8px",
           borderRadius: 10, background: T.surface, border: `1px solid ${T.border}`
         }}>
@@ -878,14 +916,14 @@ function Dashboard({ employee, onSignOut }) {
             background: status === "working" ? T.green : status === "break" ? T.amber : T.faint,
             animation: (status === "working" || status === "break") ? "pulse 2s infinite" : "none"
           }} />
-          <span style={{ fontSize: 12, color: T.muted }}>
+          <span style={{ fontSize: 11, color: T.muted }}>
             {status === "working" ? "Working" : status === "break" ? "On Break" : status === "loggedOut" ? "Session Ended" : "Not Clocked In"}
           </span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Avatar name={employee.name} size={34} />
-          <div style={{ marginRight: 4 }}>
+        <div className="top-bar-user" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Avatar name={employee.name} size={32} />
+          <div className="name-label" style={{ marginRight: 4 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{employee.name}</div>
             <div style={{ fontSize: 11, color: T.muted }}>{employee.role}</div>
           </div>
@@ -902,10 +940,10 @@ function Dashboard({ employee, onSignOut }) {
       </div>
 
       {/* ── Main content ── */}
-      <div style={{ maxWidth: 1080, margin: "0 auto", padding: "28px 24px" }}>
+      <div className="dashboard-content" style={{ width: "100%", maxWidth: 1080, margin: "0 auto", padding: "28px 24px", boxSizing: "border-box" }}>
 
         {/* Greeting row */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+        <div className="greeting-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
           <div>
             <h1 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 700, color: T.ink }}>
               {greeting}, {employee.name.split(" ")[0]} 👋
@@ -915,8 +953,8 @@ function Dashboard({ employee, onSignOut }) {
             </p>
           </div>
 
-          <div style={{ background: T.ink, borderRadius: 14, padding: "14px 22px", textAlign: "right" }}>
-            <div style={{
+          <div className="time-display" style={{ background: T.ink, borderRadius: 14, padding: "14px 22px", textAlign: "right" }}>
+            <div className="time-text" style={{
               fontSize: 26, fontWeight: 700, color: "white",
               fontVariantNumeric: "tabular-nums", letterSpacing: 1
             }}>
@@ -956,7 +994,7 @@ function Dashboard({ employee, onSignOut }) {
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 11, color: T.muted }}>
               <span>{hmsStr(liveHrs)} worked</span>
-              <span>Goal: 9:00:00</span>
+              <span>Goal: 8:00:00</span>
             </div>
           </div>
         )}
@@ -973,9 +1011,9 @@ function Dashboard({ employee, onSignOut }) {
         </div>
 
         {/* Stat cards */}
-        <div style={{ display: "flex", gap: 14, marginBottom: 22 }}>
+        <div className="stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 14, marginBottom: 22 }}>
           <StatCard label="Work Time" value={hmsStr(liveHrs)}
-            sub={`${pct}% of daily goal (9h)`}
+            sub={`${pct}% of daily goal (8h)`}
             icon={icons.clock} color={T.green} bg={T.greenBg} />
           <StatCard label="Break Time" value={hmsStr(liveBreakHrs)}
             sub="Total break duration today"
@@ -984,7 +1022,7 @@ function Dashboard({ employee, onSignOut }) {
             sub={loginTime ? `Started at ${fmtTime(loginTime)}` : "Not started"}
             icon={icons.user} color={T.accent} bg="#e8f0fc" />
           <StatCard label="Overtime" value={extraStr || "—"}
-            sub={extraStr ? "Completed 9h goal" : "No overtime yet"}
+            sub={extraStr ? "Completed 8h goal" : "No overtime yet"}
             icon={icons.refresh} color={T.purple} bg={T.purpleBg} />
           <StatCard label="Log Count" value={String(history.length)}
             sub="Daily entries sync"
@@ -992,7 +1030,7 @@ function Dashboard({ employee, onSignOut }) {
         </div>
 
         {activeTab === "today" && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
+          <div className="main-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
 
             {/* Control Panel */}
             <div style={{
@@ -1172,7 +1210,7 @@ function Dashboard({ employee, onSignOut }) {
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>
                     <tr style={{ background: T.surface }}>
-                      {["Date", "Clock In", "Clock Out", "Hours", "Extra Hrs", "Status", "Tasks"].map(h => (
+                      {["Date", "Clock In", "Clock Out", "Hours", "Break Time", "Extra Hrs", "Status", "Tasks"].map(h => (
                         <th key={h} style={{
                           padding: "11px 16px", textAlign: "left",
                           fontSize: 11, fontWeight: 700, color: T.muted, letterSpacing: 0.5,
@@ -1189,6 +1227,7 @@ function Dashboard({ employee, onSignOut }) {
                         <td style={{ padding: "12px 16px", color: T.green, fontWeight: 600 }}>{r.loginT}</td>
                         <td style={{ padding: "12px 16px", color: T.red, fontWeight: 600 }}>{r.logoutT}</td>
                         <td style={{ padding: "12px 16px", fontWeight: 700, color: T.ink, fontVariantNumeric: "tabular-nums" }}>{r.hours}</td>
+                        <td style={{ padding: "12px 16px", fontWeight: 600, color: T.amber, fontVariantNumeric: "tabular-nums" }}>{r.breakTime || r.break_time || "—"}</td>
                         <td style={{
                           padding: "12px 16px", fontWeight: 700,
                           color: r.extraHours && r.extraHours !== "—" ? T.amber : T.faint,
@@ -1212,7 +1251,7 @@ function Dashboard({ employee, onSignOut }) {
         )}
 
         {/* Employee profile footer */}
-        <div style={{
+        <div className="profile-footer" style={{
           marginTop: 20, background: T.white, borderRadius: 16, padding: "16px 24px",
           border: `1px solid ${T.border}`, display: "flex", alignItems: "center",
           gap: 16, justifyContent: "space-between"
@@ -1224,7 +1263,7 @@ function Dashboard({ employee, onSignOut }) {
               <div style={{ fontSize: 12, color: T.muted }}>{employee.role} · {employee.dept}</div>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 24 }}>
+          <div className="profile-footer-stats" style={{ display: "flex", gap: 24 }}>
             {[
               { label: "Employee ID", value: employee.id },
               { label: "Department", value: employee.dept },
@@ -1418,11 +1457,11 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px" }}>
 
         {/* Stat cards */}
-        <div style={{ display: "flex", gap: 14, marginBottom: 24, flexWrap: "wrap" }}>
+        <div className="stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 14, marginBottom: 24 }}>
           <StatCard label="Total Employees" value={String(registeredCount)} sub="Registered" icon={icons.user} color={T.accent} bg="#e8f0fc" />
           <StatCard label="Today Present" value={String(todayRecs.length)} sub={fmtDate(new Date())} icon={icons.check} color={T.green} bg={T.greenBg} />
-          <StatCard label="Full Day Today" value={String(fullDayToday)} sub="≥ 9 hours" icon={icons.clock} color={T.green} bg={T.greenBg} />
-          <StatCard label="Half Day Today" value={String(halfDayToday)} sub="< 9 hours" icon={icons.chart} color={T.amber} bg={T.amberBg} />
+          <StatCard label="Full Day Today" value={String(fullDayToday)} sub="≥ 8 hours" icon={icons.clock} color={T.green} bg={T.greenBg} />
+          <StatCard label="Half Day Today" value={String(halfDayToday)} sub="< 8 hours" icon={icons.chart} color={T.amber} bg={T.amberBg} />
           <StatCard label="Total Records" value={String(records.length)} sub="All time" icon={icons.calendar} color={T.purple} bg={T.purpleBg} />
         </div>
 
@@ -1471,7 +1510,7 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: T.surface }}>
-                    {["Date", "ID", "Name", "Dept", "In", "Out", "Working Hrs", "Extra Hrs", "Status", "Daily Tasks"].map(h => (
+                    {["Date", "ID", "Name", "Dept", "In", "Out", "Working Hrs", "Break Time", "Extra Hrs", "Status", "Daily Tasks"].map(h => (
                       <th key={h} style={colStyle}>{h}</th>
                     ))}
                   </tr>
@@ -1491,6 +1530,7 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
                       <td style={{ ...cellStyle, color: T.green }}>{r.logint || r.intime}</td>
                       <td style={{ ...cellStyle, color: T.red }}>{r.logoutt || r.outtime}</td>
                       <td style={{ ...cellStyle, fontWeight: 700 }}>{r.hours || r.workinghours}</td>
+                      <td style={{ ...cellStyle, color: T.amber }}>{r.break_time || r.breaktime || "—"}</td>
                       <td style={{ ...cellStyle, color: T.amber }}>{r.extrahours || r.extras}</td>
                       <td style={cellStyle}><Badge status={r.status} /></td>
                       <td style={{ ...cellStyle, color: T.muted, maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.tasks || r.workstatus}>
