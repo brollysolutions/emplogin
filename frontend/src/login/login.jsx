@@ -596,14 +596,30 @@ function Dashboard({ employee, onSignOut }) {
         const resp = await fetch(BACKEND_URL);
         if (resp.ok) {
           const data = await resp.json();
+          
+          // Filter history for THIS employee
+          const myHistory = data.filter(r => (r.id === employee.id || r.employeeid === employee.id));
+          setHistory(myHistory.map(r => ({
+            date: r.date,
+            loginT: r.logint,
+            logoutT: r.logoutt,
+            hours: r.hours,
+            breakTime: r.break_time,
+            extraHours: r.extrahours,
+            tasks: r.tasks,
+            status: r.status
+          })));
+
           const today = fmtDate(new Date());
-          const todayRec = data.find(r => (r.id === employee.id || r.employeeid === employee.id) && r.date === today);
+          const todayRec = myHistory.find(r => r.date === today);
 
           if (todayRec && !savedSession) {
             // Restore from server if local session is empty
             const parseHMS = (str) => {
               if (!str || str === "—") return 0;
-              const [h, m, s] = str.split(":").map(Number);
+              const parts = str.split(":");
+              if (parts.length !== 3) return 0;
+              const [h, m, s] = parts.map(Number);
               return (h * 3600) + (m * 60) + s;
             };
             setTotalWorkSeconds(parseHMS(todayRec.hours));
@@ -788,6 +804,7 @@ function Dashboard({ employee, onSignOut }) {
     const extraHrsTotal = Math.floor(extraHrsFloat * 3600);
     const extraHrsStr = extraHrsFloat > 0 ? hmsStr(secondsToHMS(extraHrsTotal)) : "—";
 
+    const dayStatus = liveHrs.total >= WORK_GOAL ? "Full Day" : "Half Day";
     const payload = {
       date: fmtDate(loginTime),
       id: employee.id,
@@ -817,7 +834,25 @@ function Dashboard({ employee, onSignOut }) {
         });
       }
 
-      setHistory(prev => [...prev, { date: payload.date, loginT: payload.loginT, logoutT: payload.logoutT, hours: payload.hours, extraHours: extraHrsStr, tasks: payload.tasks, status: dayStatus }]);
+      setHistory(prev => {
+        const idx = prev.findIndex(r => r.date === payload.date);
+        const newRec = { 
+          date: payload.date, 
+          loginT: payload.loginT, 
+          logoutT: payload.logoutT, 
+          hours: payload.hours, 
+          breakTime: payload.breakTime,
+          extraHours: extraHrsStr, 
+          tasks: payload.tasks, 
+          status: dayStatus 
+        };
+        if (idx >= 0) {
+          const upd = [...prev];
+          upd[idx] = newRec;
+          return upd;
+        }
+        return [...prev, newRec];
+      });
       showToast("Attendance synced to Cloud!", "success");
     } catch (err) {
       console.error("Sync failed:", err);
