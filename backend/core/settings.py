@@ -54,6 +54,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -150,3 +151,4 @@ DEFAULT_FROM_EMAIL = f"Brolly Solutions <{EMAIL_HOST_USER}>"
 
 # Google Sheets Sync API
 GOOGLE_SCRIPT_URL = os.environ.get('GOOGLE_SCRIPT_URL', '')
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
