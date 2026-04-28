@@ -27,3 +27,20 @@ class PasswordResetToken(models.Model):
 
     def __str__(self):
         return f"{self.email} - {self.token}"
+
+class Task(models.Model):
+    STATUS_CHOICES = [
+        ('Assigned', 'Assigned'),
+        ('Viewed', 'Viewed'),
+        ('Completed', 'Completed'),
+    ]
+    employee_id = models.CharField(max_length=50)
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Assigned')
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    viewed_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.title} - {self.employee_id} ({self.status})"

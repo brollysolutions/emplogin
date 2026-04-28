@@ -1,8 +1,8 @@
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import Attendance, PasswordResetToken
-from .serializers import AttendanceSerializer
+from .models import Attendance, PasswordResetToken, Task
+from .serializers import AttendanceSerializer, TaskSerializer
 import uuid
 from django.core.mail import send_mail
 from django.conf import settings
@@ -12,6 +12,8 @@ from datetime import timedelta
 from django.db.models import Q
 import requests
 import json
+from django.core.management import call_command
+import threading
 
 @api_view(['GET'])
 def health_check(request):
@@ -20,6 +22,16 @@ def health_check(request):
 @api_view(['GET', 'POST'])
 def attendance_list(request):
     try:
+        # Proactive cleanup: Auto-logout hanging sessions from previous days
+        def trigger_auto_logout():
+            try:
+                call_command('auto_logout')
+            except Exception as e:
+                print(f"Auto-logout background task failed: {e}")
+
+        # Run in a separate thread to not block the current request
+        threading.Thread(target=trigger_auto_logout).start()
+
         if request.method == 'GET':
             attendances = Attendance.objects.all().order_by('-date', '-timestamp')
             data = []
@@ -257,3 +269,40 @@ def sync_users(request):
         "message": f"Sync complete. Created {created_count}, Updated {updated_count} users.",
         "success": True
     }, status=status.HTTP_200_OK)
+
+@api_view(['GET', 'POST'])
+def task_list(request):
+    if request.method == 'GET':
+        employee_id = request.query_params.get('employee_id')
+        if employee_id:
+            tasks = Task.objects.filter(employee_id=employee_id).order_by('-assigned_at')
+        else:
+            tasks = Task.objects.all().order_by('-assigned_at')
+        serializer = TaskSerializer(tasks, many=True)
+        return Response(serializer.data)
+
+    elif request.method == 'POST':
+        serializer = TaskSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['PATCH'])
+def update_task_status(request, pk):
+    try:
+        task = Task.objects.get(pk=pk)
+    except Task.DoesNotExist:
+        return Response({"error": "Task not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    new_status = request.data.get('status')
+    if new_status == 'Viewed' and task.status == 'Assigned':
+        task.status = 'Viewed'
+        task.viewed_at = timezone.now()
+    elif new_status == 'Completed':
+        task.status = 'Completed'
+        task.completed_at = timezone.now()
+    
+    task.save()
+    serializer = TaskSerializer(task)
+    return Response(serializer.data)

@@ -52,6 +52,7 @@ const API_BASE = window.location.hostname === "localhost"
   ? "http://localhost:8000/api/v1/"
   : "/login/api/v1/";
 const BACKEND_URL = API_BASE + "attendance/";
+const TASKS_URL = API_BASE + "tasks/";
 
 /* ── Avatar ────────────────────────────────────────────────── */
 function Avatar({ name, size = 40, accent = T.accent }) {
@@ -546,19 +547,27 @@ function StatCard({ label, value, sub, icon, color, bg }) {
 ══════════════════════════════════════════════════════════════ */
 function Badge({ status }) {
   const map = {
-    "Full Day": { bg: "#e8fdf5", color: T.green, dot: "#0d9e6e" },
-    "Half Day": { bg: T.amberBg, color: T.amber, dot: "#b45309" },
-    "Incomplete": { bg: "#fef0f0", color: T.red, dot: "#d93b3b" },
-    "Active": { bg: "#e0f2fe", color: T.accent2, dot: T.accent2 },
+    "Full Day": { bg: "#ecfdf5", color: "#065f46", dot: "#10b981" },
+    "Half Day": { bg: "#fffbeb", color: "#92400e", dot: "#f59e0b" },
+    "Incomplete": { bg: "#fef2f2", color: "#991b1b", dot: "#ef4444" },
+    "Active": { bg: "#f0fdf4", color: "#166534", dot: "#22c55e", pulse: true },
+    "Leave": { bg: "#f9fafb", color: "#374151", dot: "#9ca3af" },
+    "Viewed": { bg: "#eef2ff", color: "#3730a3", dot: "#6366f1" },
+    "Completed": { bg: "#f0fdf4", color: "#166534", dot: "#22c55e" },
+    "Assigned": { bg: "#fff7ed", color: "#9a3412", dot: "#f97316" },
   };
   const s = map[status] || map["Incomplete"];
   return (
     <span style={{
-      display: "inline-flex", alignItems: "center", gap: 5,
-      padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700,
-      background: s.bg, color: s.color
+      display: "inline-flex", alignItems: "center", gap: 6,
+      padding: "4px 12px", borderRadius: 20, fontSize: 11, fontWeight: 700,
+      background: s.bg, color: s.color, border: `1px solid ${s.dot}20`,
+      whiteSpace: "nowrap"
     }}>
-      <span style={{ width: 6, height: 6, borderRadius: "50%", background: s.dot, flexShrink: 0 }} />
+      <span style={{ 
+        width: 6, height: 6, borderRadius: "50%", background: s.dot, flexShrink: 0,
+        animation: s.pulse ? "pulse 2s infinite" : "none"
+      }} />
       {status}
     </span>
   );
@@ -597,6 +606,8 @@ function Dashboard({ employee, onSignOut }) {
   const [status, setStatus] = useState(savedSession?.status || "idle"); // idle, working, break, loggedOut
 
   const [taskInput, setTask] = useState(savedSession?.taskInput || "");
+  const [assignedTasks, setAssignedTasks] = useState([]);
+  const [showTasksModal, setShowTasksModal] = useState(false);
   const [toast, setToast] = useState(null);
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -685,6 +696,48 @@ function Dashboard({ employee, onSignOut }) {
     
     return () => clearInterval(pollInterval);
   }, [employee.id, status]); // Re-run if status changes locally to ensure we stay synced
+
+  // Fetch assigned tasks
+  const fetchAssignedTasks = async () => {
+    try {
+      const resp = await fetch(`${TASKS_URL}?employee_id=${employee.id}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        setAssignedTasks(data);
+      }
+    } catch (e) {
+      console.error("Task fetch failed", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchAssignedTasks();
+    const t = setInterval(fetchAssignedTasks, 15000); // Check for new tasks every 15s
+    return () => clearInterval(t);
+  }, [employee.id]);
+
+  const markTaskViewed = async (taskId) => {
+    try {
+      await fetch(`${TASKS_URL}${taskId}/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "Viewed" })
+      });
+      fetchAssignedTasks();
+    } catch (e) { console.error(e); }
+  };
+
+  const markTaskCompleted = async (taskId) => {
+    try {
+      await fetch(`${TASKS_URL}${taskId}/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "Completed" })
+      });
+      fetchAssignedTasks();
+      showToast("Task marked as completed!", "success");
+    } catch (e) { console.error(e); }
+  };
 
   const [xlWb, setXlWb] = useState(null);
   const [xlName, setXlName] = useState(null);
@@ -971,6 +1024,57 @@ function Dashboard({ employee, onSignOut }) {
         </div>
       )}
 
+      {/* ── Assigned Tasks Modal (Employee View) ── */}
+      {showTasksModal && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 1050,
+          background: "rgba(11,31,53,0.6)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 20
+        }} onClick={() => setShowTasksModal(false)}>
+          <div style={{
+            background: "white", borderRadius: 24, width: "100%", maxWidth: 500,
+            boxShadow: "0 20px 50px rgba(0,0,0,0.3)", animation: "fadeInUp 0.3s ease",
+            overflow: "hidden"
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ background: T.ink, padding: "20px 24px", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontSize: 18, fontWeight: 800 }}>Your Assigned Tasks</div>
+              <button onClick={() => setShowTasksModal(false)} style={{ background: "none", border: "none", color: "white", cursor: "pointer" }}>
+                <Icon d="M18 6L6 18M6 6l12 12" size={20} color="white" />
+              </button>
+            </div>
+            <div style={{ padding: 24, maxHeight: 400, overflowY: "auto" }}>
+              {assignedTasks.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 0", color: T.muted }}>No tasks assigned to you.</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {assignedTasks.map(t => (
+                    <div key={t.id} style={{ 
+                      padding: 16, borderRadius: 16, border: `1px solid ${T.border}`,
+                      background: t.status === "Assigned" ? "#fff9f0" : "white"
+                    }} onMouseEnter={() => t.status === "Assigned" && markTaskViewed(t.id)}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                        <div style={{ fontWeight: 700, color: T.ink }}>{t.title}</div>
+                        <Badge status={t.status} />
+                      </div>
+                      <p style={{ fontSize: 13, color: T.ink2, margin: "0 0 12px", lineHeight: 1.5 }}>{t.description}</p>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ fontSize: 11, color: T.muted }}>Assigned {new Date(t.assigned_at).toLocaleDateString()}</div>
+                        {t.status !== "Completed" && (
+                          <button onClick={() => markTaskCompleted(t.id)} style={{
+                            padding: "6px 12px", borderRadius: 8, border: "none", background: T.green, color: "white",
+                            fontSize: 12, fontWeight: 700, cursor: "pointer"
+                          }}>Mark as Complete</button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Details Modal ── */}
       {selectedRecord && (
         <div style={{
@@ -1078,6 +1182,23 @@ function Dashboard({ employee, onSignOut }) {
         </div>
 
         <div className="top-bar-user" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {/* Task Notification */}
+          <button onClick={() => setShowTasksModal(true)} style={{
+            position: "relative", width: 36, height: 36, borderRadius: 10, border: `1.5px solid ${T.border}`,
+            background: "none", color: T.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center"
+          }}>
+            <Icon d={icons.tasks} size={18} color={T.muted} />
+            {assignedTasks.filter(t => t.status === "Assigned").length > 0 && (
+              <span style={{
+                position: "absolute", top: -5, right: -5, width: 18, height: 18, borderRadius: "50%",
+                background: T.red, color: "white", fontSize: 10, fontWeight: 800,
+                display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid white"
+              }}>
+                {assignedTasks.filter(t => t.status === "Assigned").length}
+              </span>
+            )}
+          </button>
+
           <Avatar name={employee.name} size={32} />
           <div className="name-label" style={{ marginRight: 4 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{employee.name}</div>
@@ -1453,6 +1574,125 @@ function Dashboard({ employee, onSignOut }) {
 }
 
 /* ══════════════════════════════════════════════════════════════
+   ASSIGN TASK MODAL
+══════════════════════════════════════════════════════════════ */
+function AssignTaskModal({ employee, onClose, onAssigned }) {
+  const [title, setTitle] = useState("");
+  const [desc, setDesc] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const submit = async () => {
+    if (!title || !desc) return;
+    setLoading(true);
+    try {
+      const resp = await fetch(TASKS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          employee_id: employee.id,
+          title,
+          description: desc,
+          status: "Assigned"
+        })
+      });
+      if (resp.ok) {
+        onAssigned();
+        onClose();
+      } else {
+        alert("Failed to assign task");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error connecting to server");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 2100,
+      background: "rgba(11, 31, 53, 0.4)", backdropFilter: "blur(8px)",
+      display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+      animation: "fadeIn 0.3s ease"
+    }} onClick={onClose}>
+      <div style={{
+        background: "white", borderRadius: 28, width: "100%", maxWidth: 480,
+        boxShadow: "0 25px 60px -12px rgba(0,0,0,0.25)", animation: "popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+        overflow: "hidden", border: "1px solid rgba(255,255,255,0.2)"
+      }} onClick={e => e.stopPropagation()}>
+        
+        {/* Header with Gradient */}
+        <div style={{ 
+          background: `linear-gradient(135deg, ${T.ink} 0%, #1e3a5f 100%)`, 
+          padding: "32px 32px", color: "white", position: "relative" 
+        }}>
+          <div style={{ position: "relative", zIndex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 8 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Icon d={icons.tasks} size={22} color="white" />
+              </div>
+              <div>
+                <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.5 }}>Assign Task</div>
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>{employee.name} · {employee.id}</div>
+              </div>
+            </div>
+          </div>
+          {/* Decorative Circle */}
+          <div style={{ position: "absolute", top: -20, right: -20, width: 120, height: 120, borderRadius: "50%", background: "rgba(255,255,255,0.03)" }} />
+        </div>
+
+        <div style={{ padding: "32px" }}>
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: T.ink2, marginBottom: 8, marginLeft: 2 }}>Task Title</label>
+            <input className="premium-inp" 
+              placeholder="e.g., Finalize Monthly Report" 
+              value={title} 
+              onChange={e => setTitle(e.target.value)} 
+              style={{
+                width: "100%", padding: "14px 18px", borderRadius: 14, border: `1.5px solid ${T.border}`,
+                background: T.surface, fontSize: 14, fontWeight: 500, outline: "none", transition: "all 0.2s",
+                boxSizing: "border-box"
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: 32 }}>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: T.ink2, marginBottom: 8, marginLeft: 2 }}>Task Details</label>
+            <textarea className="premium-area" 
+              placeholder="Provide clear instructions for the employee..." 
+              value={desc} 
+              onChange={e => setDesc(e.target.value)} 
+              style={{
+                width: "100%", padding: "14px 18px", borderRadius: 14, border: `1.5px solid ${T.border}`,
+                background: T.surface, fontSize: 14, fontWeight: 500, outline: "none", transition: "all 0.2s",
+                minHeight: 120, resize: "none", lineHeight: 1.6, boxSizing: "border-box"
+              }}
+            />
+          </div>
+
+          <div style={{ display: "flex", gap: 14 }}>
+            <button onClick={onClose} style={{ 
+              flex: 1, padding: "14px", borderRadius: 14, border: `1.5px solid ${T.border}`, 
+              background: "white", color: T.ink2, fontWeight: 700, cursor: "pointer",
+              transition: "all 0.2s", fontSize: 15
+            }} className="p-btn-sec">Cancel</button>
+            <button onClick={submit} disabled={loading} style={{ 
+              flex: 1, padding: "14px", borderRadius: 14, border: "none", 
+              background: loading ? T.faint : T.accent, 
+              color: "white", fontWeight: 700, cursor: "pointer",
+              transition: "all 0.2s", fontSize: 15,
+              boxShadow: `0 8px 20px ${T.accent}30`
+            }} className="p-btn-pri">
+              {loading ? "Assigning..." : "Send Task"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
    ADMIN DASHBOARD
 ══════════════════════════════════════════════════════════════ */
 function AdminDashboard({ onSignOut, allEmployees = [] }) {
@@ -1464,6 +1704,8 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
   const [filterStatus, setFilterStatus] = useState("all");
   const [activeTab, setTab] = useState("attendance");
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [assignTaskTo, setAssignTaskTo] = useState(null);
+  const [taskFeed, setTaskFeed] = useState([]);
 
   const fetchAttendance = async () => {
     setLoading(true);
@@ -1502,6 +1744,17 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
     }
     setLastSync(new Date());
     setLoading(false);
+
+    // Fetch Task Feed
+    try {
+      const tResp = await fetch(TASKS_URL);
+      if (tResp.ok) {
+        const tData = await tResp.json();
+        setTaskFeed(tData);
+      }
+    } catch (e) {
+      console.error("Failed to fetch task feed", e);
+    }
   };
 
   useEffect(() => {
@@ -1518,14 +1771,42 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
   const halfDayToday = todayRecs.filter(r => r.status === "Half Day").length;
 
   // Filtered records
-  const filtered = records.filter(r => {
+  const filtered = (() => {
     const q = search.toLowerCase();
-    const matchSearch = !q || (r.name || r.employeename || "").toLowerCase().includes(q)
-      || (r.id || r.employeeid || "").toLowerCase().includes(q);
-    const matchDate = !filterDate || (r.date || "").includes(filterDate);
-    const matchStatus = filterStatus === "all" || r.status === filterStatus;
-    return matchSearch && matchDate && matchStatus;
-  });
+    const targetDate = filterDate || today;
+
+    if (filterStatus === "Leave") {
+       return allEmployees
+         .filter(emp => {
+           const hasRec = records.some(r => {
+             const eid = r.id || r.employeeid;
+             return eid === emp.id && r.date === targetDate;
+           });
+           const matchSearch = !q || emp.name.toLowerCase().includes(q) || emp.id.toLowerCase().includes(q);
+           return !hasRec && matchSearch;
+         })
+         .map(emp => ({
+           id: emp.id,
+           name: emp.name,
+           dept: emp.dept,
+           date: targetDate,
+           logint: "—",
+           logoutt: "—",
+           hours: "—",
+           break_time: "00:00:00",
+           tasks: "—",
+           status: "Leave"
+         }));
+    }
+
+    return records.filter(r => {
+      const ms = !q || (r.name || r.employeename || "").toLowerCase().includes(q)
+        || (r.id || r.employeeid || "").toLowerCase().includes(q);
+      const md = !filterDate || (r.date || "").includes(filterDate);
+      const mst = filterStatus === "all" || r.status === filterStatus;
+      return ms && md && mst;
+    });
+  })();
 
   const exportExcel = () => {
     const wb = XLSX.utils.book_new();
@@ -1543,14 +1824,20 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
   return (
     <div style={{ minHeight: "100vh", background: "#eef3f9", fontFamily: "'Segoe UI',system-ui,sans-serif" }}>
       <style>{`
-        .adm-tab{padding:8px 18px;border-radius:8px;border:none;cursor:pointer;font-size:13px;
-          font-weight:600;transition:all 0.15s;background:none;color:${T.muted};}
-        .adm-tab.active{background:${T.white};color:${T.ink};box-shadow:0 1px 4px rgba(0,0,0,0.07);}
-        .adm-tab:hover:not(.active){color:${T.ink2};}
-        .adm-row:hover{background:${T.surface};}
-        .adm-inp{padding:8px 12px;border-radius:9px;border:1.5px solid ${T.border};
-          font-size:13px;outline:none;color:${T.ink};background:white;transition:border 0.2s;}
-        .adm-inp:focus{border-color:${T.accent};}
+        .adm-tab{padding:10px 22px;border-radius:12px;border:none;cursor:pointer;font-size:13px;
+          font-weight:700;transition:all 0.25s cubic-bezier(0.4, 0, 0.2, 1);background:none;color:${T.muted};}
+        .adm-tab.active{background:${T.white};color:${T.accent};box-shadow:0 10px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.08);}
+        .adm-tab:hover:not(.active){color:${T.ink};background:rgba(255,255,255,0.5);}
+        .adm-row{transition:all 0.2s;}
+        .adm-row:hover{background:${T.surface};transform:translateY(-1px);}
+        .adm-inp{padding:11px 16px;border-radius:12px;border:1.5px solid ${T.border};
+          font-size:13px;outline:none;color:${T.ink};background:white;transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow:0 1px 2px rgba(0,0,0,0.05);}
+        .adm-inp:focus{border-color:${T.accent};box-shadow:0 0 0 4px ${T.accent}15;background:white;}
+        .premium-card{background:white;border-radius:24px;border:1px solid ${T.border};
+          box-shadow:0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);overflow:hidden;}
+        @keyframes popIn{0%{opacity:0;transform:scale(0.95) translateY(10px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
         @keyframes spin{to{transform:rotate(360deg)}}
       `}</style>
 
@@ -1572,55 +1859,40 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
           </div>
         </div>
 
-        <div className="adm-topbar-actions" style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        <div className="adm-topbar-actions" style={{ display: "flex", alignItems: "center", gap: 16 }}>
           {lastSync && (
-            <div style={{ fontSize: 11, color: T.faint }}>
-              Last synced: {lastSync.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 500, background: "rgba(255,255,255,0.05)", padding: "4px 10px", borderRadius: 8 }}>
+              Sync: {lastSync.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
             </div>
           )}
           <button onClick={fetchAttendance}
             style={{
-              display: "flex", alignItems: "center", gap: 6, padding: "7px 14px",
-              borderRadius: 9, border: "1.5px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.08)",
-              color: "white", cursor: "pointer", fontSize: 12, fontWeight: 600, transition: "all 0.15s"
-            }}>
-            <Icon d={icons.refresh} size={13} color="white" />
+              display: "flex", alignItems: "center", gap: 8, padding: "8px 16px",
+              borderRadius: 12, border: "1.5px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.08)",
+              color: "white", cursor: "pointer", fontSize: 13, fontWeight: 700,
+              transition: "all 0.25s"
+            }} onMouseOver={e => e.currentTarget.style.background = "rgba(255,255,255,0.15)"} onMouseOut={e => e.currentTarget.style.background = "rgba(255,255,255,0.08)"}>
+            <Icon d={icons.refresh} size={14} color="white" />
             <span className="adm-btn-text">Refresh</span>
           </button>
           <button onClick={exportExcel}
             style={{
-              display: "flex", alignItems: "center", gap: 6, padding: "7px 14px",
-              borderRadius: 9, border: "none", background: T.accent,
-              color: "white", cursor: "pointer", fontSize: 12, fontWeight: 600
-            }}>
-            <Icon d={icons.save} size={13} color="white" />
-            <span className="adm-btn-text">Export Excel</span>
-          </button>
-          <button onClick={async () => {
-            if (!allEmployees.length) return;
-            const resp = await fetch(API_BASE + "sync-users/", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ users: allEmployees })
-            });
-            const res = await resp.json();
-            alert(res.message);
-          }}
-            style={{
-              display: "flex", alignItems: "center", gap: 6, padding: "7px 14px",
-              borderRadius: 9, border: "none", background: T.green,
-              color: "white", cursor: "pointer", fontSize: 12, fontWeight: 600
-            }}>
-            <Icon d={icons.refresh} size={13} color="white" />
-            <span className="adm-btn-text">Sync Accounts</span>
+              display: "flex", alignItems: "center", gap: 8, padding: "8px 16px",
+              borderRadius: 12, border: "none", background: T.accent,
+              color: "white", cursor: "pointer", fontSize: 13, fontWeight: 700,
+              transition: "all 0.2s", boxShadow: `0 4px 12px ${T.accent}40`
+            }} onMouseOver={e => e.currentTarget.style.transform = "translateY(-1px)"} onMouseOut={e => e.currentTarget.style.transform = "none"}>
+            <Icon d={icons.save} size={14} color="white" />
+            <span className="adm-btn-text">Export</span>
           </button>
           <button onClick={onSignOut}
             style={{
-              display: "flex", alignItems: "center", gap: 6, padding: "7px 14px",
-              borderRadius: 9, border: "1.5px solid rgba(255,255,255,0.2)", background: "none",
-              color: T.faint, cursor: "pointer", fontSize: 12, fontWeight: 600
-            }}>
-            <Icon d={icons.logout} size={13} color={T.faint} />
+              display: "flex", alignItems: "center", gap: 8, padding: "8px 16px",
+              borderRadius: 12, border: "1.5px solid rgba(255,255,255,0.15)", background: "none",
+              color: "white", cursor: "pointer", fontSize: 13, fontWeight: 700,
+              transition: "all 0.25s"
+            }} onMouseOver={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"} onMouseOut={e => e.currentTarget.style.background = "none"}>
+            <Icon d={icons.logout} size={14} color="white" />
             <span className="adm-btn-text">Sign out</span>
           </button>
         </div>
@@ -1713,6 +1985,15 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
         </div>
       )}
 
+      {/* Assign Task Modal */}
+      {assignTaskTo && (
+        <AssignTaskModal 
+          employee={assignTaskTo} 
+          onClose={() => setAssignTaskTo(null)}
+          onAssigned={fetchAttendance}
+        />
+      )}
+
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px" }}>
 
         {/* Stat cards */}
@@ -1754,6 +2035,8 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
             style={{ minWidth: 150 }} />
           <select className="adm-inp" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
             <option value="all">All Status</option>
+            <option value="Active">Active</option>
+            <option value="Leave">Leave</option>
             <option value="Full Day">Full Day</option>
             <option value="Half Day">Half Day</option>
           </select>
@@ -1764,45 +2047,64 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
 
         {/* Attendance Records Table */}
         {activeTab === "attendance" && (
-          <div style={{ background: T.white, borderRadius: 16, border: `1px solid ${T.border}`, overflow: "hidden" }}>
+          <div className="premium-card">
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: T.surface }}>
-                    {["Date", "ID", "Name", "Dept", "In", "Out", "Working Hrs", "Break Time", "Status", "Daily Tasks", ""].map(h => (
-                      <th key={h} style={colStyle}>{h}</th>
+                    {[
+                      { h: "Date", w: 100 },
+                      { h: "ID", w: 80 },
+                      { h: "Employee", w: 200 },
+                      { h: "Dept", w: 120 },
+                      { h: "In", w: 80 },
+                      { h: "Out", w: 80 },
+                      { h: "Work Hrs", w: 100 },
+                      { h: "Break", w: 80 },
+                      { h: "Status", w: 120 },
+                      { h: "Logs", w: 180 },
+                      { h: "Actions", w: 100, align: "right" }
+                    ].map(col => (
+                      <th key={col.h} style={{ ...colStyle, width: col.w, textAlign: col.align || "left" }}>{col.h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {[...filtered].reverse().map((r, i) => (
-                    <tr key={i} className="adm-row" style={{ transition: "background 0.1s" }}>
+                    <tr key={i} className="adm-row">
                       <td style={cellStyle}>{r.date}</td>
                       <td style={cellStyle}>{r.id || r.employeeid}</td>
                       <td style={cellStyle}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <Avatar name={r.name || r.employeename || "?"} size={28} />
-                          <span style={{ fontWeight: 600 }}>{r.name || r.employeename}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
+                             onClick={() => setAssignTaskTo({ id: r.id || r.employeeid, name: r.name || r.employeename })}>
+                          <Avatar name={r.name || r.employeename || "?"} size={32} />
+                          <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                            <span style={{ fontWeight: 700, color: T.accent, fontSize: 13 }}>{r.name || r.employeename}</span>
+                            <span style={{ fontSize: 10, color: T.muted, fontWeight: 600 }}>Assign Task +</span>
+                          </div>
                         </div>
                       </td>
                       <td style={cellStyle}>{r.dept || r.department}</td>
-                      <td style={{ ...cellStyle, color: T.green }}>{r.logint || r.intime}</td>
-                      <td style={{ ...cellStyle, color: T.red }}>{r.logoutt || r.outtime}</td>
-                      <td style={{ ...cellStyle, fontWeight: 700 }}>{r.hours || r.workinghours}</td>
-                      <td style={{ ...cellStyle, color: T.amber }}>{r.break_time || r.breaktime || "—"}</td>
-                      <td style={{ ...cellStyle, color: T.muted, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.tasks || r.workstatus}>
+                      <td style={{ ...cellStyle, color: T.green, fontWeight: 600 }}>{r.logint || r.intime}</td>
+                      <td style={{ ...cellStyle, color: T.red, fontWeight: 600 }}>{r.logoutt || r.outtime}</td>
+                      <td style={{ ...cellStyle, fontWeight: 800 }}>{r.hours || r.workinghours}</td>
+                      <td style={{ ...cellStyle, color: T.amber, fontWeight: 600 }}>{r.break_time || r.breaktime || "—"}</td>
+                      <td style={cellStyle}>
+                        <Badge status={r.status || "Incomplete"} />
+                      </td>
+                      <td style={{ ...cellStyle, color: T.muted, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.tasks || r.workstatus}>
                         {r.tasks || r.workstatus || "—"}
                       </td>
                       <td style={{ ...cellStyle, textAlign: "right" }}>
                         <button 
                           onClick={() => setSelectedRecord(r)}
                           style={{
-                            padding: "6px 10px", borderRadius: 8, border: `1.5px solid ${T.border}`,
-                            background: "white", color: T.ink2, fontSize: 11, fontWeight: 700,
-                            cursor: "pointer", transition: "all 0.15s", display: "flex", alignItems: "center", gap: 6
+                            padding: "8px 12px", borderRadius: 10, border: `1.5px solid ${T.border}`,
+                            background: "white", color: T.ink2, fontSize: 12, fontWeight: 700,
+                            cursor: "pointer", transition: "all 0.2s", display: "inline-flex", alignItems: "center", gap: 6
                           }}
                         >
-                          <Icon d={icons.eye} size={12} color={T.accent} />
+                          <Icon d={icons.eye} size={13} color={T.accent} />
                           Details
                         </button>
                       </td>
@@ -1814,76 +2116,88 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
           </div>
         )}
 
-        {/* Task Feed Table */}
+        {/* Live Task Feed */}
         {activeTab === "tasks" && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20 }}>
-            {[...records].reverse().filter(r => r.tasks || r.workstatus).slice(0, 50).map((r, i) => (
-              <div key={i} style={{ background: T.white, borderRadius: 16, padding: 20, border: `1px solid ${T.border}`, display: "flex", flexDirection: "column", gap: 12 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <Avatar name={r.name || r.employeename || "?"} size={36} />
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: T.ink }}>{r.name || r.employeename}</div>
-                    <div style={{ fontSize: 11, color: T.muted }}>{r.date} · {r.logint || r.intime}</div>
-                  </div>
+          <div className="premium-card">
+             <div style={{ padding: "24px 28px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>Individual Tasks Tracking</div>
+                  <div style={{ fontSize: 12, color: T.muted }}>Real-time activity from your team</div>
                 </div>
-                <div style={{ fontSize: 13, color: T.ink2, lineHeight: 1.6, padding: "10px 12px", background: T.surface, borderRadius: 10, flex: 1, whiteSpace: "pre-wrap" }}>
-                  {r.tasks || r.workstatus}
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <Badge status={r.status} />
-                  <span style={{ fontSize: 11, color: T.muted }}>Logged: {r.hours || r.workinghours}</span>
-                </div>
-              </div>
-            ))}
-            {records.filter(r => r.tasks || r.workstatus).length === 0 && (
-              <div style={{ gridColumn: "1 / -1", padding: 60, textAlign: "center", background: T.white, borderRadius: 16, border: `1px solid ${T.border}` }}>
-                <div style={{ fontSize: 14, color: T.muted }}>No tasks logged yet.</div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Employee Summary Table */}
-        {activeTab === "employees" && (
-          <div style={{ background: T.white, borderRadius: 16, border: `1px solid ${T.border}`, overflow: "hidden" }}>
-            <div style={{ overflowX: "auto" }}>
+             </div>
+             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: T.surface }}>
-                    {["Employee", "ID", "Dept", "Total Days", "Full Days", "Half Days", "Last Seen"].map(h => (
+                    {["Assigned At", "Employee", "Task Title", "Status", "Tracking"].map(h => (
                       <th key={h} style={colStyle}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {allEmployees.map((emp, i) => {
-                    const eid = emp.id || emp.Id || emp.employeeid || emp.username;
-                    const empRecs = records.filter(r => (r.id || r.employeeid) === eid);
-                    const empName = emp.name || emp.Name || emp.employeename;
-                    const empDept = emp.dept || emp.Dept || emp.department;
-                    const fullD = empRecs.filter(r => r.status === "Full Day").length;
-                    const halfD = empRecs.filter(r => r.status === "Half Day").length;
-                    const lastSeen = empRecs.length > 0 ? empRecs[0].date : "Never";
-                    return (
-                      <tr key={i} className="adm-row">
-                        <td style={cellStyle}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            <Avatar name={empName} size={32} />
-                            <span style={{ fontWeight: 700 }}>{empName}</span>
+                  {[...taskFeed].reverse().map((t, i) => (
+                    <tr key={i} className="adm-row">
+                      <td style={cellStyle}>{new Date(t.assigned_at).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
+                      <td style={cellStyle}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <Avatar name={allEmployees.find(e => e.id === t.employee_id)?.name || "?"} size={28} />
+                          <div style={{ fontWeight: 600 }}>{allEmployees.find(e => e.id === t.employee_id)?.name || t.employee_id}</div>
+                        </div>
+                      </td>
+                      <td style={cellStyle}>
+                        <div style={{ fontWeight: 700, color: T.ink }}>{t.title}</div>
+                        <div style={{ fontSize: 11, color: T.muted, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis" }}>{t.description}</div>
+                      </td>
+                      <td style={cellStyle}><Badge status={t.status} /></td>
+                      <td style={cellStyle}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          <div style={{ fontSize: 10, display: "flex", gap: 6 }}>
+                             <span style={{ color: T.muted }}>Viewed:</span>
+                             <span style={{ fontWeight: 600 }}>{t.viewed_at ? new Date(t.viewed_at).toLocaleTimeString() : "—"}</span>
                           </div>
-                        </td>
-                        <td style={cellStyle}>{eid}</td>
-                        <td style={cellStyle}>{empDept}</td>
-                        <td style={cellStyle}>{empRecs.length}</td>
-                        <td style={{ ...cellStyle, color: T.green }}>{fullD}</td>
-                        <td style={{ ...cellStyle, color: T.amber }}>{halfD}</td>
-                        <td style={cellStyle}>{lastSeen}</td>
-                      </tr>
-                    );
-                  })}
+                          <div style={{ fontSize: 10, display: "flex", gap: 6 }}>
+                             <span style={{ color: T.muted }}>Done:</span>
+                             <span style={{ fontWeight: 600, color: T.green }}>{t.completed_at ? new Date(t.completed_at).toLocaleTimeString() : "—"}</span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
-            </div>
+             </div>
+          </div>
+        )}
+
+        {/* Employee List Tab */}
+        {activeTab === "employees" && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20 }}>
+            {allEmployees.filter(e => !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.id.toLowerCase().includes(search.toLowerCase())).map(e => (
+              <div key={e.id} className="premium-card" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20, transition: "transform 0.2s" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                  <div style={{ position: "relative" }}>
+                    <Avatar name={e.name} size={56} />
+                    <div style={{ position: "absolute", bottom: 2, right: 2, width: 14, height: 14, borderRadius: "50%", background: T.green, border: "3px solid white" }} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, color: T.ink, fontSize: 16 }}>{e.name}</div>
+                    <div style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>{e.role} · {e.id}</div>
+                  </div>
+                </div>
+                
+                <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 20 }}>
+                   <button onClick={() => setAssignTaskTo(e)} style={{
+                      width: "100%", padding: "12px", borderRadius: 14, border: "none",
+                      background: T.surface, color: T.ink, fontWeight: 700, cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 10, transition: "all 0.2s"
+                    }} onMouseOver={btn => { btn.currentTarget.style.background = T.accent; btn.currentTarget.style.color = "white"; }} 
+                       onMouseOut={btn => { btn.currentTarget.style.background = T.surface; btn.currentTarget.style.color = T.ink; }}>
+                    <Icon d={icons.tasks} size={16} />
+                    Assign New Task
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
