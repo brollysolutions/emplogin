@@ -35,7 +35,8 @@ def attendance_list(request):
                     "extrahours": r.extra_hours,
                     "tasks": r.tasks,
                     "break_time": r.total_break_time,
-                    "status": r.status
+                    "status": r.status,
+                    "last_status_change": r.last_status_change
                 })
             return Response(data)
 
@@ -58,6 +59,7 @@ def attendance_list(request):
                 instance.extra_hours = request.data.get('extraHours', instance.extra_hours)
                 instance.tasks = request.data.get('tasks', instance.tasks)
                 instance.status = request.data.get('status', instance.status)
+                instance.last_status_change = request.data.get('lastStatusChange', instance.last_status_change)
                 instance.save()
                 return Response({"message": "Record updated"}, status=status.HTTP_200_OK)
             else:
@@ -75,7 +77,8 @@ def attendance_list(request):
                     total_break_time=request.data.get('breakTime', '00:00:00'),
                     extra_hours=request.data.get('extraHours', '—'),
                     tasks=request.data.get('tasks', '—'),
-                    status=st
+                    status=st,
+                    last_status_change=request.data.get('lastStatusChange')
                 )
                 new_record.save()
                 return Response({"message": "Record saved"}, status=status.HTTP_201_CREATED)
@@ -108,7 +111,7 @@ def request_password_reset(request):
             return Response({"error": f"Database error: {str(e)}", "traceback": traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         token = str(uuid.uuid4())
-        PasswordResetToken.objects.create(email=target_email, token=token)
+        PasswordResetToken.objects.create(email=target_email, username=user.username, token=token)
 
         # Build the reset link
         origin = request.headers.get('Origin', 'https://brollysolutions.in')
@@ -179,7 +182,14 @@ def reset_password(request):
         if timezone.now() > reset_token.created_at + timedelta(hours=1):
             return Response({"error": "Token has expired"}, status=status.HTTP_400_BAD_REQUEST)
         
-        user = User.objects.get(email=reset_token.email)
+        if reset_token.username:
+            user = User.objects.get(username=reset_token.username)
+        else:
+            # Fallback for older tokens or edge cases
+            user = User.objects.filter(email=reset_token.email).first()
+        
+        if not user:
+            return Response({"error": "User associated with this token not found"}, status=status.HTTP_404_NOT_FOUND)
         user.set_password(new_password)
         user.save()
         

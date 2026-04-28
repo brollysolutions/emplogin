@@ -12,6 +12,7 @@ class Attendance(models.Model):
     tasks = models.TextField(blank=True, default="—")
     total_break_time = models.CharField(max_length=50, default="00:00:00")
     status = models.CharField(max_length=50)
+    last_status_change = models.DateTimeField(null=True, blank=True)
     timestamp = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -19,6 +20,7 @@ class Attendance(models.Model):
 
 class PasswordResetToken(models.Model):
     email = models.EmailField()
+    username = models.CharField(max_length=150, null=True, blank=True)
     token = models.CharField(max_length=100, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_used = models.BooleanField(default=False)

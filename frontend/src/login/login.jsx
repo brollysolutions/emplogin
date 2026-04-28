@@ -183,7 +183,28 @@ const LOGIN_STYLES = `
     .login-left-panel { display: none !important; }
     .login-right-panel { padding: 24px 16px !important; }
     .login-card { padding: 32px 24px !important; border-radius: 20px !important; }
-    .login-title { fontSize: 22px !important; }
+    .login-title { font-size: 22px !important; }
+  }
+
+  @media (max-width: 768px) {
+    .dashboard-content { padding: 20px 16px !important; }
+    .greeting-row { flex-direction: column; align-items: flex-start !important; gap: 16px; }
+    .time-display { width: 100%; text-align: left !important; padding: 12px 20px !important; }
+    .stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
+    .main-grid { grid-template-columns: 1fr !important; }
+    .profile-footer { flex-direction: column; align-items: flex-start !important; gap: 20px !important; }
+    .profile-footer-stats { width: 100%; display: grid !important; grid-template-columns: 1fr 1fr; gap: 16px !important; text-align: left !important; }
+    .profile-footer-stats > div { text-align: left !important; }
+    
+    .adm-topbar { flex-direction: column; height: auto !important; padding: 16px !important; gap: 16px; }
+    .adm-topbar-actions { flex-wrap: wrap; justify-content: flex-start !important; gap: 8px !important; width: 100%; }
+    .adm-btn-text { display: none; } /* Hide button text on very small screens if needed */
+    .stat-value { font-size: 18px !important; }
+  }
+
+  @media (max-width: 480px) {
+    .stat-grid { grid-template-columns: 1fr !important; }
+    .profile-footer-stats { grid-template-columns: 1fr !important; }
   }
 `;
 
@@ -514,7 +535,7 @@ function StatCard({ label, value, sub, icon, color, bg }) {
           <Icon d={icon} size={16} color={color} />
         </div>
       </div>
-      <div style={{ fontSize: 22, fontWeight: 700, color: T.ink, marginBottom: 3, fontVariantNumeric: "tabular-nums" }}>{value}</div>
+      <div className="stat-value" style={{ fontSize: 22, fontWeight: 700, color: T.ink, marginBottom: 3, fontVariantNumeric: "tabular-nums" }}>{value}</div>
       {sub && <div style={{ fontSize: 12, color: T.muted }}>{sub}</div>}
     </div>
   );
@@ -579,6 +600,7 @@ function Dashboard({ employee, onSignOut }) {
   const [toast, setToast] = useState(null);
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
   // Helper to format seconds to HMS
   const secondsToHMS = (totalSeconds) => {
@@ -588,17 +610,18 @@ function Dashboard({ employee, onSignOut }) {
     return { h, m, s, total: totalSeconds / 3600 };
   };
 
-  // Prevention of multiple clock-ins today
+  // Polling for status sync across devices
   useEffect(() => {
-    const checkTodayStatus = async () => {
-      setLoadingHistory(true);
+    let pollInterval;
+    
+    const checkTodayStatus = async (isInitial = false) => {
       try {
         const resp = await fetch(BACKEND_URL);
         if (resp.ok) {
           const data = await resp.json();
-          
-          // Filter history for THIS employee
           const myHistory = data.filter(r => (r.id === employee.id || r.employeeid === employee.id));
+          
+          // Update local history list
           setHistory(myHistory.map(r => ({
             date: r.date,
             loginT: r.logint,
@@ -607,14 +630,14 @@ function Dashboard({ employee, onSignOut }) {
             breakTime: r.break_time,
             extraHours: r.extrahours,
             tasks: r.tasks,
-            status: r.status
+            status: r.status,
+            last_status_change: r.last_status_change
           })));
 
           const today = fmtDate(new Date());
           const todayRec = myHistory.find(r => r.date === today);
 
-          if (todayRec && !savedSession) {
-            // Restore from server if local session is empty
+          if (todayRec) {
             const parseHMS = (str) => {
               if (!str || str === "—") return 0;
               const parts = str.split(":");
@@ -622,28 +645,46 @@ function Dashboard({ employee, onSignOut }) {
               const [h, m, s] = parts.map(Number);
               return (h * 3600) + (m * 60) + s;
             };
-            setTotalWorkSeconds(parseHMS(todayRec.hours));
-            setTotalBreakSeconds(parseHMS(todayRec.break_time));
-            setLT(new Date(today + " " + todayRec.logint));
-            if (todayRec.status === "Active") {
-              setStatus("working");
-              setSessionStartTime(new Date());
-            } else if (todayRec.status === "On Break") {
-              setStatus("break");
-              setBreakStartTime(new Date());
-            } else if (todayRec.logoutt && todayRec.logoutt !== "—") {
-              setLOT(new Date(today + " " + todayRec.logoutt));
-              setStatus("loggedOut");
+
+            const serverStatusMap = { "Active": "working", "On Break": "break" };
+            const mappedStatus = serverStatusMap[todayRec.status] || (todayRec.logoutt && todayRec.logoutt !== "—" ? "loggedOut" : "idle");
+            
+            // Sync logic: If server status is different OR if we don't have a session start time yet
+            const serverLastChange = todayRec.last_status_change ? new Date(todayRec.last_status_change).getTime() : 0;
+            const localLastChange = (status === "working" ? sessionStartTime : (status === "break" ? breakStartTime : null))?.getTime() || 0;
+
+            if (isInitial || status !== mappedStatus || (serverLastChange && serverLastChange !== localLastChange)) {
+              // Only overwrite if different to avoid jitter
+              if (status !== mappedStatus || Math.abs(serverLastChange - localLastChange) > 2000) {
+                console.log(`Syncing with server: Status=${mappedStatus}, LastChange=${todayRec.last_status_change}`);
+                setTotalWorkSeconds(parseHMS(todayRec.hours));
+                setTotalBreakSeconds(parseHMS(todayRec.break_time));
+                setLT(new Date(today + " " + todayRec.logint));
+                
+                if (todayRec.status === "Active") {
+                  setStatus("working");
+                  setSessionStartTime(todayRec.last_status_change ? new Date(todayRec.last_status_change) : new Date());
+                } else if (todayRec.status === "On Break") {
+                  setStatus("break");
+                  setBreakStartTime(todayRec.last_status_change ? new Date(todayRec.last_status_change) : new Date());
+                } else if (todayRec.logoutt && todayRec.logoutt !== "—") {
+                  setLOT(new Date(today + " " + todayRec.logoutt));
+                  setStatus("loggedOut");
+                }
+              }
             }
           }
         }
       } catch (e) {
-        console.warn("Failed to check daily status from DB", e);
+        console.warn("Status sync failed", e);
       }
-      setLoadingHistory(false);
     };
-    checkTodayStatus();
-  }, [employee.id]);
+
+    checkTodayStatus(true);
+    pollInterval = setInterval(() => checkTodayStatus(false), 5000); // Poll every 5 seconds
+    
+    return () => clearInterval(pollInterval);
+  }, [employee.id, status]); // Re-run if status changes locally to ensure we stay synced
 
   const [xlWb, setXlWb] = useState(null);
   const [xlName, setXlName] = useState(null);
@@ -694,36 +735,46 @@ function Dashboard({ employee, onSignOut }) {
     setSessionStartTime(t);
     setStatus("working");
     showToast("Session started", "success");
-    setTimeout(() => triggerAutoSync(loginTime || t, null, "working"), 100);
+    triggerAutoSync(loginTime || t, null, "working", t);
   };
 
   const handleBreak = () => {
     const t = new Date();
     if (status === "working" && sessionStartTime) {
-      setTotalWorkSeconds(v => v + Math.floor((t - sessionStartTime) / 1000));
+      const addedWork = Math.floor((t - sessionStartTime) / 1000);
+      const newTotalWork = totalWorkSeconds + addedWork;
+      setTotalWorkSeconds(newTotalWork);
       setSessionStartTime(null);
       setBreakStartTime(t);
       setStatus("break");
       showToast("Break started", "amber");
-      setTimeout(() => triggerAutoSync(loginTime, null, "break"), 100);
+      triggerAutoSync(loginTime, null, "break", t, newTotalWork);
     } else if (status === "break" && breakStartTime) {
-      setTotalBreakSeconds(v => v + Math.floor((t - breakStartTime) / 1000));
+      const addedBreak = Math.floor((t - breakStartTime) / 1000);
+      const newTotalBreak = totalBreakSeconds + addedBreak;
+      setTotalBreakSeconds(newTotalBreak);
       setBreakStartTime(null);
       setSessionStartTime(t);
       setStatus("working");
       showToast("Work resumed", "success");
-      setTimeout(() => triggerAutoSync(loginTime, null, "working"), 100);
+      triggerAutoSync(loginTime, null, "working", t, totalWorkSeconds, newTotalBreak);
     }
   };
 
-  const triggerAutoSync = (lt, lot, curStatus) => {
-    const tWork = curStatus === "working" && sessionStartTime
-      ? totalWorkSeconds + Math.floor((new Date() - sessionStartTime) / 1000)
-      : totalWorkSeconds;
+  const triggerAutoSync = (lt, lot, curStatus, startTimeOverride, workOverride, breakOverride) => {
+    const sTime = startTimeOverride || (curStatus === "working" ? sessionStartTime : (curStatus === "break" ? breakStartTime : null));
 
-    const tBreak = curStatus === "break" && breakStartTime
-      ? totalBreakSeconds + Math.floor((new Date() - breakStartTime) / 1000)
-      : totalBreakSeconds;
+    const tWork = workOverride !== undefined ? workOverride : (
+      curStatus === "working" && sTime
+        ? totalWorkSeconds + Math.floor((new Date() - sTime) / 1000)
+        : totalWorkSeconds
+    );
+
+    const tBreak = breakOverride !== undefined ? breakOverride : (
+      curStatus === "break" && sTime
+        ? totalBreakSeconds + Math.floor((new Date() - sTime) / 1000)
+        : totalBreakSeconds
+    );
 
     const hrs = secondsToHMS(tWork);
     const brk = secondsToHMS(tBreak);
@@ -741,7 +792,8 @@ function Dashboard({ employee, onSignOut }) {
       breakTime: hmsStr(brk),
       extraHours: "—",
       tasks: taskInput || "—",
-      status: curStatus === "working" ? "Active" : curStatus === "break" ? "On Break" : dayStatus
+      status: curStatus === "working" ? "Active" : curStatus === "break" ? "On Break" : dayStatus,
+      lastStatusChange: sTime ? sTime.toISOString() : null
     };
 
     // Fast sync to local backend
@@ -771,7 +823,7 @@ function Dashboard({ employee, onSignOut }) {
     setLOT(t);
     setStatus("loggedOut");
     showToast("Session paused. Click Sync to save!", "info");
-    triggerAutoSync(loginTime, t, "loggedOut");
+    triggerAutoSync(loginTime, t, "loggedOut", null, finalWork, finalBreak);
   };
 
   const handleLoadXl = (e) => {
@@ -796,14 +848,10 @@ function Dashboard({ employee, onSignOut }) {
 
     showToast("Syncing to Google Sheets...", "info");
     const lt = logoutTime || new Date();
-
     const WORK_GOAL = 8;
-
-    // Calculate extra hours beyond the 9h goal
     const extraHrsFloat = Math.max(0, liveHrs.total - WORK_GOAL);
     const extraHrsTotal = Math.floor(extraHrsFloat * 3600);
     const extraHrsStr = extraHrsFloat > 0 ? hmsStr(secondsToHMS(extraHrsTotal)) : "—";
-
     const dayStatus = liveHrs.total >= WORK_GOAL ? "Full Day" : "Half Day";
     const payload = {
       date: fmtDate(loginTime),
@@ -888,7 +936,6 @@ function Dashboard({ employee, onSignOut }) {
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
         .pulse-active{animation: pulse 2s infinite;}
 
-        /* Mobile Responsive Adjustments */
         @media (max-width: 768px) {
           .stat-grid { grid-template-columns: 1fr 1fr !important; }
           .main-grid { grid-template-columns: 1fr !important; }
@@ -921,6 +968,80 @@ function Dashboard({ employee, onSignOut }) {
         }}>
           <Icon d={toast.type === "success" ? icons.check : icons.info} size={15} color="white" />
           {toast.msg}
+        </div>
+      )}
+
+      {/* ── Details Modal ── */}
+      {selectedRecord && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 1000,
+          background: "rgba(11,31,53,0.6)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 20
+        }} onClick={() => setSelectedRecord(null)}>
+          <div style={{
+            background: "white", borderRadius: 24, width: "100%", maxWidth: 500,
+            boxShadow: "0 20px 50px rgba(0,0,0,0.3)", animation: "fadeInUp 0.3s ease",
+            overflow: "hidden"
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{
+              background: T.ink, padding: "24px 30px", color: "white",
+              display: "flex", justifyContent: "space-between", alignItems: "center"
+            }}>
+              <div>
+                <div style={{ fontSize: 12, color: T.faint, letterSpacing: 1, fontWeight: 700, marginBottom: 4 }}>RECORD DETAILS</div>
+                <div style={{ fontSize: 20, fontWeight: 800 }}>{selectedRecord.date}</div>
+              </div>
+              <button onClick={() => setSelectedRecord(null)} style={{ background: "none", border: "none", color: "white", cursor: "pointer", opacity: 0.7 }}>
+                <Icon d="M18 6L6 18M6 6l12 12" size={24} color="white" />
+              </button>
+            </div>
+            
+            <div style={{ padding: 30 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 30 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: T.muted, fontWeight: 700, marginBottom: 5 }}>CLOCK IN</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: T.green }}>{selectedRecord.loginT || "—"}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: T.muted, fontWeight: 700, marginBottom: 5 }}>CLOCK OUT</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: T.red }}>{selectedRecord.logoutT || "—"}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: T.muted, fontWeight: 700, marginBottom: 5 }}>WORKING HOURS</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: T.ink }}>{selectedRecord.hours || "—"}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: T.muted, fontWeight: 700, marginBottom: 5 }}>BREAK DURATION</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: T.amber }}>{selectedRecord.breakTime || "—"}</div>
+                </div>
+              </div>
+
+              <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: T.purpleBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Icon d={icons.tasks} size={16} color={T.purple} />
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>Tasks Performed</div>
+                </div>
+                <div style={{ 
+                  background: T.surface, padding: 20, borderRadius: 14, 
+                  fontSize: 14, color: T.ink2, lineHeight: 1.6, whiteSpace: "pre-wrap",
+                  border: `1px solid ${T.border}`, minHeight: 120
+                }}>
+                  {selectedRecord.tasks || "No tasks recorded for this day."}
+                </div>
+              </div>
+            </div>
+            
+            <div style={{ padding: "0 30px 30px" }}>
+              <button onClick={() => setSelectedRecord(null)} style={{ 
+                width: "100%", padding: 14, borderRadius: 12, border: "none", 
+                background: T.ink, color: "white", fontWeight: 700, cursor: "pointer" 
+              }}>
+                Close Details
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1245,7 +1366,7 @@ function Dashboard({ employee, onSignOut }) {
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>
                     <tr style={{ background: T.surface }}>
-                      {["Date", "Clock In", "Clock Out", "Hours", "Break Time", "Extra Hrs", "Status", "Tasks"].map(h => (
+                      {["Date", "Clock In", "Clock Out", "Hours", "Break Time", "Status", "Tasks", ""].map(h => (
                         <th key={h} style={{
                           padding: "11px 16px", textAlign: "left",
                           fontSize: 11, fontWeight: 700, color: T.muted, letterSpacing: 0.5,
@@ -1272,10 +1393,25 @@ function Dashboard({ employee, onSignOut }) {
                         </td>
                         <td style={{ padding: "12px 16px" }}><Badge status={r.status || "Incomplete"} /></td>
                         <td style={{
-                          padding: "12px 16px", color: T.muted, maxWidth: 200,
+                          padding: "12px 16px", color: T.muted, maxWidth: 180,
                           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"
                         }}
                           title={r.tasks}>{r.tasks}</td>
+                        <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                          <button 
+                            onClick={() => setSelectedRecord(r)}
+                            style={{
+                              padding: "6px 12px", borderRadius: 8, border: `1.5px solid ${T.border}`,
+                              background: "white", color: T.ink2, fontSize: 11, fontWeight: 700,
+                              cursor: "pointer", transition: "all 0.15s", display: "flex", alignItems: "center", gap: 6
+                            }}
+                            onMouseOver={e => e.currentTarget.style.background = T.surface}
+                            onMouseOut={e => e.currentTarget.style.background = "white"}
+                          >
+                            <Icon d={icons.eye} size={13} color={T.accent} />
+                            View
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1327,6 +1463,7 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
   const [filterDate, setFilterDate] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [activeTab, setTab] = useState("attendance");
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
   const fetchAttendance = async () => {
     setLoading(true);
@@ -1418,7 +1555,7 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
       `}</style>
 
       {/* Topbar */}
-      <div style={{
+      <div className="adm-topbar" style={{
         background: T.ink, padding: "0 28px", display: "flex", alignItems: "center",
         justifyContent: "space-between", height: 60, boxShadow: "0 2px 12px rgba(0,0,0,0.15)"
       }}>
@@ -1435,7 +1572,7 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        <div className="adm-topbar-actions" style={{ display: "flex", alignItems: "center", gap: 14 }}>
           {lastSync && (
             <div style={{ fontSize: 11, color: T.faint }}>
               Last synced: {lastSync.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
@@ -1448,7 +1585,7 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
               color: "white", cursor: "pointer", fontSize: 12, fontWeight: 600, transition: "all 0.15s"
             }}>
             <Icon d={icons.refresh} size={13} color="white" />
-            Refresh
+            <span className="adm-btn-text">Refresh</span>
           </button>
           <button onClick={exportExcel}
             style={{
@@ -1457,7 +1594,7 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
               color: "white", cursor: "pointer", fontSize: 12, fontWeight: 600
             }}>
             <Icon d={icons.save} size={13} color="white" />
-            Export Excel
+            <span className="adm-btn-text">Export Excel</span>
           </button>
           <button onClick={async () => {
             if (!allEmployees.length) return;
@@ -1475,7 +1612,7 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
               color: "white", cursor: "pointer", fontSize: 12, fontWeight: 600
             }}>
             <Icon d={icons.refresh} size={13} color="white" />
-            Sync Accounts
+            <span className="adm-btn-text">Sync Accounts</span>
           </button>
           <button onClick={onSignOut}
             style={{
@@ -1484,10 +1621,97 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
               color: T.faint, cursor: "pointer", fontSize: 12, fontWeight: 600
             }}>
             <Icon d={icons.logout} size={13} color={T.faint} />
-            Sign out
+            <span className="adm-btn-text">Sign out</span>
           </button>
         </div>
       </div>
+
+      {/* ── Details Modal ── */}
+      {selectedRecord && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 1000,
+          background: "rgba(11,31,53,0.6)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 20
+        }} onClick={() => setSelectedRecord(null)}>
+          <div style={{
+            background: "white", borderRadius: 24, width: "100%", maxWidth: 550,
+            boxShadow: "0 20px 50px rgba(0,0,0,0.3)", animation: "fadeInUp 0.3s ease",
+            overflow: "hidden"
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{
+              background: T.ink, padding: "24px 30px", color: "white",
+              display: "flex", justifyContent: "space-between", alignItems: "center"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <Avatar name={selectedRecord.name || selectedRecord.employeename} size={44} />
+                <div>
+                  <div style={{ fontSize: 13, color: T.faint, fontWeight: 600, letterSpacing: 0.5 }}>{selectedRecord.id || selectedRecord.employeeid}</div>
+                  <div style={{ fontSize: 18, fontWeight: 800 }}>{selectedRecord.name || selectedRecord.employeename}</div>
+                </div>
+              </div>
+              <button onClick={() => setSelectedRecord(null)} style={{ background: "none", border: "none", color: "white", cursor: "pointer", opacity: 0.7 }}>
+                <Icon d="M18 6L6 18M6 6l12 12" size={24} color="white" />
+              </button>
+            </div>
+            
+            <div style={{ padding: 30 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+                <Icon d={icons.calendar} size={16} color={T.accent} />
+                Activity for {selectedRecord.date}
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24, background: T.surface, padding: 18, borderRadius: 14 }}>
+                <div style={{ borderRight: `1px solid ${T.border}` }}>
+                  <div style={{ fontSize: 10, color: T.muted, fontWeight: 700, marginBottom: 4, textTransform: "uppercase" }}>Work Session</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{selectedRecord.logint || selectedRecord.intime || "—"} → {selectedRecord.logoutt || selectedRecord.outtime || "—"}</div>
+                </div>
+                <div style={{ paddingLeft: 10 }}>
+                  <div style={{ fontSize: 10, color: T.muted, fontWeight: 700, marginBottom: 4, textTransform: "uppercase" }}>Hours (Work / Break)</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{selectedRecord.hours || selectedRecord.workinghours || "—"} / {selectedRecord.break_time || selectedRecord.breaktime || "—"}</div>
+                </div>
+              </div>
+
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: 8, background: T.purpleBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Icon d={icons.tasks} size={15} color={T.purple} />
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>Task Report</div>
+                  <div style={{ marginLeft: "auto" }}><Badge status={selectedRecord.status} /></div>
+                </div>
+                <div style={{ 
+                  background: "white", padding: 18, borderRadius: 14, 
+                  fontSize: 13.5, color: T.ink2, lineHeight: 1.6, whiteSpace: "pre-wrap",
+                  border: `1px solid ${T.border}`, minHeight: 140, maxHeight: 250, overflowY: "auto"
+                }}>
+                  {selectedRecord.tasks || selectedRecord.workstatus || "No task notes were provided for this day."}
+                </div>
+              </div>
+            </div>
+            
+            <div style={{ padding: "0 30px 30px", display: "flex", gap: 12 }}>
+              <button onClick={() => setSelectedRecord(null)} style={{ 
+                flex: 1, padding: 14, borderRadius: 12, border: `1.5px solid ${T.border}`, 
+                background: "white", color: T.ink, fontWeight: 700, cursor: "pointer" 
+              }}>
+                Close
+              </button>
+              <button onClick={() => {
+                const text = `Attendance: ${selectedRecord.name || selectedRecord.employeename}\nDate: ${selectedRecord.date}\nHours: ${selectedRecord.hours || selectedRecord.workinghours}\nTasks: ${selectedRecord.tasks || selectedRecord.workstatus || "—"}`;
+                navigator.clipboard.writeText(text);
+                alert("Report copied to clipboard!");
+              }} style={{ 
+                flex: 1, padding: 14, borderRadius: 12, border: "none", 
+                background: T.accent, color: "white", fontWeight: 700, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8
+              }}>
+                <Icon d={icons.save} size={15} color="white" />
+                Copy Report
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px" }}>
 
@@ -1545,7 +1769,7 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: T.surface }}>
-                    {["Date", "ID", "Name", "Dept", "In", "Out", "Working Hrs", "Break Time", "Extra Hrs", "Status", "Daily Tasks"].map(h => (
+                    {["Date", "ID", "Name", "Dept", "In", "Out", "Working Hrs", "Break Time", "Status", "Daily Tasks", ""].map(h => (
                       <th key={h} style={colStyle}>{h}</th>
                     ))}
                   </tr>
@@ -1566,10 +1790,21 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
                       <td style={{ ...cellStyle, color: T.red }}>{r.logoutt || r.outtime}</td>
                       <td style={{ ...cellStyle, fontWeight: 700 }}>{r.hours || r.workinghours}</td>
                       <td style={{ ...cellStyle, color: T.amber }}>{r.break_time || r.breaktime || "—"}</td>
-                      <td style={{ ...cellStyle, color: T.amber }}>{r.extrahours || r.extras}</td>
-                      <td style={cellStyle}><Badge status={r.status} /></td>
-                      <td style={{ ...cellStyle, color: T.muted, maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.tasks || r.workstatus}>
+                      <td style={{ ...cellStyle, color: T.muted, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.tasks || r.workstatus}>
                         {r.tasks || r.workstatus || "—"}
+                      </td>
+                      <td style={{ ...cellStyle, textAlign: "right" }}>
+                        <button 
+                          onClick={() => setSelectedRecord(r)}
+                          style={{
+                            padding: "6px 10px", borderRadius: 8, border: `1.5px solid ${T.border}`,
+                            background: "white", color: T.ink2, fontSize: 11, fontWeight: 700,
+                            cursor: "pointer", transition: "all 0.15s", display: "flex", alignItems: "center", gap: 6
+                          }}
+                        >
+                          <Icon d={icons.eye} size={12} color={T.accent} />
+                          Details
+                        </button>
                       </td>
                     </tr>
                   ))}
