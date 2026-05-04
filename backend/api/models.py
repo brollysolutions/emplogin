@@ -1,4 +1,6 @@
 from django.db import models
+from django.contrib.auth.models import User
+
 
 class Attendance(models.Model):
     employee_id = models.CharField(max_length=50)
@@ -42,5 +44,32 @@ class Task(models.Model):
     viewed_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
 
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    employee_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    total_leaves = models.IntegerField(default=16)
+    
     def __str__(self):
-        return f"{self.title} - {self.employee_id} ({self.status})"
+        return f"{self.user.username} Profile"
+
+class LeaveRequest(models.Model):
+    STATUS_CHOICES = [
+        ('Pending', 'Pending'),
+        ('Approved', 'Approved'),
+        ('Rejected', 'Rejected'),
+    ]
+    employee_id = models.CharField(max_length=50)
+    employee_name = models.CharField(max_length=255)
+    leave_type = models.CharField(max_length=50, default="Casual Leave")
+    start_date = models.DateField()
+    end_date = models.DateField()
+    reason = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    applied_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    admin_comment = models.TextField(blank=True, null=True)
+    is_notified = models.BooleanField(default=False) # For employee dashboard notifications
+
+    def __str__(self):
+        return f"{self.employee_name} ({self.start_date} to {self.end_date})"
+

@@ -53,6 +53,9 @@ const API_BASE = window.location.hostname === "localhost"
   : "/login/api/v1/";
 const BACKEND_URL = API_BASE + "attendance/";
 const TASKS_URL = API_BASE + "tasks/";
+const LEAVES_URL = API_BASE + "leaves/";
+const PROFILES_URL = API_BASE + "profiles/";
+const PROFILE_URL = (id) => API_BASE + `profile/${id}/`;
 
 /* ── Avatar ────────────────────────────────────────────────── */
 function Avatar({ name, size = 40, accent = T.accent }) {
@@ -555,6 +558,10 @@ function Badge({ status }) {
     "Viewed": { bg: "#eef2ff", color: "#3730a3", dot: "#6366f1" },
     "Completed": { bg: "#f0fdf4", color: "#166534", dot: "#22c55e" },
     "Assigned": { bg: "#fff7ed", color: "#9a3412", dot: "#f97316" },
+    "Approved": { bg: "#f0fdf4", color: "#166534", dot: "#22c55e" },
+    "Rejected": { bg: "#fef2f2", color: "#991b1b", dot: "#ef4444" },
+    "Pending": { bg: "#fffbeb", color: "#92400e", dot: "#f59e0b" },
+    "On Break": { bg: "#fff1f1", color: "#d93b3b", dot: "#d93b3b", pulse: true },
   };
   const s = map[status] || map["Incomplete"];
   return (
@@ -612,6 +619,12 @@ function Dashboard({ employee, onSignOut }) {
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
+
+  // Leave Management State
+  const [profile, setProfile] = useState({ total_leaves: 16 });
+  const [myLeaves, setMyLeaves] = useState([]);
+  const [showLeaveForm, setShowLeaveForm] = useState(false);
+  const [leaveData, setLeaveData] = useState({ start: "", end: "", reason: "" });
 
   // Helper to format seconds to HMS
   const secondsToHMS = (totalSeconds) => {
@@ -715,6 +728,66 @@ function Dashboard({ employee, onSignOut }) {
     const t = setInterval(fetchAssignedTasks, 15000); // Check for new tasks every 15s
     return () => clearInterval(t);
   }, [employee.id]);
+
+  const fetchProfile = async () => {
+    try {
+      const resp = await fetch(PROFILE_URL(employee.id));
+      if (resp.ok) setProfile(await resp.json());
+    } catch (e) { console.warn("Profile fetch failed", e); }
+  };
+
+  const fetchLeaves = async () => {
+    try {
+      const resp = await fetch(`${LEAVES_URL}?employee_id=${employee.id}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        setMyLeaves(data);
+        
+        // Handle notifications for approved/rejected leaves
+        const unnotified = data.find(l => !l.is_notified && l.status !== "Pending");
+        if (unnotified) {
+          showToast(`Your leave request was ${unnotified.status}!`, unnotified.status === "Approved" ? "success" : "error");
+          // Mark as notified
+          fetch(`${LEAVES_URL}${unnotified.id}/notify/`, { method: "PATCH" });
+        }
+      }
+    } catch (e) { console.warn("Leaves fetch failed", e); }
+  };
+
+  useEffect(() => {
+    fetchProfile();
+    fetchLeaves();
+    const t = setInterval(() => { fetchProfile(); fetchLeaves(); }, 30000);
+    return () => clearInterval(t);
+  }, [employee.id]);
+
+  const handleLeaveRequest = async () => {
+    if (!leaveData.start || !leaveData.end || !leaveData.reason) {
+      showToast("Please fill all fields", "amber");
+      return;
+    }
+    try {
+      const resp = await fetch(LEAVES_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          employee_id: employee.id,
+          employee_name: employee.name,
+          start_date: leaveData.start,
+          end_date: leaveData.end,
+          reason: leaveData.reason
+        })
+      });
+      if (resp.ok) {
+        showToast("Leave request submitted!", "success");
+        setLeaveData({ start: "", end: "", reason: "" });
+        setShowLeaveForm(false);
+        fetchLeaves();
+      } else {
+        showToast("Submission failed", "error");
+      }
+    } catch (e) { console.error(e); }
+  };
 
   const markTaskViewed = async (taskId) => {
     try {
@@ -1281,10 +1354,11 @@ function Dashboard({ employee, onSignOut }) {
           display: "flex", gap: 4, background: "#e4eaf3", borderRadius: 10,
           padding: 4, marginBottom: 20, width: "fit-content"
         }}>
-          {[{ k: "today", label: "Today's Session" }, { k: "history", label: "Attendance History" }].map(t => (
+          {[{ k: "today", label: "Today's Session" }, { k: "history", label: "Attendance History" }, { k: "leaves", label: "Leave Requests" }].map(t => (
             <button key={t.k} className={`tab${activeTab === t.k ? " active" : ""}`}
               onClick={() => setTab(t.k)}>{t.label}</button>
           ))}
+
         </div>
 
         {/* Stat cards */}
@@ -1541,6 +1615,78 @@ function Dashboard({ employee, onSignOut }) {
             )}
           </div>
         )}
+        
+        {activeTab === "leaves" && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+            <div style={{ background: T.white, borderRadius: 16, border: `1px solid ${T.border}`, padding: 24, alignSelf: "start" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: T.purpleBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Icon d={icons.calendar} size={20} color={T.purple} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: T.ink }}>Request Leave</div>
+                  <div style={{ fontSize: 13, color: T.muted }}>You have <b style={{color: T.purple}}>{profile.total_leaves}</b> leaves remaining</div>
+                </div>
+              </div>
+              
+              <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.muted, marginBottom: 8, letterSpacing: 0.5 }}>START DATE</label>
+                  <input className="adm-inp" type="date" style={{ width: "100%", boxSizing: "border-box" }}
+                    value={leaveData.start} onChange={e => setLeaveData({ ...leaveData, start: e.target.value })} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.muted, marginBottom: 8, letterSpacing: 0.5 }}>END DATE</label>
+                  <input className="adm-inp" type="date" style={{ width: "100%", boxSizing: "border-box" }}
+                    value={leaveData.end} onChange={e => setLeaveData({ ...leaveData, end: e.target.value })} />
+                </div>
+              </div>
+              
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.muted, marginBottom: 8, letterSpacing: 0.5 }}>REASON FOR LEAVE</label>
+                <textarea className="task-area" style={{ minHeight: 120 }} placeholder="Please provide a brief reason for your leave request..."
+                  value={leaveData.reason} onChange={e => setLeaveData({ ...leaveData, reason: e.target.value })} />
+              </div>
+              
+              <button className="act-btn" onClick={handleLeaveRequest}
+                style={{ width: "100%", background: T.accent, color: "white", justifyContent: "center", padding: "14px", borderRadius: 12 }}>
+                <Icon d={icons.check} size={16} color="white" />
+                Submit Leave Application
+              </button>
+            </div>
+            
+            <div style={{ background: T.white, borderRadius: 16, border: `1px solid ${T.border}`, padding: 24, overflow: "hidden" }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 20 }}>My Leave History</div>
+              <div style={{ overflowY: "auto", maxHeight: 500, paddingRight: 6 }}>
+                {myLeaves.length === 0 ? (
+                  <div style={{ textAlign: "center", color: T.muted, padding: "60px 0" }}>
+                    <div style={{ opacity: 0.3, marginBottom: 12 }}><Icon d={icons.calendar} size={48} /></div>
+                    No leave requests found
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {[...myLeaves].reverse().map(l => (
+                      <div key={l.id} style={{ padding: 18, borderRadius: 16, background: T.surface, border: `1px solid ${T.border}`, transition: "transform 0.15s" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+                          <div style={{ fontWeight: 800, fontSize: 14 }}>{new Date(l.start_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })} - {new Date(l.end_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
+                          <Badge status={l.status} />
+                        </div>
+                        <div style={{ fontSize: 13, color: T.ink2, lineHeight: 1.5, marginBottom: l.admin_comment ? 12 : 0 }}>{l.reason}</div>
+                        {l.admin_comment && (
+                          <div style={{ marginTop: 12, fontSize: 12, color: T.accent, background: "white", padding: "10px 14px", borderRadius: 10, borderLeft: `4px solid ${T.accent}`, boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
+                            <div style={{ fontWeight: 800, fontSize: 10, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 }}>Admin Feedback</div>
+                            {l.admin_comment}
+                          </div>
+                        )}
+                        <div style={{ marginTop: 10, fontSize: 10, color: T.muted, textAlign: "right" }}>Applied on {new Date(l.applied_at).toLocaleDateString()}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Employee profile footer */}
         <div className="profile-footer" style={{
@@ -1696,16 +1842,30 @@ function AssignTaskModal({ employee, onClose, onAssigned }) {
    ADMIN DASHBOARD
 ══════════════════════════════════════════════════════════════ */
 function AdminDashboard({ onSignOut, allEmployees = [] }) {
+    // State for live timer
+    const [now, setNow] = useState(Date.now());
+
+    // Update 'now' every second for live timer
+    useEffect(() => {
+      const interval = setInterval(() => setNow(Date.now()), 1000);
+      return () => clearInterval(interval);
+    }, []);
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastSync, setLastSync] = useState(null);
   const [search, setSearch] = useState("");
   const [filterDate, setFilterDate] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterDept, setFilterDept] = useState("all");
   const [activeTab, setTab] = useState("attendance");
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [assignTaskTo, setAssignTaskTo] = useState(null);
   const [taskFeed, setTaskFeed] = useState([]);
+  const [leaveRequests, setLeaveRequests] = useState([]);
+  const [adminComment, setAdminComment] = useState("");
+  const [profiles, setProfiles] = useState([]);
+  const [sortConfig, setSortConfig] = useState({ key: "date", dir: "desc" });
+
 
   const fetchAttendance = async () => {
     setLoading(true);
@@ -1755,7 +1915,46 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
     } catch (e) {
       console.error("Failed to fetch task feed", e);
     }
+
+    // Fetch Leave Requests
+    try {
+      const lResp = await fetch(LEAVES_URL);
+      if (lResp.ok) setLeaveRequests(await lResp.json());
+    } catch (e) {
+      console.error("Failed to fetch leaves", e);
+    }
+
+    // Fetch Profiles
+    try {
+      const pResp = await fetch(PROFILES_URL);
+      if (pResp.ok) setProfiles(await pResp.json());
+    } catch (e) {
+      console.error("Failed to fetch profiles", e);
+    }
   };
+
+
+  const handleApproveLeave = async (leaveId, status) => {
+    try {
+      const resp = await fetch(`${LEAVES_URL}${leaveId}/approve/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, admin_comment: adminComment })
+      });
+      if (resp.ok) {
+        setAdminComment("");
+        fetchAttendance();
+        alert(`Leave request ${status.toLowerCase()} successfully`);
+      } else {
+        const errorData = await resp.json();
+        alert(`Failed: ${errorData.error || "Unknown error"}`);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Network error while updating leave status");
+    }
+  };
+
 
   useEffect(() => {
     fetchAttendance();
@@ -1764,8 +1963,16 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
   }, []);
 
   // Derived stats
+  const departments = Array.from(new Set(allEmployees.map(e => e.dept).filter(Boolean)));
   const today = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
   const todayRecs = records.filter(r => r.date === today);
+
+  // Helper to format input date (YYYY-MM-DD) to DD MMM YYYY
+  const formatInputDate = (dateStr) => {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  };
   const registeredCount = allEmployees.length;
   const fullDayToday = todayRecs.filter(r => r.status === "Full Day").length;
   const halfDayToday = todayRecs.filter(r => r.status === "Half Day").length;
@@ -1773,18 +1980,44 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
   // Filtered records
   const filtered = (() => {
     const q = search.toLowerCase();
-    const targetDate = filterDate || today;
+    const targetDate = filterDate ? formatInputDate(filterDate) : today;
 
-    if (filterStatus === "Leave") {
+    if (filterStatus === "Leave" || filterStatus === "leaves") {
+       // Use targetDate (calculated from filterDate or today) for checking leave status
+       // Parse targetDate string "29 Apr 2026" back to a Date object if needed
+       // But targetDate is a string from records or today string.
+       // It's safer to just parse the filterDate input if it exists.
+       
+       let checkDate = new Date();
+       if (filterDate) {
+         // Expecting DD MMM YYYY or YYYY-MM-DD
+         checkDate = new Date(filterDate);
+         if (isNaN(checkDate)) checkDate = new Date(); // fallback
+       }
+       checkDate.setHours(0, 0, 0, 0);
+
        return allEmployees
          .filter(emp => {
-           const hasRec = records.some(r => {
-             const eid = r.id || r.employeeid;
-             return eid === emp.id && r.date === targetDate;
+           const onLeave = leaveRequests.some(l => {
+             if (l.status !== "Approved") return false;
+             const lId = String(l.employee_id).toLowerCase().trim();
+             const eId = String(emp.id).toLowerCase().trim();
+             if (lId !== eId) return false;
+
+             const start = new Date(l.start_date);
+
+             const end = new Date(l.end_date);
+             start.setHours(0, 0, 0, 0);
+             end.setHours(0, 0, 0, 0);
+             
+             return checkDate >= start && checkDate <= end;
            });
+           
            const matchSearch = !q || emp.name.toLowerCase().includes(q) || emp.id.toLowerCase().includes(q);
-           return !hasRec && matchSearch;
+           return onLeave && matchSearch;
          })
+
+
          .map(emp => ({
            id: emp.id,
            name: emp.name,
@@ -1794,18 +2027,78 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
            logoutt: "—",
            hours: "—",
            break_time: "00:00:00",
-           tasks: "—",
+           tasks: "On Approved Leave",
            status: "Leave"
          }));
     }
 
-    return records.filter(r => {
+    if (filterStatus === "notlogin") {
+      return allEmployees
+        .filter(emp => {
+          const hasRec = records.some(r => {
+            const eid = r.id || r.employeeid;
+            return eid === emp.id && r.date === targetDate;
+          });
+          const matchSearch = !q || emp.name.toLowerCase().includes(q) || emp.id.toLowerCase().includes(q);
+          return !hasRec && matchSearch;
+        })
+        .map(emp => ({
+          id: emp.id,
+          name: emp.name,
+          dept: emp.dept,
+          date: targetDate,
+          logint: "—",
+          logoutt: "—",
+          hours: "—",
+          break_time: "00:00:00",
+          tasks: "Not Signed In",
+          status: "Incomplete"
+        }));
+    }
+
+    const base = records.filter(r => {
       const ms = !q || (r.name || r.employeename || "").toLowerCase().includes(q)
-        || (r.id || r.employeeid || "").toLowerCase().includes(q);
-      const md = !filterDate || (r.date || "").includes(filterDate);
+        || (r.id || r.employeeid || "").toLowerCase().includes(q)
+        || (r.dept || r.department || "").toLowerCase().includes(q);
+      const md = !filterDate || (r.date || "") === targetDate;
       const mst = filterStatus === "all" || r.status === filterStatus;
-      return ms && md && mst;
+      const mdt = filterDept === "all" || (r.dept || r.department) === filterDept;
+      return ms && md && mst && mdt;
     });
+
+    return [...base].sort((a, b) => {
+      if (!sortConfig) return 0;
+      const { key, dir } = sortConfig;
+      let valA = a[key] || "";
+      let valB = b[key] || "";
+      
+      if (key === "date") {
+        valA = new Date(valA); valB = new Date(valB);
+      } else if (key === "logint" || key === "logoutt") {
+        // Convert "01:00:00 pm" to comparable value
+        const parseTime = (s) => {
+           if (!s || s === "—") return 0;
+           const parts = s.split(" ");
+           if (parts.length < 2) return 0;
+           const [time, ampm] = parts;
+           let [h, m, s_] = time.split(":").map(Number);
+           if (ampm.toLowerCase() === "pm" && h < 12) h += 12;
+           if (ampm.toLowerCase() === "am" && h === 12) h = 0;
+           return h * 3600 + m * 60 + s_;
+        };
+
+        valA = parseTime(valA); valB = parseTime(valB);
+      } else if (key === "hours") {
+        valA = parseFloat(valA.split(":")[0]) || 0;
+        valB = parseFloat(valB.split(":")[0]) || 0;
+      }
+      
+      if (dir === "asc") return valA > valB ? 1 : -1;
+      return valA < valB ? 1 : -1;
+    });
+
+
+
   })();
 
   const exportExcel = () => {
@@ -1820,6 +2113,23 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
     color: T.muted, letterSpacing: 0.5, borderBottom: `1px solid ${T.border}`, textTransform: "uppercase", whiteSpace: "nowrap"
   };
   const cellStyle = { padding: "11px 14px", fontSize: 13, color: T.ink, borderBottom: `1px solid ${T.border}` };
+
+  // Helper to parse "HH:MM:SS" string to seconds
+  function parseHMS(str) {
+    if (!str || str === "—") return 0;
+    const parts = str.split(":");
+    if (parts.length !== 3) return 0;
+    const [h, m, s] = parts.map(Number);
+    return h * 3600 + m * 60 + s;
+  }
+
+  // Helper to format seconds to "HH:MM:SS"
+  function formatHMS(totalSeconds) {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  }
 
   return (
     <div style={{ minHeight: "100vh", background: "#eef3f9", fontFamily: "'Segoe UI',system-ui,sans-serif" }}>
@@ -1952,13 +2262,33 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
                   <div style={{ marginLeft: "auto" }}><Badge status={selectedRecord.status} /></div>
                 </div>
                 <div style={{ 
-                  background: "white", padding: 18, borderRadius: 14, 
+                  background: T.surface, padding: 18, borderRadius: 14, 
                   fontSize: 13.5, color: T.ink2, lineHeight: 1.6, whiteSpace: "pre-wrap",
-                  border: `1px solid ${T.border}`, minHeight: 140, maxHeight: 250, overflowY: "auto"
+                  border: `1px solid ${T.border}`, maxHeight: 150, overflowY: "auto", marginBottom: 20
                 }}>
-                  {selectedRecord.tasks || selectedRecord.workstatus || "No task notes were provided for this day."}
+                  <b style={{ fontSize: 10, color: T.muted, display: "block", textTransform: "uppercase", marginBottom: 4 }}>Daily Log:</b>
+                  {selectedRecord.tasks || selectedRecord.workstatus || "No log notes provided."}
+                </div>
+
+                {/* Assigned Tasks in Modal */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <b style={{ fontSize: 10, color: T.muted, textTransform: "uppercase" }}>Assigned Tasks:</b>
+                  {taskFeed.filter(t => (t.employee_id === (selectedRecord.id || selectedRecord.employeeid)) && fmtDate(new Date(t.assigned_at)) === selectedRecord.date).map(t => (
+                    <div key={t.id} style={{ padding: 14, background: "white", borderRadius: 12, border: `1px solid ${T.border}` }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                         <span style={{ fontWeight: 800, color: T.ink }}>{t.title}</span>
+                         <Badge status={t.status} />
+                      </div>
+                      <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.4 }}>{t.description}</div>
+                      {t.completed_at && <div style={{ marginTop: 6, fontSize: 10, color: T.green, fontWeight: 700 }}>✓ Done at {new Date(t.completed_at).toLocaleTimeString()}</div>}
+                    </div>
+                  ))}
+                  {taskFeed.filter(t => (t.employee_id === (selectedRecord.id || selectedRecord.employeeid)) && fmtDate(new Date(t.assigned_at)) === selectedRecord.date).length === 0 && (
+                    <div style={{ fontSize: 12, color: T.muted, fontStyle: "italic" }}>No tasks assigned for this day.</div>
+                  )}
                 </div>
               </div>
+
             </div>
             
             <div style={{ padding: "0 30px 30px", display: "flex", gap: 12 }}>
@@ -2013,6 +2343,7 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
           {[
             { k: "attendance", label: "Attendance Records" },
             { k: "tasks", label: "Live Task Feed" },
+            { k: "leaves", label: "Leave Requests" },
             { k: "employees", label: "Employee List" },
           ].map(t => (
             <button key={t.k} className={`adm-tab${activeTab === t.k ? " active" : ""}`}
@@ -2030,16 +2361,28 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
               value={search} onChange={e => setSearch(e.target.value)}
               style={{ width: "100%", paddingLeft: 32, boxSizing: "border-box" }} />
           </div>
-          <input className="adm-inp" type="text" placeholder="Filter date..."
-            value={filterDate} onChange={e => setFilterDate(e.target.value)}
-            style={{ minWidth: 150 }} />
+          <input
+            className="adm-inp"
+            type="date"
+            placeholder="Filter date..."
+            value={filterDate}
+            onChange={e => setFilterDate(e.target.value)}
+            style={{ minWidth: 150 }}
+          />
           <select className="adm-inp" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
             <option value="all">All Status</option>
-            <option value="Active">Active</option>
-            <option value="Leave">Leave</option>
+            <option value="Active">Active Today</option>
+            <option value="On Break">On Break</option>
+            <option value="notlogin">Not Logged In</option>
+            <option value="leaves">On Leave</option>
             <option value="Full Day">Full Day</option>
             <option value="Half Day">Half Day</option>
           </select>
+          <select className="adm-inp" value={filterDept} onChange={e => setFilterDept(e.target.value)} style={{ minWidth: 150 }}>
+            <option value="all">All Departments</option>
+            {departments.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+
           <div style={{ fontSize: 12, color: T.muted, marginLeft: 4 }}>
             {loading ? "Syncing..." : `${filtered.length} records`}
           </div>
@@ -2053,25 +2396,36 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
                 <thead>
                   <tr style={{ background: T.surface }}>
                     {[
-                      { h: "Date", w: 100 },
-                      { h: "ID", w: 80 },
-                      { h: "Employee", w: 200 },
-                      { h: "Dept", w: 120 },
-                      { h: "In", w: 80 },
-                      { h: "Out", w: 80 },
-                      { h: "Work Hrs", w: 100 },
-                      { h: "Break", w: 80 },
-                      { h: "Status", w: 120 },
-                      { h: "Logs", w: 180 },
+                      { h: "Date", w: 100, k: "date" },
+                      { h: "ID", w: 80, k: "id" },
+                      { h: "Employee", w: 200, k: "name" },
+                      { h: "Dept", w: 120, k: "dept" },
+                      { h: "In", w: 80, k: "logint" },
+                      { h: "Out", w: 80, k: "logoutt" },
+                      { h: "Work Hrs", w: 100, k: "hours" },
+                      { h: "Break", w: 80, k: "break_time" },
+                      { h: "Status", w: 120, k: "status" },
+                      { h: "Tasks & Logs", w: 220 },
                       { h: "Actions", w: 100, align: "right" }
                     ].map(col => (
-                      <th key={col.h} style={{ ...colStyle, width: col.w, textAlign: col.align || "left" }}>{col.h}</th>
+                      <th key={col.h} 
+                          onClick={() => col.k && setSortConfig({ key: col.k, dir: sortConfig.key === col.k && sortConfig.dir === "asc" ? "desc" : "asc" })}
+                          style={{ ...colStyle, width: col.w, textAlign: col.align || "left", cursor: col.k ? "pointer" : "default" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          {col.h}
+                          {col.k && sortConfig.key === col.k && (
+                             <span style={{ fontSize: 10 }}>{sortConfig.dir === "asc" ? "↑" : "↓"}</span>
+                          )}
+                        </div>
+                      </th>
                     ))}
                   </tr>
                 </thead>
+
                 <tbody>
-                  {[...filtered].reverse().map((r, i) => (
+                  {filtered.map((r, i) => (
                     <tr key={i} className="adm-row">
+
                       <td style={cellStyle}>{r.date}</td>
                       <td style={cellStyle}>{r.id || r.employeeid}</td>
                       <td style={cellStyle}>
@@ -2087,14 +2441,55 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
                       <td style={cellStyle}>{r.dept || r.department}</td>
                       <td style={{ ...cellStyle, color: T.green, fontWeight: 600 }}>{r.logint || r.intime}</td>
                       <td style={{ ...cellStyle, color: T.red, fontWeight: 600 }}>{r.logoutt || r.outtime}</td>
-                      <td style={{ ...cellStyle, fontWeight: 800 }}>{r.hours || r.workinghours}</td>
-                      <td style={{ ...cellStyle, color: T.amber, fontWeight: 600 }}>{r.break_time || r.breaktime || "—"}</td>
+                      <td style={{ ...cellStyle, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
+                        {r.status === "Active" && r.last_status_change
+                          ? (() => {
+                              const base = parseHMS(r.hours || r.workinghours);
+                              const lastChange = new Date(r.last_status_change).getTime();
+                              const elapsed = Math.floor((now - lastChange) / 1000);
+                              return formatHMS(base + (elapsed > 0 ? elapsed : 0));
+                            })()
+                          : (r.hours || r.workinghours || "—")}
+                      </td>
+                      <td style={{ ...cellStyle, color: T.amber, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
+                        {r.status === "On Break" && r.last_status_change
+                          ? (() => {
+                              const base = parseHMS(r.break_time || r.breaktime);
+                              const lastChange = new Date(r.last_status_change).getTime();
+                              const elapsed = Math.floor((now - lastChange) / 1000);
+                              return formatHMS(base + (elapsed > 0 ? elapsed : 0));
+                            })()
+                          : (r.break_time || r.breaktime || "—")}
+                      </td>
                       <td style={cellStyle}>
                         <Badge status={r.status || "Incomplete"} />
                       </td>
-                      <td style={{ ...cellStyle, color: T.muted, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.tasks || r.workstatus}>
-                        {r.tasks || r.workstatus || "—"}
+                      <td style={{ ...cellStyle, color: T.ink2, maxWidth: 220, fontSize: 12 }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          {/* Manual Logs */}
+                          { (r.tasks || r.workstatus) && (
+                            <div style={{ padding: "4px 8px", background: T.surface, borderRadius: 6, border: `1px solid ${T.border}`, fontSize: 11, maxHeight: 60, overflowY: "auto" }} title={r.tasks || r.workstatus}>
+                              <b style={{ fontSize: 9, color: T.muted, display: "block", textTransform: "uppercase" }}>Manual Log:</b>
+                              {r.tasks || r.workstatus}
+                            </div>
+                          )}
+
+                          
+                          {/* Assigned Tasks from Task Feed */}
+                          {taskFeed.filter(t => (t.employee_id === (r.id || r.employeeid)) && 
+                            fmtDate(new Date(t.assigned_at)) === r.date).map(t => (
+                            <div key={t.id} style={{ padding: "4px 8px", background: "white", borderRadius: 6, border: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <span style={{ fontWeight: 600, fontSize: 11, color: T.accent }}>{t.title}</span>
+                              <Badge status={t.status} />
+                            </div>
+                          ))}
+                          
+                          {!(r.tasks || r.workstatus) && taskFeed.filter(t => (t.employee_id === (r.id || r.employeeid)) && fmtDate(new Date(t.assigned_at)) === r.date).length === 0 && (
+                            <span style={{ color: T.faint }}>—</span>
+                          )}
+                        </div>
                       </td>
+
                       <td style={{ ...cellStyle, textAlign: "right" }}>
                         <button 
                           onClick={() => setSelectedRecord(r)}
@@ -2169,6 +2564,73 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
           </div>
         )}
 
+        {/* Leave Requests Tab */}
+        {activeTab === "leaves" && (
+          <div className="premium-card">
+            <div style={{ padding: 24, borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 18, color: T.ink }}>Employee Leave Requests</div>
+                <div style={{ fontSize: 12, color: T.muted }}>Manage and approve employee leave applications</div>
+              </div>
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: T.surface }}>
+                    {["Applied On", "Employee", "Duration", "Reason", "Status", "Actions"].map(h => (
+                      <th key={h} style={colStyle}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {leaveRequests.length === 0 ? (
+                    <tr><td colSpan="6" style={{ padding: 40, textAlign: "center", color: T.muted }}>No leave requests found</td></tr>
+                  ) : (
+                    [...leaveRequests].reverse().map((l, i) => (
+                      <tr key={i} className="adm-row">
+                        <td style={cellStyle}>{new Date(l.applied_at).toLocaleDateString()}</td>
+                        <td style={cellStyle}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                             <Avatar name={l.employee_name} size={28} />
+                             <div>
+                               <div style={{ fontWeight: 700 }}>{l.employee_name}</div>
+                               <div style={{ fontSize: 10, color: T.muted }}>{l.employee_id}</div>
+                             </div>
+                          </div>
+                        </td>
+                        <td style={cellStyle}>
+                          <div style={{ fontWeight: 700 }}>{l.start_date}</div>
+                          <div style={{ fontSize: 10, color: T.muted }}>to {l.end_date}</div>
+                        </td>
+                        <td style={{ ...cellStyle, maxWidth: 250, whiteSpace: "normal", fontSize: 12, lineHeight: 1.4 }}>{l.reason}</td>
+                        <td style={cellStyle}><Badge status={l.status} /></td>
+                        <td style={cellStyle}>
+                          {l.status === "Pending" ? (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 160 }}>
+                              <input className="adm-inp" placeholder="Add comment..." style={{ fontSize: 11, padding: "6px 10px" }}
+                                value={adminComment} onChange={e => setAdminComment(e.target.value)} />
+                              <div style={{ display: "flex", gap: 6 }}>
+                                <button onClick={() => handleApproveLeave(l.id, "Approved")} style={{ flex: 1, padding: "8px", background: T.green, color: "white", borderRadius: 8, border: "none", fontSize: 11, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }} onMouseOver={e => e.currentTarget.style.opacity = 0.8} onMouseOut={e => e.currentTarget.style.opacity = 1}>Approve</button>
+                                <button onClick={() => handleApproveLeave(l.id, "Rejected")} style={{ flex: 1, padding: "8px", background: T.red, color: "white", borderRadius: 8, border: "none", fontSize: 11, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }} onMouseOver={e => e.currentTarget.style.opacity = 0.8} onMouseOut={e => e.currentTarget.style.opacity = 1}>Reject</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: 11, color: T.muted }}>
+                              <div>Reviewed on {new Date(l.reviewed_at).toLocaleDateString()}</div>
+                              {l.admin_comment && <div style={{ marginTop: 4, color: T.ink, fontStyle: "italic" }}>"{l.admin_comment}"</div>}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+
         {/* Employee List Tab */}
         {activeTab === "employees" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20 }}>
@@ -2179,11 +2641,18 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
                     <Avatar name={e.name} size={56} />
                     <div style={{ position: "absolute", bottom: 2, right: 2, width: 14, height: 14, borderRadius: "50%", background: T.green, border: "3px solid white" }} />
                   </div>
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 800, color: T.ink, fontSize: 16 }}>{e.name}</div>
                     <div style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>{e.role} · {e.id}</div>
                   </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: T.purple }}>
+                      {profiles.find(p => String(p.employee_id).toLowerCase() === String(e.id).toLowerCase())?.total_leaves ?? 16}
+                    </div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: 0.5 }}>Leaves Left</div>
+                  </div>
                 </div>
+
                 
                 <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 20 }}>
                    <button onClick={() => setAssignTaskTo(e)} style={{

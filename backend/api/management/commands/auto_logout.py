@@ -5,7 +5,8 @@ from datetime import datetime
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from django.conf import settings
-from api.models import Attendance
+from django.db.models import Q
+from api.models import Attendance, Profile
 
 class Command(BaseCommand):
     help = 'Automatically logs out hanging sessions and sends warnings'
@@ -15,36 +16,40 @@ class Command(BaseCommand):
         today_str = datetime.now().strftime('%d %b %Y')
         
         hanging = Attendance.objects.exclude(date=today_str).filter(
-            status__in=['Active', 'On Break', 'working', 'break']
+            status__in=['Active', 'On Break', 'working', 'break', 'Login']
         )
         
         count = 0
         self.stdout.write(f"Searching for hanging sessions (not {today_str})...")
         
         for rec in hanging:
-            self.stdout.write(f"Closing hanging session for {rec.name} on {rec.date}")
+            self.stdout.write(f"Closing hanging session for {rec.name} on {rec.date} (Status: {rec.status})")
             
             # 1. Update status
             original_status = rec.status
             rec.logout_time = "11:59:59 PM"
             rec.status = "Complete (Auto)"
             
-            # Simple heuristic: if it was hanging, it likely reached 8+ hours
-            if rec.hours == "—" or rec.hours == "00:00:00":
-                rec.hours = "08:00:00"
-            
             # 2. Find employee email
-            # We try to find the user by employee_id (which is the username)
-            user = User.objects.filter(username=rec.employee_id).first()
+            user = User.objects.filter(Q(username__iexact=rec.employee_id) | Q(email__iexact=rec.employee_id)).first()
+            if not user:
+                # Try finding via Profile model mapping
+                profile = Profile.objects.filter(employee_id__iexact=rec.employee_id).first()
+                if profile:
+                    user = profile.user
             
             if user and user.email:
-                self.send_warning_email(user, rec.date)
-                self.stdout.write(f"Warning email sent to {user.email}")
+                success = self.send_warning_email(user, rec.date)
+                if success:
+                    self.stdout.write(f"Warning email sent to {user.email}")
+                else:
+                    self.stdout.write(f"FAILED to send warning email to {user.email}")
             else:
                 self.stdout.write(f"Warning: No email found for user {rec.employee_id}")
 
             rec.save()
             count += 1
+
             
         self.stdout.write(self.style.SUCCESS(f'Successfully auto-logged out {count} users.'))
 
@@ -66,7 +71,7 @@ class Command(BaseCommand):
             return
 
         try:
-            requests.post(
+            r = requests.post(
                 script_url,
                 data=json.dumps({
                     "action": "sendEmail",
@@ -75,7 +80,11 @@ class Command(BaseCommand):
                     "body": body
                 }),
                 headers={"Content-Type": "text/plain"},
+                allow_redirects=True,
                 timeout=15
             )
+            return r.status_code == 200
         except Exception as e:
             self.stderr.write(f"Failed to send email to {user.email}: {str(e)}")
+            return False
+

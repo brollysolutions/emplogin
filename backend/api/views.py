@@ -1,8 +1,8 @@
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import Attendance, PasswordResetToken, Task
-from .serializers import AttendanceSerializer, TaskSerializer
+from .models import Attendance, PasswordResetToken, Task, Profile, LeaveRequest
+from .serializers import AttendanceSerializer, TaskSerializer, ProfileSerializer, LeaveRequestSerializer
 import uuid
 from django.core.mail import send_mail
 from django.conf import settings
@@ -257,6 +257,12 @@ def sync_users(request):
         if created or not user.email:
             user.email = email
             
+        # Ensure Profile exists
+        profile, p_created = Profile.objects.get_or_create(user=user)
+        if p_created or not profile.employee_id:
+            profile.employee_id = username
+        profile.save()
+            
         # Only set password on creation to avoid overwriting current passwords
         if created and password:
             user.set_password(password)
@@ -306,3 +312,105 @@ def update_task_status(request, pk):
     task.save()
     serializer = TaskSerializer(task)
     return Response(serializer.data)
+
+@api_view(['GET', 'POST'])
+def leave_request_list(request):
+    if request.method == 'GET':
+        employee_id = request.query_params.get('employee_id')
+        if employee_id:
+            # Employee viewing their requests
+            requests_list = LeaveRequest.objects.filter(employee_id=employee_id).order_by('-applied_at')
+        else:
+            # Admin viewing all requests
+            requests_list = LeaveRequest.objects.all().order_by('-applied_at')
+        
+        serializer = LeaveRequestSerializer(requests_list, many=True)
+        return Response(serializer.data)
+
+    elif request.method == 'POST':
+        # Employee submitting a request
+        serializer = LeaveRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['PATCH'])
+def approve_leave(request, pk):
+    try:
+        leave = LeaveRequest.objects.get(pk=pk)
+    except LeaveRequest.DoesNotExist:
+        return Response({"error": "Leave request not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    status_val = request.data.get('status')
+    admin_comment = request.data.get('admin_comment', '')
+
+    if status_val not in ['Approved', 'Rejected']:
+        return Response({"error": "Invalid status"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if leave.status == 'Pending' and status_val == 'Approved':
+        # Decrement leave count
+        try:
+            profile = Profile.objects.filter(employee_id__iexact=leave.employee_id).first()
+            if not profile:
+                # Fallback: try to find user by username or email
+                user = User.objects.filter(Q(username__iexact=leave.employee_id) | Q(email__iexact=leave.employee_id)).first()
+                if user:
+                    profile, _ = Profile.objects.get_or_create(user=user)
+                    profile.employee_id = leave.employee_id
+                    profile.save()
+                else:
+                    # Final attempt: search Profiles by user username
+                    user_alt = User.objects.filter(username__iexact=leave.employee_name).first()
+                    if user_alt:
+                         profile, _ = Profile.objects.get_or_create(user=user_alt)
+                         profile.employee_id = leave.employee_id
+                         profile.save()
+                    else:
+                        return Response({"error": f"Employee profile for {leave.employee_id} not found and could not be auto-created."}, status=status.HTTP_404_NOT_FOUND)
+
+            
+            if profile.total_leaves > 0:
+                profile.total_leaves -= 1
+                profile.save()
+            else:
+                return Response({"error": "No leaves remaining for this employee"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": f"Profile processing error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+    leave.status = status_val
+    leave.admin_comment = admin_comment
+    leave.reviewed_at = timezone.now()
+    leave.is_notified = False # Reset notification for employee to see
+    leave.save()
+
+    serializer = LeaveRequestSerializer(leave)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+def employee_profile(request, employee_id):
+    try:
+        profile = Profile.objects.get(employee_id=employee_id)
+        serializer = ProfileSerializer(profile)
+        return Response(serializer.data)
+    except Profile.DoesNotExist:
+        return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['PATCH'])
+def mark_notification_read(request, pk):
+    try:
+        leave = LeaveRequest.objects.get(pk=pk)
+        leave.is_notified = True
+        leave.save()
+        return Response({"success": True})
+    except LeaveRequest.DoesNotExist:
+        return Response({"error": "Leave request not found"}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+def profile_list(request):
+    profiles = Profile.objects.all()
+    serializer = ProfileSerializer(profiles, many=True)
+    return Response(serializer.data)
+
+
