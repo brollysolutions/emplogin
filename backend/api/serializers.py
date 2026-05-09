@@ -9,9 +9,14 @@ class EmployeeGroupSerializer(serializers.ModelSerializer):
         slug_field='username',
         source='members'
     )
+    member_names = serializers.SerializerMethodField()
+    
+    def get_member_names(self, obj):
+        return [user.get_full_name() or user.username for user in obj.members.all()]
+
     class Meta:
         model = EmployeeGroup
-        fields = ['id', 'name', 'description', 'members', 'member_usernames', 'created_at']
+        fields = ['id', 'name', 'description', 'members', 'member_usernames', 'member_names', 'created_at']
         extra_kwargs = {'members': {'required': False}}
 
 
@@ -43,15 +48,21 @@ class ChatMessageSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def get_sender_username(self, obj):
-        if obj.sender_id == 'admin':
+        if not obj.sender_id:
+            return "Unknown"
+        if obj.sender_id.lower() == 'admin':
             return 'Admin'
         try:
-            profile = Profile.objects.filter(employee_id=obj.sender_id).first()
+            # Case-insensitive lookup for employee_id
+            profile = Profile.objects.filter(employee_id__iexact=obj.sender_id).first()
             if profile:
-                return profile.user.username
-            user = User.objects.filter(username=obj.sender_id).first()
+                # Return the name from profile if it looks like a real name
+                return profile.name or profile.user.username
+            
+            # Fallback to username lookup
+            user = User.objects.filter(username__iexact=obj.sender_id).first()
             if user:
-                return user.username
+                return user.get_full_name() or user.username
         except Exception:
             pass
         return obj.sender_id

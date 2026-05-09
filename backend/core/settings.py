@@ -153,5 +153,11 @@ DEFAULT_FROM_EMAIL = f"Brolly Solutions <{EMAIL_HOST_USER}>"
 GOOGLE_SCRIPT_URL = os.environ.get('GOOGLE_SCRIPT_URL', '')
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-MEDIA_URL = "/media/"
+# Media files
+# In production, media needs to be served behind the /login/ proxy
+if os.environ.get('DATABASE_URL') or not DEBUG: # Simple heuristic for production
+    MEDIA_URL = "/login/media/"
+else:
+    MEDIA_URL = "/media/"
+
 MEDIA_ROOT = BASE_DIR / "media"

@@ -1139,6 +1139,11 @@ function Dashboard({ employee, onSignOut }) {
   const [groupUnreadMap, setGroupUnreadMap] = useState({});
   const lastMsgsCountRef = useRef(0);
   const isFirstUnreadCheck = useRef(true);
+  const activeTabRef = useRef(activeTab);
+  const activeChatRef = useRef(activeChat);
+
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
+  useEffect(() => { activeChatRef.current = activeChat; }, [activeChat]);
 
   useEffect(() => {
     if (!employee?.id) return;
@@ -1168,12 +1173,12 @@ function Dashboard({ employee, onSignOut }) {
           if (!isFirstUnreadCheck.current && msgs.length > lastMsgsCountRef.current) {
              const last = msgs[msgs.length - 1];
              if (last && last.sender_id !== employee.id) {
-               const isViewingChat = activeTab === 'messages' && activeChat.id === (last.group_id || 'admin');
+               const isViewingChat = activeTabRef.current === 'messages' && activeChatRef.current.id === (last.group_id || 'admin');
                if (!document.hasFocus() || !isViewingChat) {
-                  (window._triggerNotif || playNotifySound)();
+                  (window.showToast || playNotifySound)();
                   if (!isViewingChat) {
                     const sender = last.sender_id === 'admin' ? 'Admin' : last.sender_username || last.sender_id;
-                    showToast(`New message from ${sender}`, "info");
+                    window.showToast?.(`New message from ${sender}`, "info");
                   }
                }
              }
@@ -2383,6 +2388,14 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
   const [groupUnreadMapAdmin, setGroupUnreadMapAdmin] = useState({});
   const lastMsgsCountAdminRef = useRef(0);
   const lastUnreadAdminRef = useRef(0);
+  
+  const activeTabAdmRef = useRef(activeTab);
+  const chatWithRef = useRef(chatWith);
+  const selGroupRef = useRef(selGroup);
+
+  useEffect(() => { activeTabAdmRef.current = activeTab; }, [activeTab]);
+  useEffect(() => { chatWithRef.current = chatWith; }, [chatWith]);
+  useEffect(() => { selGroupRef.current = selGroup; }, [selGroup]);
 
   useEffect(() => {
     const fetchAllUnread = async () => {
@@ -2394,7 +2407,8 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
           let totalDirectUnread = 0;
           allMsgs.forEach(m => {
             if (!m.is_read && m.receiver_id === "admin") {
-              map[m.sender_id] = (map[m.sender_id] || 0) + 1;
+              const sid = String(m.sender_id).toLowerCase();
+              map[sid] = (map[sid] || 0) + 1;
               totalDirectUnread++;
             }
           });
@@ -2416,12 +2430,12 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
           if (!isFirstUnreadAdmin.current && allMsgs.length > lastMsgsCountAdminRef.current) {
             const last = allMsgs[allMsgs.length - 1];
             if (last && last.sender_id !== 'admin') {
-              const isViewingMsgs = activeTab === 'employees'; // or 'groups'
-              const isViewingThisGroup = activeTab === 'groups' && selGroup && `group_${selGroup.id}` === last.group_id;
-              if (!document.hasFocus() || (!isViewingMsgs && !chatWith && !isViewingThisGroup)) {
-                (window._triggerNotif || playNotifySound)();
-                if (!isViewingMsgs && !chatWith && !isViewingThisGroup) {
-                  showToast(`New message from ${last.sender_username || last.sender_id}`, "info");
+              const isViewingMsgs = activeTabAdmRef.current === 'employees'; // or 'groups'
+              const isViewingThisGroup = activeTabAdmRef.current === 'groups' && selGroupRef.current && `group_${selGroupRef.current.id}` === last.group_id;
+              if (!document.hasFocus() || (!isViewingMsgs && !chatWithRef.current && !isViewingThisGroup)) {
+                (window.showToast || playNotifySound)();
+                if (!isViewingMsgs && !chatWithRef.current && !isViewingThisGroup) {
+                  window.showToast?.(`New message from ${last.sender_username || last.sender_id}`, "info");
                 }
               }
             }
@@ -3500,8 +3514,10 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
                    const timeB = b.last_active ? new Date(b.last_active).getTime() : 0;
                    return timeB - timeA;
                 })[0];
-                const lastActive = latestRec?.last_active ? new Date(latestRec.last_active) : null;
-                const isOnline = lastActive && (new Date() - lastActive < 120000); // 2 minutes window
+                 const lastActiveRaw = latestRec?.last_active;
+                 const lastActive = lastActiveRaw ? new Date(lastActiveRaw) : null;
+                 const isOnline = lastActive && !isNaN(lastActive.getTime()) && (new Date() - lastActive < 120000); 
+                 const unread = unreadMap[String(e.id).toLowerCase()] || 0;
                 return (
               <div key={e.id} className="premium-card" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20, transition: "transform 0.2s", borderTop: isOnline ? `4px solid ${T.green}` : "none" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -3511,7 +3527,7 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 800, color: T.ink, fontSize: 16 }}>{e.name}</div>
-                    <div style={{ fontSize: 11, color: T.muted, fontWeight: 600 }}>{isOnline ? "Online Now" : (lastActive ? `Last seen: ${lastActive.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}` : "Offline")}</div>
+                    <div style={{ fontSize: 11, color: T.muted, fontWeight: 600 }}>{isOnline ? "Online Now" : (lastActive && !isNaN(lastActive.getTime()) ? `Last seen: ${lastActive.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}` : "Offline")}</div>
                     <div style={{ fontSize: 10, color: T.faint, fontWeight: 600 }}>{e.role} · {e.id}</div>
                   </div>
                   <div style={{ textAlign: "right" }}>
@@ -3542,8 +3558,8 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
                     onMouseOut={btn => { btn.currentTarget.style.background = T.purpleBg; btn.currentTarget.style.color = T.purple; }}>
                     <Icon d={icons.message} size={16} />
                     Chat
-                    {unreadMap[e.id] > 0 && (
-                      <span style={{ position: "absolute", top: -6, right: -6, background: T.red, color: "white", fontSize: 10, padding: "2px 6px", borderRadius: 10, border: "2px solid white", fontWeight: 800 }}>{unreadMap[e.id]}</span>
+                    {unread > 0 && (
+                      <span style={{ position: "absolute", top: -6, right: -6, background: T.red, color: "white", fontSize: 10, padding: "2px 6px", borderRadius: 10, border: "2px solid white", fontWeight: 800 }}>{unread}</span>
                     )}
                   </button>
                 </div>
@@ -4215,27 +4231,27 @@ export default function App() {
     } catch (e) { return false; }
   };
 
-  const [showNotif, setShowNotif] = useState(false);
-  const triggerNotif = () => {
+  const [toast, setToast] = useState({ show: false, msg: "", type: "info" });
+  const showToast = (msg, type = "info") => {
     playNotifySound();
-    setShowNotif(true);
-    setTimeout(() => setShowNotif(false), 4000);
+    setToast({ show: true, msg, type });
+    setTimeout(() => setToast(v => ({ ...v, show: false })), 5000);
   };
 
-  // Re-bind playNotifySound to trigger toast globally
-  window._triggerNotif = triggerNotif;
+  // Bind globally so internal dashboard functions can call it
+  window.showToast = showToast;
 
   if (isAdmin) return (
     <>
       <AdminDashboard onSignOut={handleSignOut} allEmployees={creds} />
-      {showNotif && (
-        <div className="notif-toast">
-          <div style={{ background: T.accent, width: 40, height: 40, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      {toast.show && (
+        <div className="notif-toast" style={{ animation: "popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275)" }}>
+          <div style={{ background: toast.type === 'error' ? T.red : T.accent, width: 42, height: 42, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>
             <Icon d={icons.message} size={20} color="white" />
           </div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 14 }}>New Message</div>
-            <div style={{ fontSize: 12, opacity: 0.8 }}>You have a new direct message</div>
+            <div style={{ fontWeight: 800, fontSize: 14, color: T.ink }}>Notification</div>
+            <div style={{ fontSize: 12, color: T.ink2, opacity: 0.9 }}>{toast.msg}</div>
           </div>
         </div>
       )}
@@ -4245,14 +4261,14 @@ export default function App() {
   if (employee) return (
     <>
       <Dashboard employee={employee} onSignOut={handleSignOut} />
-      {showNotif && (
-        <div className="notif-toast">
-          <div style={{ background: T.accent, width: 40, height: 40, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      {toast.show && (
+        <div className="notif-toast" style={{ animation: "popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275)" }}>
+          <div style={{ background: toast.type === 'error' ? T.red : T.accent, width: 42, height: 42, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>
             <Icon d={icons.message} size={20} color="white" />
           </div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 14 }}>Admin Message</div>
-            <div style={{ fontSize: 12, opacity: 0.8 }}>The administrator sent you a message</div>
+            <div style={{ fontWeight: 800, fontSize: 14, color: T.ink }}>Message Alert</div>
+            <div style={{ fontSize: 12, color: T.ink2, opacity: 0.9 }}>{toast.msg}</div>
           </div>
         </div>
       )}
