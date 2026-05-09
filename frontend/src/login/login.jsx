@@ -26,7 +26,6 @@ const T = {
 };
 
 /* ── Helpers ───────────────────────────────────────────────── */
-/* ── Helpers ───────────────────────────────────────────────── */
 function pad(n) { return String(n).padStart(2, "0"); }
 function fmtTime(d) { return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }); }
 function fmtDate(d) { return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }); }
@@ -43,6 +42,12 @@ function hmsStr(o) {
 }
 function initials(name) {
   return name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+}
+function secondsToHMS(totalSeconds) {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  return { h, m, s, total: totalSeconds / 3600 };
 }
 
 let masterAudioCtx = null;
@@ -643,8 +648,7 @@ function Badge({ status }) {
 /* ══════════════════════════════════════════════════════════════
    DASHBOARD
 ══════════════════════════════════════════════════════════════ */
-function Dashboard({ employee, onSignOut }) {
-  // ── Restore session from localStorage on mount ──
+function Dashboard({ employee, onSignOut, showToast }) {
   const savedSession = (() => {
     try {
       const session = JSON.parse(localStorage.getItem("wt_session") || "null");
@@ -677,6 +681,8 @@ function Dashboard({ employee, onSignOut }) {
   const [assignedTasks, setAssignedTasks] = useState([]);
   const [showTasksModal, setShowTasksModal] = useState(false);
   const [toast, setToast] = useState(null);
+  // _showToast: uses the prop version if available (from App), else updates local toast state
+  const _showToast = showToast || ((msg, type = "success") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3500); });
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
@@ -688,13 +694,6 @@ function Dashboard({ employee, onSignOut }) {
   const [chatOpen, setChatOpen] = useState(false);
   const [leaveData, setLeaveData] = useState({ start: "", end: "", reason: "" });
 
-  // Helper to format seconds to HMS
-  const secondsToHMS = (totalSeconds) => {
-    const h = Math.floor(totalSeconds / 3600);
-    const m = Math.floor((totalSeconds % 3600) / 60);
-    const s = totalSeconds % 60;
-    return { h, m, s, total: totalSeconds / 3600 };
-  };
 
   // Polling for status sync across devices
   useEffect(() => {
@@ -808,7 +807,7 @@ function Dashboard({ employee, onSignOut }) {
         // Handle notifications for approved/rejected leaves
         const unnotified = data.find(l => !l.is_notified && l.status !== "Pending");
         if (unnotified) {
-          showToast(`Your leave request was ${unnotified.status}!`, unnotified.status === "Approved" ? "success" : "error");
+          _showToast(`Your leave request was ${unnotified.status}!`, unnotified.status === "Approved" ? "success" : "error");
           // Mark as notified
           fetch(`${LEAVES_URL}${unnotified.id}/notify/`, { method: "PATCH" });
         }
@@ -825,7 +824,7 @@ function Dashboard({ employee, onSignOut }) {
 
   const handleLeaveRequest = async () => {
     if (!leaveData.start || !leaveData.end || !leaveData.reason) {
-      showToast("Please fill all fields", "amber");
+      _showToast("Please fill all fields", "amber");
       return;
     }
     try {
@@ -841,12 +840,12 @@ function Dashboard({ employee, onSignOut }) {
         })
       });
       if (resp.ok) {
-        showToast("Leave request submitted!", "success");
+        _showToast("Leave request submitted!", "success");
         setLeaveData({ start: "", end: "", reason: "" });
         setShowLeaveForm(false);
         fetchLeaves();
       } else {
-        showToast("Submission failed", "error");
+        _showToast("Submission failed", "error");
       }
     } catch (e) { console.error(e); }
   };
@@ -870,7 +869,7 @@ function Dashboard({ employee, onSignOut }) {
         body: JSON.stringify({ status: "Completed" })
       });
       fetchAssignedTasks();
-      showToast("Task marked as completed!", "success");
+      _showToast("Task marked as completed!", "success");
     } catch (e) { console.error(e); }
   };
 
@@ -900,10 +899,6 @@ function Dashboard({ employee, onSignOut }) {
 
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
 
-  const showToast = (msg, type = "success") => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3500);
-  };
 
   // Live work calculation
   const currentTotalWorkSeconds = status === "working" && sessionStartTime
@@ -922,7 +917,7 @@ function Dashboard({ employee, onSignOut }) {
     if (!loginTime) setLT(t);
     setSessionStartTime(t);
     setStatus("working");
-    showToast("Session started", "success");
+    _showToast("Session started", "success");
     triggerAutoSync(loginTime || t, null, "working", t);
   };
 
@@ -935,7 +930,7 @@ function Dashboard({ employee, onSignOut }) {
       setSessionStartTime(null);
       setBreakStartTime(t);
       setStatus("break");
-      showToast("Break started", "amber");
+      _showToast("Break started", "amber");
       triggerAutoSync(loginTime, null, "break", t, newTotalWork);
     } else if (status === "break" && breakStartTime) {
       const addedBreak = Math.floor((t - breakStartTime) / 1000);
@@ -944,7 +939,7 @@ function Dashboard({ employee, onSignOut }) {
       setBreakStartTime(null);
       setSessionStartTime(t);
       setStatus("working");
-      showToast("Work resumed", "success");
+      _showToast("Work resumed", "success");
       triggerAutoSync(loginTime, null, "working", t, totalWorkSeconds, newTotalBreak);
     }
   };
@@ -1016,7 +1011,7 @@ function Dashboard({ employee, onSignOut }) {
     setBreakStartTime(null);
     setLOT(t);
     setStatus("loggedOut");
-    showToast("Session paused. Click Sync to save!", "info");
+    _showToast("Session paused. Click Sync to save!", "info");
     triggerAutoSync(loginTime, t, "loggedOut", null, finalWork, finalBreak);
   };
 
@@ -1041,7 +1036,7 @@ function Dashboard({ employee, onSignOut }) {
           status: r[10]
         })));
       }
-      showToast(`Loaded: ${file.name}`, "success");
+      _showToast(`Loaded: ${file.name}`, "success");
     };
     reader.readAsBinaryString(file);
   };
@@ -1057,9 +1052,9 @@ function Dashboard({ employee, onSignOut }) {
   }, [liveHrs.total, status]);
 
   const handleSave = async () => {
-    if (!loginTime) { showToast("Please clock in first", "error"); return; }
+    if (!loginTime) { _showToast("Please clock in first", "error"); return; }
 
-    showToast("Syncing to Google Sheets...", "info");
+    _showToast("Syncing to Google Sheets...", "info");
     const lt = logoutTime || new Date();
     const WORK_GOAL = 8;
     const HALF_DAY_THRESHOLD = 4.5;
@@ -1123,10 +1118,10 @@ function Dashboard({ employee, onSignOut }) {
         }
         return [...prev, newRec];
       });
-      showToast("Attendance synced to Cloud!", "success");
+      _showToast("Attendance synced to Cloud!", "success");
     } catch (err) {
       console.error("Sync failed:", err);
-      showToast("Sync failed. Check connection.", "error");
+      _showToast("Sync failed. Check connection.", "error");
     }
   };
 
@@ -1135,6 +1130,9 @@ function Dashboard({ employee, onSignOut }) {
 
   const greetHour = now.getHours();
   const greeting = greetHour < 12 ? "Good morning" : greetHour < 17 ? "Good afternoon" : "Good evening";
+
+  const [groups, setGroups] = useState([]);
+  const [activeChat, setActiveChat] = useState({ type: 'admin', id: 'admin', name: 'Admin Chat' });
 
   const [unreadCount, setUnreadCount] = useState(0);
   const [groupUnreadMap, setGroupUnreadMap] = useState({});
@@ -1176,10 +1174,10 @@ function Dashboard({ employee, onSignOut }) {
              if (last && last.sender_id !== employee.id) {
                const isViewingChat = activeTabRef.current === 'messages' && activeChatRef.current.id === (last.group_id || 'admin');
                if (!document.hasFocus() || !isViewingChat) {
-                  (window.showToast || playNotifySound)();
+                  (_showToast || playNotifySound)();
                   if (!isViewingChat) {
                     const sender = last.sender_id === 'admin' ? 'Admin' : last.sender_username || last.sender_id;
-                    window.showToast?.(`New message from ${sender}`, "info");
+                    _showToast?.(`New message from ${sender}`, "info");
                   }
                }
              }
@@ -1196,8 +1194,6 @@ function Dashboard({ employee, onSignOut }) {
     return () => clearInterval(iv);
   }, [employee.id, unreadCount]);
 
-  const [groups, setGroups] = useState([]);
-  const [activeChat, setActiveChat] = useState({ type: 'admin', id: 'admin', name: 'Admin Chat' });
 
   useEffect(() => {
     const fetchGroups = async () => {
@@ -2341,7 +2337,7 @@ function ChatPanel({ currentUser, targetUser, onBack, groupId = null, subStatus 
 /* ══════════════════════════════════════════════════════════════
    ADMIN DASHBOARD
 ══════════════════════════════════════════════════════════════ */
-function AdminDashboard({ onSignOut, allEmployees = [] }) {
+function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
   // State for live timer
   const [now, setNow] = useState(Date.now());
 
@@ -2434,9 +2430,9 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
               const isViewingMsgs = activeTabAdmRef.current === 'employees'; // or 'groups'
               const isViewingThisGroup = activeTabAdmRef.current === 'groups' && selGroupRef.current && `group_${selGroupRef.current.id}` === last.group_id;
               if (!document.hasFocus() || (!isViewingMsgs && !chatWithRef.current && !isViewingThisGroup)) {
-                (window.showToast || playNotifySound)();
+                (showToast || playNotifySound)();
                 if (!isViewingMsgs && !chatWithRef.current && !isViewingThisGroup) {
-                  window.showToast?.(`New message from ${last.sender_username || last.sender_id}`, "info");
+                  showToast?.(`New message from ${last.sender_username || last.sender_id}`, "info");
                 }
               }
             }
@@ -4244,7 +4240,7 @@ export default function App() {
 
   if (isAdmin) return (
     <>
-      <AdminDashboard onSignOut={handleSignOut} allEmployees={creds} />
+      <AdminDashboard onSignOut={handleSignOut} allEmployees={creds} showToast={showToast} />
       {toast.show && (
         <div className="notif-toast" style={{ animation: "popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275)" }}>
           <div style={{ background: toast.type === 'error' ? T.red : T.accent, width: 42, height: 42, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>
@@ -4261,7 +4257,7 @@ export default function App() {
   
   if (employee) return (
     <>
-      <Dashboard employee={employee} onSignOut={handleSignOut} />
+      <Dashboard employee={employee} onSignOut={handleSignOut} showToast={showToast} />
       {toast.show && (
         <div className="notif-toast" style={{ animation: "popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275)" }}>
           <div style={{ background: toast.type === 'error' ? T.red : T.accent, width: 42, height: 42, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>
