@@ -7,6 +7,7 @@ from django.views.static import serve
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/", include("api.urls")),
-    # Serve media files under /login/media/ to match the production proxy setup
-    re_path(r'^login/media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+    # Serve media files under /media/ because Nginx strips the /login/ prefix
+    # before passing the request to Django.
+    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
