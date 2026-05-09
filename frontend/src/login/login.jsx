@@ -21,6 +21,8 @@ const T = {
   amberBg: "#fffbeb",
   purple: "#6d28d9",
   purpleBg: "#f3f0ff",
+  orange: "#f97316",
+  orangeBg: "#fff7ed",
 };
 
 /* ── Helpers ───────────────────────────────────────────────── */
@@ -42,6 +44,44 @@ function initials(name) {
   return name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 }
 
+let masterAudioCtx = null;
+let lastNotifTime = 0;
+
+const playNotifySound = () => {
+  const now = Date.now();
+  if (now - lastNotifTime < 1000) return; 
+  lastNotifTime = now;
+
+  try {
+    if (!masterAudioCtx) {
+      masterAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    const ctx = masterAudioCtx;
+    if (ctx.state === 'suspended') ctx.resume();
+    
+    const playTone = (freq, time, duration, type = 'sine') => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = type; 
+      osc.frequency.setValueAtTime(freq, time);
+      gain.gain.setValueAtTime(0, time);
+      gain.gain.linearRampToValueAtTime(0.3, time + 0.01); 
+      gain.gain.linearRampToValueAtTime(0, time + duration);
+      osc.start(time);
+      osc.stop(time + duration);
+    };
+    // Teams-Style Professional Arpeggio (Ascending Chime)
+    const t = ctx.currentTime;
+    playTone(440, t, 0.1, 'sine');       // A4
+    playTone(554, t + 0.06, 0.1, 'sine'); // C#5
+    playTone(659, t + 0.12, 0.1, 'sine'); // E5
+    playTone(880, t + 0.18, 0.3, 'sine'); // A5
+    console.log("🔊 Professional Chime Played");
+  } catch (e) { console.error("Audio error:", e); }
+};
+
 const FALLBACK_CREDS = [
   { id: "EMP001", name: "Arjun Sharma", username: "arjun.sharma", password: "pass123", dept: "Engineering", role: "Software Engineer" },
 ];
@@ -56,6 +96,12 @@ const TASKS_URL = API_BASE + "tasks/";
 const LEAVES_URL = API_BASE + "leaves/";
 const PROFILES_URL = API_BASE + "profiles/";
 const PROFILE_URL = (id) => API_BASE + `profile/${id}/`;
+const MESSAGES_URL = API_BASE + "messages/";
+const MESSAGES_READ_URL = API_BASE + "messages/read/";
+const GROUPS_URL = API_BASE + "groups/";
+const HEARTBEAT_URL = API_BASE + "heartbeat/";
+const CHAT_SUMMARIES_URL = API_BASE + "chat-summaries/";
+
 
 /* ── Avatar ────────────────────────────────────────────────── */
 function Avatar({ name, size = 40, accent = T.accent }) {
@@ -96,6 +142,9 @@ const icons = {
   eyeOff: "M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22",
   refresh: "M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15",
   info: "M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM12 16v-4M12 8h.01",
+  chevronLeft: "M15 18l-6-6 6-6",
+  message: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
+  camera: "M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
 };
 
 /* ══════════════════════════════════════════════════════════════
@@ -135,6 +184,15 @@ const LOGIN_STYLES = `
   .login-inp::placeholder { color:#a8bcd4; }
   .login-inp.error { border-color:#f87171; background:#fff8f8; }
   .login-inp.error:focus { box-shadow: 0 0 0 4px rgba(248,113,113,0.15); }
+  
+  .notif-toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    background: #0b1f35; color: white; padding: 16px 24px;
+    border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    display: flex; alignItems: center; gap: 12px;
+    animation: fadeInUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
 
   .login-btn {
     width:100%; padding:14px; border-radius:12px; border:none;
@@ -552,6 +610,7 @@ function Badge({ status }) {
   const map = {
     "Full Day": { bg: "#ecfdf5", color: "#065f46", dot: "#10b981" },
     "Half Day": { bg: "#fffbeb", color: "#92400e", dot: "#f59e0b" },
+    "Incomplete Workday(IWD)": { bg: "#fff7ed", color: "#c2410c", dot: "#f97316" },
     "Incomplete": { bg: "#fef2f2", color: "#991b1b", dot: "#ef4444" },
     "Active": { bg: "#f0fdf4", color: "#166534", dot: "#22c55e", pulse: true },
     "Leave": { bg: "#f9fafb", color: "#374151", dot: "#9ca3af" },
@@ -571,7 +630,7 @@ function Badge({ status }) {
       background: s.bg, color: s.color, border: `1px solid ${s.dot}20`,
       whiteSpace: "nowrap"
     }}>
-      <span style={{ 
+      <span style={{
         width: 6, height: 6, borderRadius: "50%", background: s.dot, flexShrink: 0,
         animation: s.pulse ? "pulse 2s infinite" : "none"
       }} />
@@ -586,7 +645,7 @@ function Badge({ status }) {
 function Dashboard({ employee, onSignOut }) {
   // ── Restore session from localStorage on mount ──
   const savedSession = (() => {
-    try { 
+    try {
       const session = JSON.parse(localStorage.getItem("wt_session") || "null");
       if (session && session.loginTime) {
         const sessionDate = new Date(session.loginTime).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
@@ -613,6 +672,7 @@ function Dashboard({ employee, onSignOut }) {
   const [status, setStatus] = useState(savedSession?.status || "idle"); // idle, working, break, loggedOut
 
   const [taskInput, setTask] = useState(savedSession?.taskInput || "");
+  const [taskScreenshot, setTaskScreenshot] = useState(null);
   const [assignedTasks, setAssignedTasks] = useState([]);
   const [showTasksModal, setShowTasksModal] = useState(false);
   const [toast, setToast] = useState(null);
@@ -623,7 +683,8 @@ function Dashboard({ employee, onSignOut }) {
   // Leave Management State
   const [profile, setProfile] = useState({ total_leaves: 16 });
   const [myLeaves, setMyLeaves] = useState([]);
-  const [showLeaveForm, setShowLeaveForm] = useState(false);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const [leaveData, setLeaveData] = useState({ start: "", end: "", reason: "" });
 
   // Helper to format seconds to HMS
@@ -637,14 +698,14 @@ function Dashboard({ employee, onSignOut }) {
   // Polling for status sync across devices
   useEffect(() => {
     let pollInterval;
-    
+
     const checkTodayStatus = async (isInitial = false) => {
       try {
         const resp = await fetch(BACKEND_URL);
         if (resp.ok) {
           const data = await resp.json();
           const myHistory = data.filter(r => (r.id === employee.id || r.employeeid === employee.id));
-          
+
           // Update local history list
           setHistory(myHistory.map(r => ({
             date: r.date,
@@ -672,7 +733,7 @@ function Dashboard({ employee, onSignOut }) {
 
             const serverStatusMap = { "Active": "working", "On Break": "break" };
             const mappedStatus = serverStatusMap[todayRec.status] || (todayRec.logoutt && todayRec.logoutt !== "—" ? "loggedOut" : "idle");
-            
+
             // Sync logic: If server status is different OR if we don't have a session start time yet
             const serverLastChange = todayRec.last_status_change ? new Date(todayRec.last_status_change).getTime() : 0;
             const localLastChange = (status === "working" ? sessionStartTime : (status === "break" ? breakStartTime : null))?.getTime() || 0;
@@ -684,7 +745,7 @@ function Dashboard({ employee, onSignOut }) {
                 setTotalWorkSeconds(parseHMS(todayRec.hours));
                 setTotalBreakSeconds(parseHMS(todayRec.break_time));
                 setLT(new Date(today + " " + todayRec.logint));
-                
+
                 if (todayRec.status === "Active") {
                   setStatus("working");
                   setSessionStartTime(todayRec.last_status_change ? new Date(todayRec.last_status_change) : new Date());
@@ -706,7 +767,7 @@ function Dashboard({ employee, onSignOut }) {
 
     checkTodayStatus(true);
     pollInterval = setInterval(() => checkTodayStatus(false), 5000); // Poll every 5 seconds
-    
+
     return () => clearInterval(pollInterval);
   }, [employee.id, status]); // Re-run if status changes locally to ensure we stay synced
 
@@ -742,7 +803,7 @@ function Dashboard({ employee, onSignOut }) {
       if (resp.ok) {
         const data = await resp.json();
         setMyLeaves(data);
-        
+
         // Handle notifications for approved/rejected leaves
         const unnotified = data.find(l => !l.is_notified && l.status !== "Pending");
         if (unnotified) {
@@ -905,7 +966,13 @@ function Dashboard({ employee, onSignOut }) {
     const hrs = secondsToHMS(tWork);
     const brk = secondsToHMS(tBreak);
     const WORK_GOAL = 8;
-    const dayStatus = hrs.total >= WORK_GOAL ? "Full Day" : "Half Day";
+    const HALF_DAY_THRESHOLD = 4.5;
+    let dayStatus = "Half Day";
+    if (hrs.total >= WORK_GOAL) {
+      dayStatus = "Full Day";
+    } else if (hrs.total >= HALF_DAY_THRESHOLD) {
+      dayStatus = "Incomplete Workday(IWD)";
+    }
 
     const payload = {
       date: fmtDate(lt),
@@ -962,12 +1029,31 @@ function Dashboard({ employee, onSignOut }) {
       if (ws) {
         const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
         const emp = rows.slice(1).filter(r => r[1] === employee.id);
-        setHistory(emp.map(r => ({ date: r[0], loginT: r[4], logoutT: r[5], hours: r[6], tasks: r[7], status: r[8] })));
+        setHistory(emp.map(r => ({
+          date: r[0],
+          loginT: r[4],
+          logoutT: r[5],
+          hours: r[6],
+          breakTime: r[7],
+          extraHours: r[8],
+          tasks: r[9],
+          status: r[10]
+        })));
       }
       showToast(`Loaded: ${file.name}`, "success");
     };
     reader.readAsBinaryString(file);
   };
+
+  const eightHourSyncedRef = useRef(false);
+  useEffect(() => {
+    if (liveHrs.total >= 8 && !eightHourSyncedRef.current) {
+      eightHourSyncedRef.current = true;
+      triggerAutoSync(loginTime, logoutTime, status);
+    }
+    // Reset if it's a new day or hours drop
+    if (liveHrs.total < 8) eightHourSyncedRef.current = false;
+  }, [liveHrs.total, status]);
 
   const handleSave = async () => {
     if (!loginTime) { showToast("Please clock in first", "error"); return; }
@@ -975,50 +1061,59 @@ function Dashboard({ employee, onSignOut }) {
     showToast("Syncing to Google Sheets...", "info");
     const lt = logoutTime || new Date();
     const WORK_GOAL = 8;
-    const extraHrsFloat = Math.max(0, liveHrs.total - WORK_GOAL);
-    const extraHrsTotal = Math.floor(extraHrsFloat * 3600);
-    const extraHrsStr = extraHrsFloat > 0 ? hmsStr(secondsToHMS(extraHrsTotal)) : "—";
-    const dayStatus = liveHrs.total >= WORK_GOAL ? "Full Day" : "Half Day";
-    const payload = {
-      date: fmtDate(loginTime),
-      id: employee.id,
-      name: employee.name,
-      dept: employee.dept,
-      loginT: fmtTime(loginTime),
-      logoutT: fmtTime(lt),
-      hours: hmsStr(liveHrs),
-      breakTime: hmsStr(liveBreakHrs),
-      extraHours: extraHrsStr,
-      tasks: taskInput || "—",
-      status: dayStatus
-    };
+    const HALF_DAY_THRESHOLD = 4.5;
+    let dayStatus = "Half Day";
+    if (liveHrs.total >= WORK_GOAL) {
+      dayStatus = "Full Day";
+    } else if (liveHrs.total >= HALF_DAY_THRESHOLD) {
+      dayStatus = "Incomplete Workday(IWD)";
+    }
+    const formData = new FormData();
+    formData.append('date', fmtDate(loginTime));
+    formData.append('id', employee.id);
+    formData.append('name', employee.name);
+    formData.append('dept', employee.dept);
+    formData.append('loginT', fmtTime(loginTime));
+    formData.append('logoutT', fmtTime(lt));
+    formData.append('hours', hmsStr(liveHrs));
+    formData.append('breakTime', hmsStr(liveBreakHrs));
+    formData.append('extraHours', liveHrs.total > 8 ? hmsStr(secondsToHMS(Math.floor((liveHrs.total - 8) * 3600))) : "—");
+    formData.append('tasks', taskInput || "—");
+    formData.append('status', dayStatus);
+    if (taskScreenshot) formData.append('screenshot', taskScreenshot);
 
     try {
       await fetch(BACKEND_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: formData
       });
 
       if (SCRIPT_URL && !SCRIPT_URL.includes("YOUR_SCRIPT_URL_HERE")) {
+        // Send a simple object for Google Sheets (cannot handle FormData/Files)
+        const payload = {
+          date: fmtDate(loginTime), id: employee.id, name: employee.name, dept: employee.dept,
+          loginT: fmtTime(loginTime), logoutT: fmtTime(lt), hours: hmsStr(liveHrs),
+          breakTime: hmsStr(liveBreakHrs), tasks: taskInput || "—", status: dayStatus
+        };
         await fetch(SCRIPT_URL, {
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify(payload)
         });
       }
+      setTaskScreenshot(null);
 
       setHistory(prev => {
         const idx = prev.findIndex(r => r.date === payload.date);
-        const newRec = { 
-          date: payload.date, 
-          loginT: payload.loginT, 
-          logoutT: payload.logoutT, 
-          hours: payload.hours, 
+        const newRec = {
+          date: payload.date,
+          loginT: payload.loginT,
+          logoutT: payload.logoutT,
+          hours: payload.hours,
           breakTime: payload.breakTime,
-          extraHours: extraHrsStr, 
-          tasks: payload.tasks, 
-          status: dayStatus 
+          extraHours: liveHrs.total > 8 ? hmsStr(secondsToHMS(Math.floor((liveHrs.total - 8) * 3600))) : "—",
+          tasks: payload.tasks,
+          status: dayStatus
         };
         if (idx >= 0) {
           const upd = [...prev];
@@ -1039,6 +1134,77 @@ function Dashboard({ employee, onSignOut }) {
 
   const greetHour = now.getHours();
   const greeting = greetHour < 12 ? "Good morning" : greetHour < 17 ? "Good afternoon" : "Good evening";
+
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [groupUnreadMap, setGroupUnreadMap] = useState({});
+  const lastMsgsCountRef = useRef(0);
+  const isFirstUnreadCheck = useRef(true);
+
+  useEffect(() => {
+    if (!employee?.id) return;
+    const checkMessages = async () => {
+      try {
+        const r = await fetch(MESSAGES_URL + `?user1=${employee.id}`);
+        if (r.ok) {
+          const msgs = await r.json();
+          
+          // Direct unread count (for the badge)
+          const directUnread = msgs.filter(m => !m.is_read && m.receiver_id === employee.id).length;
+          
+          // Group unread logic (approximate using localStorage)
+          const lastRead = JSON.parse(localStorage.getItem(`wt_read_${employee.id}`) || "{}");
+          const gMap = {};
+          msgs.forEach(m => {
+            if (m.group_id && m.id > (lastRead[m.group_id] || 0) && m.sender_id !== employee.id) {
+              gMap[m.group_id] = (gMap[m.group_id] || 0) + 1;
+            }
+          });
+          setGroupUnreadMap(gMap);
+          
+          const groupUnreadTotal = Object.values(gMap).reduce((a, b) => a + b, 0);
+          const totalUnread = directUnread + groupUnreadTotal;
+
+          // Sound and Toast for ANY new message from others
+          if (!isFirstUnreadCheck.current && msgs.length > lastMsgsCountRef.current) {
+             const last = msgs[msgs.length - 1];
+             if (last && last.sender_id !== employee.id) {
+               const isViewingChat = activeTab === 'messages' && activeChat.id === (last.group_id || 'admin');
+               if (!document.hasFocus() || !isViewingChat) {
+                  (window._triggerNotif || playNotifySound)();
+                  if (!isViewingChat) {
+                    const sender = last.sender_id === 'admin' ? 'Admin' : last.sender_username || last.sender_id;
+                    showToast(`New message from ${sender}`, "info");
+                  }
+               }
+             }
+          }
+          
+          isFirstUnreadCheck.current = false;
+          lastMsgsCountRef.current = msgs.length;
+          setUnreadCount(totalUnread);
+        }
+      } catch(e) {}
+    };
+    const iv = setInterval(checkMessages, 5000);
+    checkMessages();
+    return () => clearInterval(iv);
+  }, [employee.id, unreadCount]);
+
+  const [groups, setGroups] = useState([]);
+  const [activeChat, setActiveChat] = useState({ type: 'admin', id: 'admin', name: 'Admin Chat' });
+
+  useEffect(() => {
+    const fetchGroups = async () => {
+      try {
+        const r = await fetch(GROUPS_URL);
+        if (r.ok) {
+          const all = await r.json();
+          setGroups(all.filter(g => g.member_usernames?.includes(employee.id)));
+        }
+      } catch(e) {}
+    };
+    fetchGroups();
+  }, [employee.id]);
 
   return (
     <div style={{ minHeight: "100vh", background: "#eef3f9", fontFamily: "'Segoe UI',system-ui,sans-serif" }}>
@@ -1121,7 +1287,7 @@ function Dashboard({ employee, onSignOut }) {
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {assignedTasks.map(t => (
-                    <div key={t.id} style={{ 
+                    <div key={t.id} style={{
                       padding: 16, borderRadius: 16, border: `1px solid ${T.border}`,
                       background: t.status === "Assigned" ? "#fff9f0" : "white"
                     }} onMouseEnter={() => t.status === "Assigned" && markTaskViewed(t.id)}>
@@ -1172,7 +1338,7 @@ function Dashboard({ employee, onSignOut }) {
                 <Icon d="M18 6L6 18M6 6l12 12" size={24} color="white" />
               </button>
             </div>
-            
+
             <div style={{ padding: 30 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 30 }}>
                 <div>
@@ -1200,8 +1366,8 @@ function Dashboard({ employee, onSignOut }) {
                   </div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>Tasks Performed</div>
                 </div>
-                <div style={{ 
-                  background: T.surface, padding: 20, borderRadius: 14, 
+                <div style={{
+                  background: T.surface, padding: 20, borderRadius: 14,
                   fontSize: 14, color: T.ink2, lineHeight: 1.6, whiteSpace: "pre-wrap",
                   border: `1px solid ${T.border}`, minHeight: 120
                 }}>
@@ -1209,11 +1375,11 @@ function Dashboard({ employee, onSignOut }) {
                 </div>
               </div>
             </div>
-            
+
             <div style={{ padding: "0 30px 30px" }}>
-              <button onClick={() => setSelectedRecord(null)} style={{ 
-                width: "100%", padding: 14, borderRadius: 12, border: "none", 
-                background: T.ink, color: "white", fontWeight: 700, cursor: "pointer" 
+              <button onClick={() => setSelectedRecord(null)} style={{
+                width: "100%", padding: 14, borderRadius: 12, border: "none",
+                background: T.ink, color: "white", fontWeight: 700, cursor: "pointer"
               }}>
                 Close Details
               </button>
@@ -1225,7 +1391,8 @@ function Dashboard({ employee, onSignOut }) {
       {/* ── Topbar ── */}
       <div className="top-bar" style={{
         background: T.white, borderBottom: `1px solid ${T.border}`,
-        padding: "0 28px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60
+        padding: "0 28px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60,
+        position: "sticky", top: 0, zIndex: 1000, boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{
@@ -1285,6 +1452,22 @@ function Dashboard({ employee, onSignOut }) {
           }}>
             <Icon d={icons.logout} size={14} color={T.muted} />
             Sign out
+          </button>
+          
+          <button onClick={() => setTab("messages")} style={{
+            position: "relative", width: 36, height: 36, borderRadius: 10, border: `1.5px solid ${activeTab === 'messages' ? T.accent : T.border}`,
+            background: activeTab === 'messages' ? T.accent : "none", color: activeTab === 'messages' ? "white" : T.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center"
+          }}>
+            <Icon d={icons.message} size={18} color={activeTab === 'messages' ? "white" : T.muted} />
+            {unreadCount > 0 && (
+              <span style={{
+                position: "absolute", top: -5, right: -5, width: 18, height: 18, borderRadius: "50%",
+                background: T.red, color: "white", fontSize: 10, fontWeight: 800,
+                display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid white"
+              }}>
+                {unreadCount}
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -1354,31 +1537,38 @@ function Dashboard({ employee, onSignOut }) {
           display: "flex", gap: 4, background: "#e4eaf3", borderRadius: 10,
           padding: 4, marginBottom: 20, width: "fit-content"
         }}>
-          {[{ k: "today", label: "Today's Session" }, { k: "history", label: "Attendance History" }, { k: "leaves", label: "Leave Requests" }].map(t => (
+          {[{ k: "today", label: "Today's Session" }, { k: "history", label: "Attendance History" }, { k: "leaves", label: "Leave Requests" }, { k: "messages", label: "Admin Chat", badge: unreadCount }].map(t => (
             <button key={t.k} className={`tab${activeTab === t.k ? " active" : ""}`}
-              onClick={() => setTab(t.k)}>{t.label}</button>
+              onClick={() => setTab(t.k)} style={{ position: "relative" }}>
+              {t.label}
+              {t.badge > 0 && (
+                <span style={{ position: "absolute", top: -6, right: -6, background: T.red, color: "white", fontSize: 10, padding: "2px 6px", borderRadius: 10, border: "2px solid white", fontWeight: 800 }}>{t.badge}</span>
+              )}
+            </button>
           ))}
 
         </div>
 
         {/* Stat cards */}
-        <div className="stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 14, marginBottom: 22 }}>
-          <StatCard label="Work Time" value={hmsStr(liveHrs)}
-            sub={`${pct}% of daily goal (8h)`}
-            icon={icons.clock} color={T.green} bg={T.greenBg} />
-          <StatCard label="Break Time" value={hmsStr(liveBreakHrs)}
-            sub="Total break duration today"
-            icon={icons.refresh} color={T.amber} bg={T.amberBg} />
-          <StatCard label="Login Status" value={status === "working" ? "Working" : status === "break" ? "Gap / Break" : "Paused"}
-            sub={loginTime ? `Started at ${fmtTime(loginTime)}` : "Not started"}
-            icon={icons.user} color={T.accent} bg="#e8f0fc" />
-          <StatCard label="Overtime" value={extraStr || "—"}
-            sub={extraStr ? "Completed 8h goal" : "No overtime yet"}
-            icon={icons.refresh} color={T.purple} bg={T.purpleBg} />
-          <StatCard label="Log Count" value={String(history.length)}
-            sub="Daily entries sync"
-            icon={icons.calendar} color={T.purple} bg={T.purpleBg} />
-        </div>
+        {activeTab !== "messages" && (
+          <div className="stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 14, marginBottom: 22 }}>
+            <StatCard label="Work Time" value={hmsStr(liveHrs)}
+              sub={`${pct}% of daily goal (8h)`}
+              icon={icons.clock} color={T.green} bg={T.greenBg} />
+            <StatCard label="Break Time" value={hmsStr(liveBreakHrs)}
+              sub="Total break duration today"
+              icon={icons.refresh} color={T.amber} bg={T.amberBg} />
+            <StatCard label="Login Status" value={status === "working" ? "Working" : status === "break" ? "Gap / Break" : "Paused"}
+              sub={loginTime ? `Started at ${fmtTime(loginTime)}` : "Not started"}
+              icon={icons.user} color={T.accent} bg="#e8f0fc" />
+            <StatCard label="Overtime" value={extraStr || "—"}
+              sub={extraStr ? "Completed 8h goal" : "No overtime yet"}
+              icon={icons.refresh} color={T.purple} bg={T.purpleBg} />
+            <StatCard label="Log Count" value={String(history.length)}
+              sub="Daily entries sync"
+              icon={icons.calendar} color={T.purple} bg={T.purpleBg} />
+          </div>
+        )}
 
         {activeTab === "today" && (
           <div className="main-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
@@ -1486,6 +1676,27 @@ function Dashboard({ employee, onSignOut }) {
                 <textarea className="task-area" value={taskInput}
                   onChange={e => setTask(e.target.value)}
                   placeholder="• Completed feature X&#10;• Reviewed PR #42&#10;• Attended standup meeting&#10;• Fixed bug in auth module" />
+                
+                <div style={{ marginTop: 16 }}>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: T.ink, marginBottom: 8 }}>Task Screenshot (Optional)</label>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <label style={{
+                      display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 10,
+                      background: T.surface, border: `1px solid ${T.border}`, cursor: "pointer", fontSize: 13, color: T.ink2
+                    }}>
+                      <Icon d={icons.camera} size={16} />
+                      {taskScreenshot ? "Change Screenshot" : "Upload Screenshot"}
+                      <input type="file" hidden accept="image/*" onChange={e => setTaskScreenshot(e.target.files[0])} />
+                    </label>
+                    {taskScreenshot && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: T.green, fontWeight: 600 }}>
+                        <Icon d={icons.check} size={14} />
+                        {taskScreenshot.name}
+                        <button onClick={() => setTaskScreenshot(null)} style={{ background: "none", border: "none", color: T.red, cursor: "pointer", marginLeft: 4 }}>×</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
                 <div style={{ marginTop: 8, fontSize: 11, color: T.faint, display: "flex", alignItems: "center", gap: 4 }}>
                   <Icon d={icons.info} size={12} color={T.faint} />
                   Use bullet points to list individual tasks
@@ -1561,7 +1772,7 @@ function Dashboard({ employee, onSignOut }) {
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>
                     <tr style={{ background: T.surface }}>
-                      {["Date", "Clock In", "Clock Out", "Hours", "Break Time", "Status", "Tasks", ""].map(h => (
+                      {["Date", "Clock In", "Clock Out", "Hours", "Break Time", "Over Time", "Status", "Tasks", ""].map(h => (
                         <th key={h} style={{
                           padding: "11px 16px", textAlign: "left",
                           fontSize: 11, fontWeight: 700, color: T.muted, letterSpacing: 0.5,
@@ -1593,7 +1804,7 @@ function Dashboard({ employee, onSignOut }) {
                         }}
                           title={r.tasks}>{r.tasks}</td>
                         <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                          <button 
+                          <button
                             onClick={() => setSelectedRecord(r)}
                             style={{
                               padding: "6px 12px", borderRadius: 8, border: `1.5px solid ${T.border}`,
@@ -1615,7 +1826,7 @@ function Dashboard({ employee, onSignOut }) {
             )}
           </div>
         )}
-        
+
         {activeTab === "leaves" && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
             <div style={{ background: T.white, borderRadius: 16, border: `1px solid ${T.border}`, padding: 24, alignSelf: "start" }}>
@@ -1625,10 +1836,10 @@ function Dashboard({ employee, onSignOut }) {
                 </div>
                 <div>
                   <div style={{ fontSize: 18, fontWeight: 800, color: T.ink }}>Request Leave</div>
-                  <div style={{ fontSize: 13, color: T.muted }}>You have <b style={{color: T.purple}}>{profile.total_leaves}</b> leaves remaining</div>
+                  <div style={{ fontSize: 13, color: T.muted }}>You have <b style={{ color: T.purple }}>{profile.total_leaves}</b> leaves remaining</div>
                 </div>
               </div>
-              
+
               <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.muted, marginBottom: 8, letterSpacing: 0.5 }}>START DATE</label>
@@ -1641,20 +1852,38 @@ function Dashboard({ employee, onSignOut }) {
                     value={leaveData.end} onChange={e => setLeaveData({ ...leaveData, end: e.target.value })} />
                 </div>
               </div>
-              
+
+              {(leaveData.start && leaveData.end) && (
+                <div style={{
+                  marginBottom: 16, padding: "10px 14px", borderRadius: 10,
+                  background: T.purpleBg, border: `1px solid ${T.purple}30`,
+                  display: "flex", justifyContent: "space-between", alignItems: "center"
+                }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: T.purple }}>Requested Duration</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: T.purple }}>
+                    {(() => {
+                      const s = new Date(leaveData.start);
+                      const e = new Date(leaveData.end);
+                      const diff = Math.ceil((e - s) / (1000 * 60 * 60 * 24)) + 1;
+                      return diff > 0 ? `${diff} Day${diff > 1 ? 's' : ''}` : "Invalid range";
+                    })()}
+                  </div>
+                </div>
+              )}
+
               <div style={{ marginBottom: 24 }}>
                 <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.muted, marginBottom: 8, letterSpacing: 0.5 }}>REASON FOR LEAVE</label>
                 <textarea className="task-area" style={{ minHeight: 120 }} placeholder="Please provide a brief reason for your leave request..."
                   value={leaveData.reason} onChange={e => setLeaveData({ ...leaveData, reason: e.target.value })} />
               </div>
-              
+
               <button className="act-btn" onClick={handleLeaveRequest}
                 style={{ width: "100%", background: T.accent, color: "white", justifyContent: "center", padding: "14px", borderRadius: 12 }}>
                 <Icon d={icons.check} size={16} color="white" />
                 Submit Leave Application
               </button>
             </div>
-            
+
             <div style={{ background: T.white, borderRadius: 16, border: `1px solid ${T.border}`, padding: 24, overflow: "hidden" }}>
               <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 20 }}>My Leave History</div>
               <div style={{ overflowY: "auto", maxHeight: 500, paddingRight: 6 }}>
@@ -1687,6 +1916,52 @@ function Dashboard({ employee, onSignOut }) {
             </div>
           </div>
         )}
+
+        {activeTab === "messages" && (
+          <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: 20, height: "75vh" }}>
+            <div style={{ background: "white", borderRadius: 20, border: `1px solid ${T.border}`, padding: 10, display: "flex", flexDirection: "column", gap: 4 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", padding: "10px 12px" }}>Direct Message</div>
+              <button onClick={() => setActiveChat({ type: 'admin', id: 'admin', name: 'Admin Chat' })} style={{
+                padding: "12px 16px", borderRadius: 12, border: "none", cursor: "pointer", textAlign: "left",
+                background: activeChat.type === 'admin' ? T.surface : "none", color: activeChat.type === 'admin' ? T.accent : T.ink,
+                fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 10
+              }}>
+                <Icon d={icons.user} size={16} />
+                Admin Chat
+              </button>
+              
+              <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", padding: "10px 12px", marginTop: 10 }}>Team Channels</div>
+              {groups.length === 0 && <div style={{ fontSize: 12, color: T.faint, padding: "0 12px" }}>No groups yet</div>}
+              {groups.map(g => {
+                const gId = `group_${g.id}`;
+                const unread = groupUnreadMap[gId] || 0;
+                return (
+                  <button key={g.id} onClick={() => setActiveChat({ type: 'group', id: gId, name: g.name })} style={{
+                    padding: "12px 16px", borderRadius: 12, border: "none", cursor: "pointer", textAlign: "left",
+                    background: activeChat.id === gId ? T.surface : "none", color: activeChat.id === gId ? T.accent : T.ink,
+                    fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 10, position: "relative"
+                  }}>
+                    <Icon d={icons.tasks} size={16} />
+                    {g.name}
+                    {unread > 0 && (
+                      <span style={{ position: "absolute", top: 12, right: 12, background: T.red, color: "white", fontSize: 10, padding: "2px 6px", borderRadius: 10, border: "2px solid white", fontWeight: 800 }}>{unread}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="premium-card" style={{ padding: 0, overflow: "hidden" }}>
+              <ChatPanel
+                currentUser={{ id: employee.id, name: employee.name }}
+                targetUser={activeChat.type === 'admin' ? { id: 'admin', name: 'Admin' } : null}
+                groupId={activeChat.type === 'group' ? activeChat.id : null}
+                onBack={null}
+              />
+            </div>
+          </div>
+        )}
+
 
         {/* Employee profile footer */}
         <div className="profile-footer" style={{
@@ -1766,11 +2041,11 @@ function AssignTaskModal({ employee, onClose, onAssigned }) {
         boxShadow: "0 25px 60px -12px rgba(0,0,0,0.25)", animation: "popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
         overflow: "hidden", border: "1px solid rgba(255,255,255,0.2)"
       }} onClick={e => e.stopPropagation()}>
-        
+
         {/* Header with Gradient */}
-        <div style={{ 
-          background: `linear-gradient(135deg, ${T.ink} 0%, #1e3a5f 100%)`, 
-          padding: "32px 32px", color: "white", position: "relative" 
+        <div style={{
+          background: `linear-gradient(135deg, ${T.ink} 0%, #1e3a5f 100%)`,
+          padding: "32px 32px", color: "white", position: "relative"
         }}>
           <div style={{ position: "relative", zIndex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 8 }}>
@@ -1790,10 +2065,10 @@ function AssignTaskModal({ employee, onClose, onAssigned }) {
         <div style={{ padding: "32px" }}>
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: T.ink2, marginBottom: 8, marginLeft: 2 }}>Task Title</label>
-            <input className="premium-inp" 
-              placeholder="e.g., Finalize Monthly Report" 
-              value={title} 
-              onChange={e => setTitle(e.target.value)} 
+            <input className="premium-inp"
+              placeholder="e.g., Finalize Monthly Report"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
               style={{
                 width: "100%", padding: "14px 18px", borderRadius: 14, border: `1.5px solid ${T.border}`,
                 background: T.surface, fontSize: 14, fontWeight: 500, outline: "none", transition: "all 0.2s",
@@ -1804,10 +2079,10 @@ function AssignTaskModal({ employee, onClose, onAssigned }) {
 
           <div style={{ marginBottom: 32 }}>
             <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: T.ink2, marginBottom: 8, marginLeft: 2 }}>Task Details</label>
-            <textarea className="premium-area" 
-              placeholder="Provide clear instructions for the employee..." 
-              value={desc} 
-              onChange={e => setDesc(e.target.value)} 
+            <textarea className="premium-area"
+              placeholder="Provide clear instructions for the employee..."
+              value={desc}
+              onChange={e => setDesc(e.target.value)}
               style={{
                 width: "100%", padding: "14px 18px", borderRadius: 14, border: `1.5px solid ${T.border}`,
                 background: T.surface, fontSize: 14, fontWeight: 500, outline: "none", transition: "all 0.2s",
@@ -1817,14 +2092,14 @@ function AssignTaskModal({ employee, onClose, onAssigned }) {
           </div>
 
           <div style={{ display: "flex", gap: 14 }}>
-            <button onClick={onClose} style={{ 
-              flex: 1, padding: "14px", borderRadius: 14, border: `1.5px solid ${T.border}`, 
+            <button onClick={onClose} style={{
+              flex: 1, padding: "14px", borderRadius: 14, border: `1.5px solid ${T.border}`,
               background: "white", color: T.ink2, fontWeight: 700, cursor: "pointer",
               transition: "all 0.2s", fontSize: 15
             }} className="p-btn-sec">Cancel</button>
-            <button onClick={submit} disabled={loading} style={{ 
-              flex: 1, padding: "14px", borderRadius: 14, border: "none", 
-              background: loading ? T.faint : T.accent, 
+            <button onClick={submit} disabled={loading} style={{
+              flex: 1, padding: "14px", borderRadius: 14, border: "none",
+              background: loading ? T.faint : T.accent,
               color: "white", fontWeight: 700, cursor: "pointer",
               transition: "all 0.2s", fontSize: 15,
               boxShadow: `0 8px 20px ${T.accent}30`
@@ -1838,18 +2113,237 @@ function AssignTaskModal({ employee, onClose, onAssigned }) {
   );
 }
 
+/* ── Chat Panel ────────────────────────────────────────────── */
+function ChatPanel({ currentUser, targetUser, onBack, groupId = null, subStatus = null }) {
+  const [msgs, setMsgs] = useState([]);
+  const [input, setInput] = useState("");
+  const [file, setFile] = useState(null);
+  const [sending, setSending] = useState(false);
+  const scrollRef = useRef();
+  const fileInputRef = useRef();
+  const prevCountRef = useRef(0);
+  
+  const fetchMsgs = async () => {
+    try {
+      const url = groupId 
+        ? `${MESSAGES_URL}?group_id=${groupId}`
+        : `${MESSAGES_URL}?user1=${currentUser.id}&user2=${targetUser.id}`;
+      const resp = await fetch(url);
+      if (resp.ok) {
+        const data = await resp.json();
+        setMsgs(data);
+        if (targetUser) {
+          // Mark messages received from targetUser as read
+          fetch(MESSAGES_READ_URL, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sender_id: targetUser.id, receiver_id: currentUser.id })
+          });
+        }
+        if (groupId && data.length > 0) {
+          // Track last seen message for group notifications
+          const lastId = data[data.length - 1].id;
+          const storageKey = currentUser.id === 'admin' ? "wt_read_admin" : `wt_read_${currentUser.id}`;
+          const lastRead = JSON.parse(localStorage.getItem(storageKey) || "{}");
+          lastRead[groupId] = lastId;
+          localStorage.setItem(storageKey, JSON.stringify(lastRead));
+        }
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  useEffect(() => {
+    prevCountRef.current = 0; // Reset count when switching chats to prevent false notification sounds
+    fetchMsgs();
+    const t = setInterval(fetchMsgs, 5000);
+    return () => clearInterval(t);
+  }, [targetUser?.id, groupId]);
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    
+    // Play sound if new message arrived from others
+    if (msgs.length > prevCountRef.current && prevCountRef.current > 0) {
+      const lastMsg = msgs[msgs.length - 1];
+      if (lastMsg && lastMsg.sender_id !== currentUser.id) {
+        // Only play if window is NOT focused
+        if (!document.hasFocus()) {
+          (window._triggerNotif || playNotifySound)();
+        }
+      }
+    }
+    prevCountRef.current = msgs.length;
+  }, [msgs]);
+
+  const send = async () => {
+    if (!input.trim() && !file) return;
+    if (!currentUser?.id) {
+      alert("Session error: User ID missing. Please refresh the page.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('sender_id', currentUser.id);
+    formData.append('content', input.trim() || " ");
+    
+    if (groupId) {
+      formData.append('group_id', groupId);
+    } else if (targetUser?.id) {
+      formData.append('receiver_id', targetUser.id);
+    } else {
+      alert("Error: No recipient or group selected.");
+      return;
+    }
+
+    if (file) formData.append('image', file);
+
+    setSending(true);
+    try {
+      const resp = await fetch(MESSAGES_URL, {
+        method: "POST",
+        body: formData
+      });
+      if (resp.ok) { 
+        setInput(""); 
+        setFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        fetchMsgs(); 
+      } else {
+        const errData = await resp.json();
+        console.error("Send error response:", errData);
+        alert("Failed to send: " + (errData.detail || JSON.stringify(errData)));
+      }
+    } catch (e) { 
+      console.error("Network error during send:", e);
+      alert("Network error: " + e.message);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handlePaste = (e) => {
+    const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        const blob = items[i].getAsFile();
+        if (blob) {
+          const file = new File([blob], `pasted_img_${Date.now()}.png`, { type: blob.type });
+          setFile(file);
+          // Optional: focus input after paste
+        }
+      }
+    }
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: T.white, borderRadius: 20, overflow: "hidden", border: `1px solid ${T.border}` }}>
+      <div style={{ padding: "16px 20px", background: T.ink, color: "white", display: "flex", alignItems: "center", gap: 12 }}>
+        {onBack && <button onClick={onBack} style={{ background: "none", border: "none", color: "white", cursor: "pointer", display: "flex", alignItems: "center" }}><Icon d={icons.chevronLeft} size={18} /></button>}
+        {targetUser && <Avatar name={targetUser.name} size={32} />}
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>{targetUser ? targetUser.name : (groupId?.replace('group_', 'Team: ') || 'Group Chat')}</div>
+          <div style={{ fontSize: 10, color: T.faint }}>{subStatus || (targetUser ? (targetUser.id === "admin" ? "System Administrator" : "Employee") : "Group Conversation")}</div>
+        </div>
+      </div>
+      <div ref={scrollRef} style={{ flex: 1, padding: 20, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10, background: "#f8fafc" }}>
+        {msgs.length === 0 && (
+          <div style={{ textAlign: "center", color: T.muted, padding: "40px 0", fontSize: 13 }}>
+            No messages yet. Start the conversation!
+          </div>
+        )}
+        {msgs.map(m => {
+          const isMe = m.sender_id === currentUser.id;
+          return (
+            <div key={m.id} style={{
+              alignSelf: isMe ? "flex-end" : "flex-start",
+              maxWidth: "85%", padding: "8px 12px", borderRadius: 16,
+              borderTopRightRadius: isMe ? 4 : 16,
+              borderTopLeftRadius: isMe ? 16 : 4,
+              background: isMe ? "#dcf8c6" : "white",
+              color: T.ink,
+              boxShadow: "0 1px 1px rgba(0,0,0,0.1)",
+              border: isMe ? "none" : `1px solid ${T.border}`,
+              fontSize: 13, lineHeight: 1.5, position: "relative",
+              display: "flex", flexDirection: "column"
+            }}>
+              {groupId && !isMe && (
+                <div style={{ fontSize: 10, fontWeight: 700, color: T.accent, marginBottom: 3 }}>
+                  {m.sender_username || m.sender_id}
+                </div>
+              )}
+              {m.image && (
+                <div style={{ marginBottom: 4, borderRadius: 12, overflow: "hidden", background: "#00000008" }}>
+                  <img src={m.image} alt="attachment" style={{ 
+                    maxHeight: 300, maxWidth: "100%", width: "auto", display: "block", 
+                    borderRadius: 8, cursor: "pointer", objectFit: "contain" 
+                  }} onClick={() => window.open(m.image, '_blank')} />
+                </div>
+              )}
+              {m.content && m.content !== " " && <div style={{ padding: "2px 0" }}>{m.content}</div>}
+              <div style={{ fontSize: 9, opacity: 0.5, marginTop: 2, textAlign: "right", fontStyle: "italic", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4 }}>
+                {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {isMe && (
+                  <div style={{ display: "flex" }}>
+                    <Icon d={icons.check} size={11} color={m.is_read ? "#34b7f1" : "currentColor"} />
+                    <Icon d={icons.check} size={11} color={m.is_read ? "#34b7f1" : "currentColor"} style={{ marginLeft: -7 }} />
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ padding: 16, borderTop: `1px solid ${T.border}`, display: "flex", flexDirection: "column", gap: 10, background: "white" }}>
+        {file && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: T.surface, padding: "6px 12px", borderRadius: 8, fontSize: 12 }}>
+            <Icon d={icons.camera} size={14} color={T.accent} />
+            <span style={{ flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{file.name}</span>
+            <button onClick={() => setFile(null)} style={{ background: "none", border: "none", color: T.red, cursor: "pointer", fontWeight: 700 }}>×</button>
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 10 }}>
+          <input type="file" hidden ref={fileInputRef} accept="image/*" onChange={e => setFile(e.target.files[0])} />
+          <button onClick={() => fileInputRef.current.click()} style={{
+            width: 44, height: 44, borderRadius: 10, background: T.surface, border: `1px solid ${T.border}`,
+            display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: T.muted
+          }}>
+            <Icon d={icons.camera} size={20} />
+          </button>
+          <input className="adm-inp" style={{ flex: 1, padding: "10px 14px", borderRadius: 10 }}
+            placeholder="Type a message or paste an image..." value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && send()}
+            onPaste={handlePaste}
+          />
+          <button onClick={send} disabled={sending} style={{
+            width: 44, height: 44, borderRadius: 10, background: sending ? T.muted : T.accent, color: "white",
+            border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: sending ? "not-allowed" : "pointer"
+          }}>
+            {sending ? (
+              <div style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "white", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+            ) : (
+              <Icon d={icons.check} size={18} color="white" />
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ══════════════════════════════════════════════════════════════
    ADMIN DASHBOARD
 ══════════════════════════════════════════════════════════════ */
 function AdminDashboard({ onSignOut, allEmployees = [] }) {
-    // State for live timer
-    const [now, setNow] = useState(Date.now());
+  // State for live timer
+  const [now, setNow] = useState(Date.now());
 
-    // Update 'now' every second for live timer
-    useEffect(() => {
-      const interval = setInterval(() => setNow(Date.now()), 1000);
-      return () => clearInterval(interval);
-    }, []);
+  // Update 'now' every second for live timer
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastSync, setLastSync] = useState(null);
@@ -1857,7 +2351,11 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
   const [filterDate, setFilterDate] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDept, setFilterDept] = useState("all");
-  const [activeTab, setTab] = useState("attendance");
+  const [activeTab, setTab] = useState(() => localStorage.getItem("wt_tab_adm") || "attendance");
+
+  useEffect(() => {
+    localStorage.setItem("wt_tab_adm", activeTab);
+  }, [activeTab]);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [assignTaskTo, setAssignTaskTo] = useState(null);
   const [taskFeed, setTaskFeed] = useState([]);
@@ -1865,6 +2363,86 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
   const [adminComment, setAdminComment] = useState("");
   const [profiles, setProfiles] = useState([]);
   const [sortConfig, setSortConfig] = useState({ key: "date", dir: "desc" });
+  const [chatWith, setChatWith] = useState(() => {
+    const saved = localStorage.getItem("wt_chat_with");
+    try { return saved ? JSON.parse(saved) : null; } catch(e) { return null; }
+  });
+
+  useEffect(() => {
+    if (chatWith) localStorage.setItem("wt_chat_with", JSON.stringify(chatWith));
+    else localStorage.removeItem("wt_chat_with");
+  }, [chatWith]);
+  const [groups, setGroups] = useState([]);
+  const [selGroup, setSelGroup] = useState(null);
+  const [unreadMap, setUnreadMap] = useState({}); // { employee_id: count }
+  const [groupSearch, setGroupSearch] = useState("");
+  const [groupMessages, setGroupMessages] = useState([]);
+  const [chatSummaries, setChatSummaries] = useState({}); // { employee_id: { last_message, timestamp, is_read } }
+
+  const isFirstUnreadAdmin = useRef(true);
+  const [groupUnreadMapAdmin, setGroupUnreadMapAdmin] = useState({});
+  const lastMsgsCountAdminRef = useRef(0);
+  const lastUnreadAdminRef = useRef(0);
+
+  useEffect(() => {
+    const fetchAllUnread = async () => {
+      try {
+        const resp = await fetch(MESSAGES_URL + "?user1=admin");
+        if (resp.ok) {
+          const allMsgs = await resp.json();
+          const map = {};
+          let totalDirectUnread = 0;
+          allMsgs.forEach(m => {
+            if (!m.is_read && m.receiver_id === "admin") {
+              map[m.sender_id] = (map[m.sender_id] || 0) + 1;
+              totalDirectUnread++;
+            }
+          });
+          
+          // Group unread logic (approximate using localStorage)
+          const lastRead = JSON.parse(localStorage.getItem("wt_read_admin") || "{}");
+          const gMap = {};
+          allMsgs.forEach(m => {
+            if (m.group_id && m.id > (lastRead[m.group_id] || 0) && m.sender_id !== 'admin') {
+              gMap[m.group_id] = (gMap[m.group_id] || 0) + 1;
+            }
+          });
+          setGroupUnreadMapAdmin(gMap);
+          
+          const groupUnreadTotal = Object.values(gMap).reduce((a, b) => a + b, 0);
+          const totalUnread = totalDirectUnread + groupUnreadTotal;
+
+          // Sound and Toast for ANY new message from others
+          if (!isFirstUnreadAdmin.current && allMsgs.length > lastMsgsCountAdminRef.current) {
+            const last = allMsgs[allMsgs.length - 1];
+            if (last && last.sender_id !== 'admin') {
+              const isViewingMsgs = activeTab === 'employees'; // or 'groups'
+              const isViewingThisGroup = activeTab === 'groups' && selGroup && `group_${selGroup.id}` === last.group_id;
+              if (!document.hasFocus() || (!isViewingMsgs && !chatWith && !isViewingThisGroup)) {
+                (window._triggerNotif || playNotifySound)();
+                if (!isViewingMsgs && !chatWith && !isViewingThisGroup) {
+                  showToast(`New message from ${last.sender_username || last.sender_id}`, "info");
+                }
+              }
+            }
+          }
+          
+          isFirstUnreadAdmin.current = false;
+          lastMsgsCountAdminRef.current = allMsgs.length;
+          lastUnreadAdminRef.current = totalUnread;
+          setUnreadMap(map);
+        }
+        
+        // Fetch summaries for WhatsApp-style sorting
+        const sResp = await fetch(CHAT_SUMMARIES_URL);
+        if (sResp.ok) setChatSummaries(await sResp.json());
+      } catch (e) {}
+    };
+    const iv = setInterval(fetchAllUnread, 5000);
+    fetchAllUnread();
+    return () => clearInterval(iv);
+  }, []);
+
 
 
   const fetchAttendance = async () => {
@@ -1931,7 +2509,34 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
     } catch (e) {
       console.error("Failed to fetch profiles", e);
     }
+
+    // Fetch Groups
+    try {
+      const gResp = await fetch(GROUPS_URL);
+      if (gResp.ok) {
+        const gData = await gResp.json();
+        setGroups(gData);
+        if (selGroup) {
+          const updated = gData.find(g => g.id === selGroup.id);
+          if (updated) setSelGroup(updated);
+        }
+      }
+    } catch (e) { console.error("Failed to fetch groups", e); }
   };
+
+  const fetchGroupMessages = async () => {
+    if (!selGroup) return;
+    try {
+      const resp = await fetch(MESSAGES_URL + `?group_id=group_${selGroup.id}`);
+      if (resp.ok) setGroupMessages(await resp.json());
+    } catch (e) {}
+  };
+
+  useEffect(() => {
+    fetchGroupMessages();
+    const iv = setInterval(fetchGroupMessages, 5000);
+    return () => clearInterval(iv);
+  }, [selGroup]);
 
 
   const handleApproveLeave = async (leaveId, status) => {
@@ -1975,6 +2580,7 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
   };
   const registeredCount = allEmployees.length;
   const fullDayToday = todayRecs.filter(r => r.status === "Full Day").length;
+  const iwdToday = todayRecs.filter(r => r.status === "Incomplete Workday(IWD)").length;
   const halfDayToday = todayRecs.filter(r => r.status === "Half Day").length;
 
   // Filtered records
@@ -1983,53 +2589,63 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
     const targetDate = filterDate ? formatInputDate(filterDate) : today;
 
     if (filterStatus === "Leave" || filterStatus === "leaves") {
-       // Use targetDate (calculated from filterDate or today) for checking leave status
-       // Parse targetDate string "29 Apr 2026" back to a Date object if needed
-       // But targetDate is a string from records or today string.
-       // It's safer to just parse the filterDate input if it exists.
-       
-       let checkDate = new Date();
-       if (filterDate) {
-         // Expecting DD MMM YYYY or YYYY-MM-DD
-         checkDate = new Date(filterDate);
-         if (isNaN(checkDate)) checkDate = new Date(); // fallback
-       }
-       checkDate.setHours(0, 0, 0, 0);
+      // Use targetDate (calculated from filterDate or today) for checking leave status
+      // Parse targetDate string "29 Apr 2026" back to a Date object if needed
+      // But targetDate is a string from records or today string.
+      // It's safer to just parse the filterDate input if it exists.
 
-       return allEmployees
-         .filter(emp => {
-           const onLeave = leaveRequests.some(l => {
-             if (l.status !== "Approved") return false;
-             const lId = String(l.employee_id).toLowerCase().trim();
-             const eId = String(emp.id).toLowerCase().trim();
-             if (lId !== eId) return false;
+      let checkDate = new Date();
+      if (filterDate) {
+        // Expecting DD MMM YYYY or YYYY-MM-DD
+        checkDate = new Date(filterDate);
+        if (isNaN(checkDate)) checkDate = new Date(); // fallback
+      }
+      checkDate.setHours(0, 0, 0, 0);
 
-             const start = new Date(l.start_date);
+      return allEmployees
+        .filter(emp => {
+          const onLeave = leaveRequests.some(l => {
+            if (l.status !== "Approved") return false;
+            const lId = String(l.employee_id).toLowerCase().trim();
+            const eId = String(emp.id).toLowerCase().trim();
+            if (lId !== eId) return false;
 
-             const end = new Date(l.end_date);
-             start.setHours(0, 0, 0, 0);
-             end.setHours(0, 0, 0, 0);
-             
-             return checkDate >= start && checkDate <= end;
-           });
-           
-           const matchSearch = !q || emp.name.toLowerCase().includes(q) || emp.id.toLowerCase().includes(q);
-           return onLeave && matchSearch;
-         })
+            const start = new Date(l.start_date);
+
+            const end = new Date(l.end_date);
+            start.setHours(0, 0, 0, 0);
+            end.setHours(0, 0, 0, 0);
+
+            return checkDate >= start && checkDate <= end;
+          });
+
+          const matchSearch = !q || emp.name.toLowerCase().includes(q) || emp.id.toLowerCase().includes(q);
+          return onLeave && matchSearch;
+        })
 
 
-         .map(emp => ({
-           id: emp.id,
-           name: emp.name,
-           dept: emp.dept,
-           date: targetDate,
-           logint: "—",
-           logoutt: "—",
-           hours: "—",
-           break_time: "00:00:00",
-           tasks: "On Approved Leave",
-           status: "Leave"
-         }));
+        .map(emp => ({
+          id: emp.id,
+          name: emp.name,
+          dept: emp.dept,
+          date: targetDate,
+          logint: "—",
+          logoutt: "—",
+          hours: "—",
+          break_time: "00:00:00",
+          tasks: "On Approved Leave",
+          status: "Leave"
+        }));
+    }
+
+    if (filterStatus === "messages") {
+      return allEmployees
+        .filter(emp => {
+          const hasUnread = unreadMap[emp.id] > 0;
+          const matchSearch = !q || emp.name.toLowerCase().includes(q) || emp.id.toLowerCase().includes(q);
+          return hasUnread && matchSearch;
+        })
+        .map(emp => ({ ...emp, status: "Message" })); // Placeholder for filtering logic consistency
     }
 
     if (filterStatus === "notlogin") {
@@ -2071,28 +2687,33 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
       const { key, dir } = sortConfig;
       let valA = a[key] || "";
       let valB = b[key] || "";
-      
+
       if (key === "date") {
         valA = new Date(valA); valB = new Date(valB);
       } else if (key === "logint" || key === "logoutt") {
         // Convert "01:00:00 pm" to comparable value
         const parseTime = (s) => {
-           if (!s || s === "—") return 0;
-           const parts = s.split(" ");
-           if (parts.length < 2) return 0;
-           const [time, ampm] = parts;
-           let [h, m, s_] = time.split(":").map(Number);
-           if (ampm.toLowerCase() === "pm" && h < 12) h += 12;
-           if (ampm.toLowerCase() === "am" && h === 12) h = 0;
-           return h * 3600 + m * 60 + s_;
+          if (!s || s === "—") return 0;
+          const parts = s.split(" ");
+          if (parts.length < 2) return 0;
+          const [time, ampm] = parts;
+          let [h, m, s_] = time.split(":").map(Number);
+          if (ampm.toLowerCase() === "pm" && h < 12) h += 12;
+          if (ampm.toLowerCase() === "am" && h === 12) h = 0;
+          return h * 3600 + m * 60 + s_;
         };
 
         valA = parseTime(valA); valB = parseTime(valB);
-      } else if (key === "hours") {
-        valA = parseFloat(valA.split(":")[0]) || 0;
-        valB = parseFloat(valB.split(":")[0]) || 0;
+      } else if (key === "hours" || key === "extrahours") {
+        const parseDur = (s) => {
+          if (!s || s === "—") return 0;
+          const parts = s.split(":").map(Number);
+          if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+          return parseFloat(s) || 0;
+        };
+        valA = parseDur(valA); valB = parseDur(valB);
       }
-      
+
       if (dir === "asc") return valA > valB ? 1 : -1;
       return valA < valB ? 1 : -1;
     });
@@ -2148,15 +2769,26 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
           box-shadow:0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);overflow:hidden;}
         @keyframes popIn{0%{opacity:0;transform:scale(0.95) translateY(10px)}100%{opacity:1;transform:scale(1) translateY(0)}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes pulse{0%{transform:scale(1);box-shadow:0 0 0 0 rgba(239,68,68,0.7)}70%{transform:scale(1.1);box-shadow:0 0 0 10px rgba(239,68,68,0)}100%{transform:scale(1);box-shadow:0 0 0 0 rgba(239,68,68,0)}}
       `}</style>
 
       {/* Topbar */}
       <div className="adm-topbar" style={{
         background: T.ink, padding: "0 28px", display: "flex", alignItems: "center",
-        justifyContent: "space-between", height: 60, boxShadow: "0 2px 12px rgba(0,0,0,0.15)"
+        justifyContent: "space-between", height: 60, boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
+        position: "sticky", top: 0, zIndex: 1000
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <a href="https://brollysolutions.in" style={{
+            textDecoration: "none", display: "flex", alignItems: "center", gap: 6,
+            padding: "6px 12px", borderRadius: 10, background: "rgba(255,255,255,0.08)",
+            color: "white", fontWeight: 700, fontSize: 12, border: "1.5px solid rgba(255,255,255,0.15)",
+            transition: "all 0.2s", marginRight: 12
+          }} onMouseOver={e => { e.currentTarget.style.background = "rgba(255,255,255,0.15)"; }}
+            onMouseOut={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; }}>
+            <Icon d={icons.chevronLeft} size={13} color="white" />
+            Go Back
+          </a>
           <div style={{
             width: 36, height: 36, borderRadius: 9, background: "#fff",
             display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden"
@@ -2195,6 +2827,26 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
             <Icon d={icons.save} size={14} color="white" />
             <span className="adm-btn-text">Export</span>
           </button>
+          <button onClick={() => setTab("employees")} style={{
+            position: "relative", width: 38, height: 38, borderRadius: 10, 
+            background: activeTab === 'employees' ? T.purple : "rgba(255,255,255,0.08)", 
+            color: "white", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+            border: `1.5px solid ${activeTab === 'employees' ? T.purple : "rgba(255,255,255,0.15)"}`,
+            transition: "all 0.2s"
+          }} title="View Messages">
+            <Icon d={icons.message} size={18} color="white" />
+            {(Object.values(unreadMap).reduce((a, b) => a + b, 0) + Object.values(groupUnreadMapAdmin).reduce((a, b) => a + b, 0)) > 0 && (
+              <span style={{
+                position: "absolute", top: -5, right: -5, width: 18, height: 18, borderRadius: "50%",
+                background: T.red, color: "white", fontSize: 10, fontWeight: 800,
+                display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #0b1f35",
+                animation: "pulse 2s infinite"
+              }}>
+                {Object.values(unreadMap).reduce((a, b) => a + b, 0) + Object.values(groupUnreadMapAdmin).reduce((a, b) => a + b, 0)}
+              </span>
+            )}
+          </button>
+
           <button onClick={onSignOut}
             style={{
               display: "flex", alignItems: "center", gap: 8, padding: "8px 16px",
@@ -2235,7 +2887,7 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
                 <Icon d="M18 6L6 18M6 6l12 12" size={24} color="white" />
               </button>
             </div>
-            
+
             <div style={{ padding: 30 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
                 <Icon d={icons.calendar} size={16} color={T.accent} />
@@ -2261,8 +2913,8 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
                   <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>Task Report</div>
                   <div style={{ marginLeft: "auto" }}><Badge status={selectedRecord.status} /></div>
                 </div>
-                <div style={{ 
-                  background: T.surface, padding: 18, borderRadius: 14, 
+                <div style={{
+                  background: T.surface, padding: 18, borderRadius: 14,
                   fontSize: 13.5, color: T.ink2, lineHeight: 1.6, whiteSpace: "pre-wrap",
                   border: `1px solid ${T.border}`, maxHeight: 150, overflowY: "auto", marginBottom: 20
                 }}>
@@ -2270,14 +2922,23 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
                   {selectedRecord.tasks || selectedRecord.workstatus || "No log notes provided."}
                 </div>
 
+                {selectedRecord.screenshot && (
+                  <div style={{ marginBottom: 20 }}>
+                    <b style={{ fontSize: 10, color: T.muted, display: "block", textTransform: "uppercase", marginBottom: 8 }}>Task Screenshot:</b>
+                    <div style={{ borderRadius: 14, overflow: "hidden", border: `1px solid ${T.border}`, cursor: "pointer" }} onClick={() => window.open(selectedRecord.screenshot, '_blank')}>
+                      <img src={selectedRecord.screenshot} alt="task screenshot" style={{ width: "100%", display: "block" }} />
+                    </div>
+                  </div>
+                )}
+
                 {/* Assigned Tasks in Modal */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   <b style={{ fontSize: 10, color: T.muted, textTransform: "uppercase" }}>Assigned Tasks:</b>
                   {taskFeed.filter(t => (t.employee_id === (selectedRecord.id || selectedRecord.employeeid)) && fmtDate(new Date(t.assigned_at)) === selectedRecord.date).map(t => (
                     <div key={t.id} style={{ padding: 14, background: "white", borderRadius: 12, border: `1px solid ${T.border}` }}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                         <span style={{ fontWeight: 800, color: T.ink }}>{t.title}</span>
-                         <Badge status={t.status} />
+                        <span style={{ fontWeight: 800, color: T.ink }}>{t.title}</span>
+                        <Badge status={t.status} />
                       </div>
                       <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.4 }}>{t.description}</div>
                       {t.completed_at && <div style={{ marginTop: 6, fontSize: 10, color: T.green, fontWeight: 700 }}>✓ Done at {new Date(t.completed_at).toLocaleTimeString()}</div>}
@@ -2290,11 +2951,11 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
               </div>
 
             </div>
-            
+
             <div style={{ padding: "0 30px 30px", display: "flex", gap: 12 }}>
-              <button onClick={() => setSelectedRecord(null)} style={{ 
-                flex: 1, padding: 14, borderRadius: 12, border: `1.5px solid ${T.border}`, 
-                background: "white", color: T.ink, fontWeight: 700, cursor: "pointer" 
+              <button onClick={() => setSelectedRecord(null)} style={{
+                flex: 1, padding: 14, borderRadius: 12, border: `1.5px solid ${T.border}`,
+                background: "white", color: T.ink, fontWeight: 700, cursor: "pointer"
               }}>
                 Close
               </button>
@@ -2302,8 +2963,8 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
                 const text = `Attendance: ${selectedRecord.name || selectedRecord.employeename}\nDate: ${selectedRecord.date}\nHours: ${selectedRecord.hours || selectedRecord.workinghours}\nTasks: ${selectedRecord.tasks || selectedRecord.workstatus || "—"}`;
                 navigator.clipboard.writeText(text);
                 alert("Report copied to clipboard!");
-              }} style={{ 
-                flex: 1, padding: 14, borderRadius: 12, border: "none", 
+              }} style={{
+                flex: 1, padding: 14, borderRadius: 12, border: "none",
                 background: T.accent, color: "white", fontWeight: 700, cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8
               }}>
@@ -2317,21 +2978,47 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
 
       {/* Assign Task Modal */}
       {assignTaskTo && (
-        <AssignTaskModal 
-          employee={assignTaskTo} 
+        <AssignTaskModal
+          employee={assignTaskTo}
           onClose={() => setAssignTaskTo(null)}
           onAssigned={fetchAttendance}
         />
+      )}
+      {/* Chat Modal */}
+      {chatWith && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 1001,
+          background: "rgba(11,31,53,0.6)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 20
+        }} onClick={() => setChatWith(null)}>
+          <div style={{
+            width: "100%", maxWidth: 450, height: "80vh",
+            boxShadow: "0 20px 50px rgba(0,0,0,0.3)", animation: "fadeInUp 0.3s ease",
+          }} onClick={e => e.stopPropagation()}>
+            <ChatPanel
+              currentUser={{ id: "admin", name: "Admin" }}
+              targetUser={chatWith}
+              onBack={() => setChatWith(null)}
+              subStatus={(() => {
+                const latestRec = records.filter(r => r.id === chatWith.id).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                const lastActive = latestRec?.last_active ? new Date(latestRec.last_active) : null;
+                const isOnline = lastActive && (new Date() - lastActive < 120000);
+                return isOnline ? "Online Now" : (lastActive ? `Last seen: ${lastActive.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}` : "Offline");
+              })()}
+            />
+          </div>
+        </div>
       )}
 
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px" }}>
 
         {/* Stat cards */}
-        <div className="stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 14, marginBottom: 24 }}>
+        <div className="stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 14, marginBottom: 24 }}>
           <StatCard label="Total Employees" value={String(registeredCount)} sub="Registered" icon={icons.user} color={T.accent} bg="#e8f0fc" />
           <StatCard label="Today Present" value={String(todayRecs.length)} sub={fmtDate(new Date())} icon={icons.check} color={T.green} bg={T.greenBg} />
           <StatCard label="Full Day Today" value={String(fullDayToday)} sub="≥ 8 hours" icon={icons.clock} color={T.green} bg={T.greenBg} />
-          <StatCard label="Half Day Today" value={String(halfDayToday)} sub="< 8 hours" icon={icons.chart} color={T.amber} bg={T.amberBg} />
+          <StatCard label="IWD Today" value={String(iwdToday)} sub="4.5 - 8 hrs" icon={icons.chart} color={T.orange} bg={T.orangeBg} />
+          <StatCard label="Half Day Today" value={String(halfDayToday)} sub="< 4.5 hours" icon={icons.clock} color={T.amber} bg={T.amberBg} />
           <StatCard label="Total Records" value={String(records.length)} sub="All time" icon={icons.calendar} color={T.purple} bg={T.purpleBg} />
         </div>
 
@@ -2344,10 +3031,16 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
             { k: "attendance", label: "Attendance Records" },
             { k: "tasks", label: "Live Task Feed" },
             { k: "leaves", label: "Leave Requests" },
-            { k: "employees", label: "Employee List" },
+            { k: "groups", label: "Manage Groups", badge: Object.values(groupUnreadMapAdmin).reduce((a, b) => a + b, 0) },
+            { k: "employees", label: "Employee List", badge: Object.values(unreadMap).reduce((a, b) => a + b, 0) },
           ].map(t => (
             <button key={t.k} className={`adm-tab${activeTab === t.k ? " active" : ""}`}
-              onClick={() => setTab(t.k)}>{t.label}</button>
+              onClick={() => setTab(t.k)} style={{ position: "relative" }}>
+              {t.label}
+              {t.badge > 0 && (
+                <span style={{ position: "absolute", top: -6, right: -6, background: T.red, color: "white", fontSize: 10, padding: "2px 6px", borderRadius: 10, border: "2px solid white", fontWeight: 800 }}>{t.badge}</span>
+              )}
+            </button>
           ))}
         </div>
 
@@ -2376,7 +3069,9 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
             <option value="notlogin">Not Logged In</option>
             <option value="leaves">On Leave</option>
             <option value="Full Day">Full Day</option>
+            <option value="Incomplete Workday(IWD)">Incomplete Workday(IWD)</option>
             <option value="Half Day">Half Day</option>
+            <option value="messages">Unread Messages</option>
           </select>
           <select className="adm-inp" value={filterDept} onChange={e => setFilterDept(e.target.value)} style={{ minWidth: 150 }}>
             <option value="all">All Departments</option>
@@ -2403,18 +3098,19 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
                       { h: "In", w: 80, k: "logint" },
                       { h: "Out", w: 80, k: "logoutt" },
                       { h: "Work Hrs", w: 100, k: "hours" },
-                      { h: "Break", w: 80, k: "break_time" },
+                      { h: "Break Time", w: 80, k: "break_time" },
+                      { h: "Over Time", w: 100, k: "extrahours" },
                       { h: "Status", w: 120, k: "status" },
-                      { h: "Tasks & Logs", w: 220 },
+                      { h: "Tasks", w: 220 },
                       { h: "Actions", w: 100, align: "right" }
                     ].map(col => (
-                      <th key={col.h} 
-                          onClick={() => col.k && setSortConfig({ key: col.k, dir: sortConfig.key === col.k && sortConfig.dir === "asc" ? "desc" : "asc" })}
-                          style={{ ...colStyle, width: col.w, textAlign: col.align || "left", cursor: col.k ? "pointer" : "default" }}>
+                      <th key={col.h}
+                        onClick={() => col.k && setSortConfig({ key: col.k, dir: sortConfig.key === col.k && sortConfig.dir === "asc" ? "desc" : "asc" })}
+                        style={{ ...colStyle, width: col.w, textAlign: col.align || "left", cursor: col.k ? "pointer" : "default" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                           {col.h}
                           {col.k && sortConfig.key === col.k && (
-                             <span style={{ fontSize: 10 }}>{sortConfig.dir === "asc" ? "↑" : "↓"}</span>
+                            <span style={{ fontSize: 10 }}>{sortConfig.dir === "asc" ? "↑" : "↓"}</span>
                           )}
                         </div>
                       </th>
@@ -2430,7 +3126,7 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
                       <td style={cellStyle}>{r.id || r.employeeid}</td>
                       <td style={cellStyle}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
-                             onClick={() => setAssignTaskTo({ id: r.id || r.employeeid, name: r.name || r.employeename })}>
+                          onClick={() => setAssignTaskTo({ id: r.id || r.employeeid, name: r.name || r.employeename })}>
                           <Avatar name={r.name || r.employeename || "?"} size={32} />
                           <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
                             <span style={{ fontWeight: 700, color: T.accent, fontSize: 13 }}>{r.name || r.employeename}</span>
@@ -2444,22 +3140,25 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
                       <td style={{ ...cellStyle, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
                         {r.status === "Active" && r.last_status_change
                           ? (() => {
-                              const base = parseHMS(r.hours || r.workinghours);
-                              const lastChange = new Date(r.last_status_change).getTime();
-                              const elapsed = Math.floor((now - lastChange) / 1000);
-                              return formatHMS(base + (elapsed > 0 ? elapsed : 0));
-                            })()
+                            const base = parseHMS(r.hours || r.workinghours);
+                            const lastChange = new Date(r.last_status_change).getTime();
+                            const elapsed = Math.floor((now - lastChange) / 1000);
+                            return formatHMS(base + (elapsed > 0 ? elapsed : 0));
+                          })()
                           : (r.hours || r.workinghours || "—")}
                       </td>
                       <td style={{ ...cellStyle, color: T.amber, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
                         {r.status === "On Break" && r.last_status_change
                           ? (() => {
-                              const base = parseHMS(r.break_time || r.breaktime);
-                              const lastChange = new Date(r.last_status_change).getTime();
-                              const elapsed = Math.floor((now - lastChange) / 1000);
-                              return formatHMS(base + (elapsed > 0 ? elapsed : 0));
-                            })()
+                            const base = parseHMS(r.break_time || r.breaktime);
+                            const lastChange = new Date(r.last_status_change).getTime();
+                            const elapsed = Math.floor((now - lastChange) / 1000);
+                            return formatHMS(base + (elapsed > 0 ? elapsed : 0));
+                          })()
                           : (r.break_time || r.breaktime || "—")}
+                      </td>
+                      <td style={{ ...cellStyle, fontWeight: 700, color: r.extrahours && r.extrahours !== "—" ? T.amber : T.faint, fontVariantNumeric: "tabular-nums" }}>
+                        {r.extrahours || "—"}
                       </td>
                       <td style={cellStyle}>
                         <Badge status={r.status || "Incomplete"} />
@@ -2467,23 +3166,23 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
                       <td style={{ ...cellStyle, color: T.ink2, maxWidth: 220, fontSize: 12 }}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                           {/* Manual Logs */}
-                          { (r.tasks || r.workstatus) && (
+                          {(r.tasks || r.workstatus) && (
                             <div style={{ padding: "4px 8px", background: T.surface, borderRadius: 6, border: `1px solid ${T.border}`, fontSize: 11, maxHeight: 60, overflowY: "auto" }} title={r.tasks || r.workstatus}>
                               <b style={{ fontSize: 9, color: T.muted, display: "block", textTransform: "uppercase" }}>Manual Log:</b>
                               {r.tasks || r.workstatus}
                             </div>
                           )}
 
-                          
+
                           {/* Assigned Tasks from Task Feed */}
-                          {taskFeed.filter(t => (t.employee_id === (r.id || r.employeeid)) && 
+                          {taskFeed.filter(t => (t.employee_id === (r.id || r.employeeid)) &&
                             fmtDate(new Date(t.assigned_at)) === r.date).map(t => (
-                            <div key={t.id} style={{ padding: "4px 8px", background: "white", borderRadius: 6, border: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <span style={{ fontWeight: 600, fontSize: 11, color: T.accent }}>{t.title}</span>
-                              <Badge status={t.status} />
-                            </div>
-                          ))}
-                          
+                              <div key={t.id} style={{ padding: "4px 8px", background: "white", borderRadius: 6, border: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <span style={{ fontWeight: 600, fontSize: 11, color: T.accent }}>{t.title}</span>
+                                <Badge status={t.status} />
+                              </div>
+                            ))}
+
                           {!(r.tasks || r.workstatus) && taskFeed.filter(t => (t.employee_id === (r.id || r.employeeid)) && fmtDate(new Date(t.assigned_at)) === r.date).length === 0 && (
                             <span style={{ color: T.faint }}>—</span>
                           )}
@@ -2491,7 +3190,7 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
                       </td>
 
                       <td style={{ ...cellStyle, textAlign: "right" }}>
-                        <button 
+                        <button
                           onClick={() => setSelectedRecord(r)}
                           style={{
                             padding: "8px 12px", borderRadius: 10, border: `1.5px solid ${T.border}`,
@@ -2514,13 +3213,13 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
         {/* Live Task Feed */}
         {activeTab === "tasks" && (
           <div className="premium-card">
-             <div style={{ padding: "24px 28px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>Individual Tasks Tracking</div>
-                  <div style={{ fontSize: 12, color: T.muted }}>Real-time activity from your team</div>
-                </div>
-             </div>
-             <div style={{ overflowX: "auto" }}>
+            <div style={{ padding: "24px 28px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>Individual Tasks Tracking</div>
+                <div style={{ fontSize: 12, color: T.muted }}>Real-time activity from your team</div>
+              </div>
+            </div>
+            <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: T.surface }}>
@@ -2547,12 +3246,12 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
                       <td style={cellStyle}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                           <div style={{ fontSize: 10, display: "flex", gap: 6 }}>
-                             <span style={{ color: T.muted }}>Viewed:</span>
-                             <span style={{ fontWeight: 600 }}>{t.viewed_at ? new Date(t.viewed_at).toLocaleTimeString() : "—"}</span>
+                            <span style={{ color: T.muted }}>Viewed:</span>
+                            <span style={{ fontWeight: 600 }}>{t.viewed_at ? new Date(t.viewed_at).toLocaleTimeString() : "—"}</span>
                           </div>
                           <div style={{ fontSize: 10, display: "flex", gap: 6 }}>
-                             <span style={{ color: T.muted }}>Done:</span>
-                             <span style={{ fontWeight: 600, color: T.green }}>{t.completed_at ? new Date(t.completed_at).toLocaleTimeString() : "—"}</span>
+                            <span style={{ color: T.muted }}>Done:</span>
+                            <span style={{ fontWeight: 600, color: T.green }}>{t.completed_at ? new Date(t.completed_at).toLocaleTimeString() : "—"}</span>
                           </div>
                         </div>
                       </td>
@@ -2560,7 +3259,7 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
                   ))}
                 </tbody>
               </table>
-             </div>
+            </div>
           </div>
         )}
 
@@ -2591,11 +3290,18 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
                         <td style={cellStyle}>{new Date(l.applied_at).toLocaleDateString()}</td>
                         <td style={cellStyle}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                             <Avatar name={l.employee_name} size={28} />
-                             <div>
-                               <div style={{ fontWeight: 700 }}>{l.employee_name}</div>
-                               <div style={{ fontSize: 10, color: T.muted }}>{l.employee_id}</div>
-                             </div>
+                            <Avatar name={l.employee_name} size={28} />
+                            <div>
+                              <div style={{ fontWeight: 700 }}>{l.employee_name}</div>
+                              <div style={{ fontSize: 10, color: T.muted }}>
+                                {l.employee_id} · <span style={{
+                                  color: (profiles.find(p => String(p.employee_id).toLowerCase() === String(l.employee_id).toLowerCase())?.total_leaves <= 0) ? T.red : T.purple,
+                                  fontWeight: 800
+                                }}>
+                                  {profiles.find(p => String(p.employee_id).toLowerCase() === String(l.employee_id).toLowerCase())?.total_leaves ?? "—"} left
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         </td>
                         <td style={cellStyle}>
@@ -2630,20 +3336,183 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
           </div>
         )}
 
+        {/* Groups Tab */}
+        {activeTab === "groups" && (
+          <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 24 }}>
+            {/* Left: Group List */}
+            <div style={{ background: T.white, borderRadius: 20, border: `1px solid ${T.border}`, overflow: "hidden" }}>
+              <div style={{ padding: 20, borderBottom: `1px solid ${T.border}`, background: T.surface }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: T.ink, marginBottom: 14 }}>Organization Groups</div>
+                <button onClick={() => {
+                  const name = prompt("Enter new group name:");
+                  if (name) fetch(GROUPS_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name, description: "New group" })
+                  }).then(fetchAttendance);
+                }} style={{ width: "100%", padding: 10, background: T.accent, color: "white", border: "none", borderRadius: 10, fontWeight: 700, cursor: "pointer", fontSize: 12 }}>
+                  + Create New Group
+                </button>
+              </div>
+              <div style={{ padding: 10 }}>
+                {groups.length === 0 && <div style={{ padding: 20, textAlign: "center", color: T.faint, fontSize: 12 }}>No groups created.</div>}
+                 {groups.map(g => {
+                   const gId = `group_${g.id}`;
+                   const unread = groupUnreadMapAdmin[gId] || 0;
+                   return (
+                    <div key={g.id} onClick={() => setSelGroup(g)} style={{
+                      padding: "12px 16px", borderRadius: 12, cursor: "pointer",
+                      background: selGroup?.id === g.id ? T.purpleBg : "none",
+                      border: selGroup?.id === g.id ? `1px solid ${T.purple}30` : "none",
+                      marginBottom: 4, position: "relative"
+                    }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: selGroup?.id === g.id ? T.purple : T.ink }}>{g.name}</div>
+                      <div style={{ fontSize: 11, color: T.muted }}>{g.member_usernames?.length || 0} Members</div>
+                      {unread > 0 && (
+                        <span style={{ position: "absolute", top: 12, right: 12, background: T.red, color: "white", fontSize: 10, padding: "2px 6px", borderRadius: 10, border: "2px solid white", fontWeight: 800 }}>{unread}</span>
+                      )}
+                    </div>
+                   );
+                 })}
+              </div>
+            </div>
+
+            {/* Right: Group Detail */}
+            {selGroup ? (
+              <div style={{ background: T.white, borderRadius: 20, border: `1px solid ${T.border}`, padding: 24, display: "flex", flexDirection: "column", gap: 24 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <h2 style={{ margin: "0 0 4px", fontSize: 24, fontWeight: 800 }}>{selGroup.name}</h2>
+                    <p style={{ margin: 0, color: T.muted, fontSize: 14 }}>{selGroup.description}</p>
+                  </div>
+                  <button onClick={() => {
+                    if (confirm(`Delete group "${selGroup.name}"?`)) {
+                      fetch(`${GROUPS_URL}${selGroup.id}/`, { method: "DELETE" }).then(() => { setSelGroup(null); fetchAttendance(); });
+                    }
+                  }} style={{ padding: "8px 14px", background: "none", color: T.red, border: `1.5px solid ${T.red}30`, borderRadius: 10, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Delete Group</button>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+                  {/* Left: Members & Search */}
+                  <div>
+                    <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>Manage Members</div>
+                    <input className="adm-inp" placeholder="Search employees to add..." 
+                      value={groupSearch} onChange={e => setGroupSearch(e.target.value)}
+                      style={{ width: "100%", marginBottom: 16, boxSizing: "border-box" }} />
+                    
+                    <div style={{ maxHeight: 300, overflowY: "auto", border: `1px solid ${T.border}`, borderRadius: 12, padding: 8 }}>
+                      {allEmployees.filter(e => !groupSearch || e.name.toLowerCase().includes(groupSearch.toLowerCase()) || e.id.toLowerCase().includes(groupSearch.toLowerCase())).map(e => {
+                        const isMember = selGroup.member_usernames?.includes(e.id);
+                        return (
+                          <div key={e.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 8, background: isMember ? T.surface : "none" }}>
+                            <div style={{ fontSize: 13, fontWeight: 600 }}>{e.name} <span style={{ fontSize: 10, opacity: 0.6 }}>({e.id})</span></div>
+                            <button onClick={async () => {
+                              try {
+                                const resp = await fetch(`${GROUPS_URL}${selGroup.id}/membership/`, {
+                                  method: "POST", headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ action: isMember ? "remove" : "add", employee_id: e.id })
+                                });
+                                if (resp.ok) {
+                                  fetchAttendance();
+                                } else {
+                                  const err = await resp.json();
+                                  alert(`Error: ${err.error || "Failed"}`);
+                                }
+                              } catch(err) { alert("Network error"); }
+                            }} style={{ 
+                              color: isMember ? T.red : T.accent, 
+                              background: "none", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700 
+                            }}>
+                              {isMember ? "Remove" : "+ Add"}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Right: Group Chat */}
+                  <div style={{ height: 450 }}>
+                    <ChatPanel
+                      currentUser={{ id: "admin", name: "Admin" }}
+                      targetUser={null}
+                      groupId={`group_${selGroup.id}`}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", background: T.white, borderRadius: 20, border: `1px solid ${T.border}`, color: T.faint }}>
+                Select a group to manage members
+              </div>
+            )}
+          </div>
+        )}
+
+
 
         {/* Employee List Tab */}
         {activeTab === "employees" && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20 }}>
-            {allEmployees.filter(e => !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.id.toLowerCase().includes(search.toLowerCase())).map(e => (
-              <div key={e.id} className="premium-card" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20, transition: "transform 0.2s" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: T.white, padding: "16px 24px", borderRadius: 16, border: `1px solid ${T.border}` }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 16 }}>Employee Directory</div>
+                <div style={{ fontSize: 12, color: T.muted }}>{allEmployees.length} registered employees</div>
+              </div>
+              <button onClick={async () => {
+                if (confirm("Sync all employee accounts from the master sheet?")) {
+                  const resp = await fetch(SYNC_USERS_URL, {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ users: allEmployees })
+                  });
+                  if (resp.ok) {
+                    alert("Sync successful!");
+                    fetchAttendance();
+                  }
+                }
+              }} style={{ padding: "10px 20px", background: T.surface, color: T.accent, border: `1.5px solid ${T.accent}40`, borderRadius: 10, fontWeight: 700, cursor: "pointer", fontSize: 13 }}>
+                🔄 Sync All Accounts
+              </button>
+            </div>
+            
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20 }}>
+            {allEmployees
+              .filter(e => !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.id.toLowerCase().includes(search.toLowerCase()))
+              .sort((a, b) => {
+                // Priority 1: Unread messages
+                const unreadA = unreadMap[a.id] || 0;
+                const unreadB = unreadMap[b.id] || 0;
+                if (unreadB !== unreadA) return unreadB - unreadA;
+                
+                // Priority 2: Latest message timestamp (WhatsApp style)
+                const timeA = chatSummaries[a.id]?.timestamp ? new Date(chatSummaries[a.id].timestamp).getTime() : 0;
+                const timeB = chatSummaries[b.id]?.timestamp ? new Date(chatSummaries[b.id].timestamp).getTime() : 0;
+                if (timeB !== timeA) return timeB - timeA;
+                
+                // Priority 3: Online status
+                const activeA = records.find(r => r.id === a.id)?.last_active ? new Date(records.find(r => r.id === a.id).last_active).getTime() : 0;
+                const activeB = records.find(r => r.id === b.id)?.last_active ? new Date(records.find(r => r.id === b.id).last_active).getTime() : 0;
+                return activeB - activeA;
+              })
+              .map(e => {
+                const latestRec = [...records].filter(r => r.id === e.id).sort((a,b) => {
+                   const timeA = a.last_active ? new Date(a.last_active).getTime() : 0;
+                   const timeB = b.last_active ? new Date(b.last_active).getTime() : 0;
+                   return timeB - timeA;
+                })[0];
+                const lastActive = latestRec?.last_active ? new Date(latestRec.last_active) : null;
+                const isOnline = lastActive && (new Date() - lastActive < 120000); // 2 minutes window
+                return (
+              <div key={e.id} className="premium-card" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20, transition: "transform 0.2s", borderTop: isOnline ? `4px solid ${T.green}` : "none" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                   <div style={{ position: "relative" }}>
                     <Avatar name={e.name} size={56} />
-                    <div style={{ position: "absolute", bottom: 2, right: 2, width: 14, height: 14, borderRadius: "50%", background: T.green, border: "3px solid white" }} />
+                    <div style={{ position: "absolute", bottom: 2, right: 2, width: 14, height: 14, borderRadius: "50%", background: isOnline ? T.green : T.faint, border: "3px solid white" }} />
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 800, color: T.ink, fontSize: 16 }}>{e.name}</div>
-                    <div style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>{e.role} · {e.id}</div>
+                    <div style={{ fontSize: 11, color: T.muted, fontWeight: 600 }}>{isOnline ? "Online Now" : (lastActive ? `Last seen: ${lastActive.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}` : "Offline")}</div>
+                    <div style={{ fontSize: 10, color: T.faint, fontWeight: 600 }}>{e.role} · {e.id}</div>
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div style={{ fontSize: 18, fontWeight: 900, color: T.purple }}>
@@ -2653,20 +3522,35 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
                   </div>
                 </div>
 
-                
-                <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 20 }}>
-                   <button onClick={() => setAssignTaskTo(e)} style={{
-                      width: "100%", padding: "12px", borderRadius: 14, border: "none",
-                      background: T.surface, color: T.ink, fontWeight: 700, cursor: "pointer",
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: 10, transition: "all 0.2s"
-                    }} onMouseOver={btn => { btn.currentTarget.style.background = T.accent; btn.currentTarget.style.color = "white"; }} 
-                       onMouseOut={btn => { btn.currentTarget.style.background = T.surface; btn.currentTarget.style.color = T.ink; }}>
+
+                <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 20, display: "flex", gap: 10 }}>
+                  <button onClick={() => setAssignTaskTo(e)} style={{
+                    flex: 1, padding: "12px", borderRadius: 14, border: "none",
+                    background: T.surface, color: T.ink, fontWeight: 700, cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 10, transition: "all 0.2s"
+                  }} onMouseOver={btn => { btn.currentTarget.style.background = T.accent; btn.currentTarget.style.color = "white"; }}
+                    onMouseOut={btn => { btn.currentTarget.style.background = T.surface; btn.currentTarget.style.color = T.ink; }}>
                     <Icon d={icons.tasks} size={16} />
-                    Assign New Task
+                    Assign Task
+                  </button>
+                  <button onClick={() => setChatWith(e)} style={{
+                    flex: 1, padding: "12px", borderRadius: 14, border: "none",
+                    background: T.purpleBg, color: T.purple, fontWeight: 700, cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 10, transition: "all 0.2s",
+                    position: "relative"
+                  }} onMouseOver={btn => { btn.currentTarget.style.background = T.purple; btn.currentTarget.style.color = "white"; }}
+                    onMouseOut={btn => { btn.currentTarget.style.background = T.purpleBg; btn.currentTarget.style.color = T.purple; }}>
+                    <Icon d={icons.message} size={16} />
+                    Chat
+                    {unreadMap[e.id] > 0 && (
+                      <span style={{ position: "absolute", top: -6, right: -6, background: T.red, color: "white", fontSize: 10, padding: "2px 6px", borderRadius: 10, border: "2px solid white", fontWeight: 800 }}>{unreadMap[e.id]}</span>
+                    )}
                   </button>
                 </div>
               </div>
-            ))}
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
@@ -3227,6 +4111,20 @@ export default function App() {
       setResetToken(token);
       setView("reset");
     }
+
+    // Global Audio Priming
+    const prime = () => {
+      if (!masterAudioCtx) {
+        masterAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      masterAudioCtx.resume().then(() => {
+        playNotifySound(); // Success chime
+        console.log("Audio System Unlocked");
+      });
+      window.removeEventListener('click', prime);
+    };
+    window.addEventListener('click', prime);
+    return () => window.removeEventListener('click', prime);
   }, []);
 
   useEffect(() => {
@@ -3296,8 +4194,8 @@ export default function App() {
       if (resp.ok) return { success: true };
       const data = await resp.json();
       return { success: false, error: data.error || "Server error" };
-    } catch (e) { 
-      return { success: false, error: "Network error. Please check your connection." }; 
+    } catch (e) {
+      return { success: false, error: "Network error. Please check your connection." };
     }
   };
 
@@ -3317,8 +4215,49 @@ export default function App() {
     } catch (e) { return false; }
   };
 
-  if (isAdmin) return <AdminDashboard onSignOut={handleSignOut} allEmployees={creds} />;
-  if (employee) return <Dashboard employee={employee} onSignOut={handleSignOut} />;
+  const [showNotif, setShowNotif] = useState(false);
+  const triggerNotif = () => {
+    playNotifySound();
+    setShowNotif(true);
+    setTimeout(() => setShowNotif(false), 4000);
+  };
+
+  // Re-bind playNotifySound to trigger toast globally
+  window._triggerNotif = triggerNotif;
+
+  if (isAdmin) return (
+    <>
+      <AdminDashboard onSignOut={handleSignOut} allEmployees={creds} />
+      {showNotif && (
+        <div className="notif-toast">
+          <div style={{ background: T.accent, width: 40, height: 40, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Icon d={icons.message} size={20} color="white" />
+          </div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 14 }}>New Message</div>
+            <div style={{ fontSize: 12, opacity: 0.8 }}>You have a new direct message</div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+  
+  if (employee) return (
+    <>
+      <Dashboard employee={employee} onSignOut={handleSignOut} />
+      {showNotif && (
+        <div className="notif-toast">
+          <div style={{ background: T.accent, width: 40, height: 40, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Icon d={icons.message} size={20} color="white" />
+          </div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 14 }}>Admin Message</div>
+            <div style={{ fontSize: 12, opacity: 0.8 }}>The administrator sent you a message</div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 
   if (view === "forgot") return <ForgotPasswordPage onBack={() => setView("login")} onSendLink={sendResetLink} />;
   if (view === "reset") return <ResetPasswordPage token={resetToken} onReset={resetPassword} />;

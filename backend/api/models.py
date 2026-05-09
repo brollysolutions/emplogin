@@ -15,7 +15,11 @@ class Attendance(models.Model):
     total_break_time = models.CharField(max_length=50, default="00:00:00")
     status = models.CharField(max_length=50)
     last_status_change = models.DateTimeField(null=True, blank=True)
+    last_active = models.DateTimeField(null=True, blank=True)
+    eight_hour_notified = models.BooleanField(default=False)
     timestamp = models.DateTimeField(auto_now=True)
+    screenshot = models.ImageField(upload_to='attendance_screenshots/', null=True, blank=True)
+
 
     def __str__(self):
         return f"{self.name} - {self.date}"
@@ -73,3 +77,22 @@ class LeaveRequest(models.Model):
     def __str__(self):
         return f"{self.employee_name} ({self.start_date} to {self.end_date})"
 
+class ChatMessage(models.Model):
+    sender_id = models.CharField(max_length=50) # employee_id or 'admin'
+    receiver_id = models.CharField(max_length=50, null=True, blank=True) # employee_id or 'admin', null if group msg
+    group_id = models.CharField(max_length=50, null=True, blank=True) # if present, it's a group chat
+    content = models.TextField(null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+    image = models.ImageField(upload_to='chat_images/', null=True, blank=True)
+
+    def __str__(self):
+        return f"From {self.sender_id} to {self.receiver_id} at {self.timestamp}"
+class EmployeeGroup(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+    members = models.ManyToManyField(User, related_name='employee_groups')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name

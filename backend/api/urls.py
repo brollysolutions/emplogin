@@ -14,6 +14,11 @@ urlpatterns = [
     path('leaves/<int:pk>/notify/', views.mark_notification_read, name='mark_notification_read'),
     path('profiles/', views.profile_list, name='profile_list'),
     path('profile/<str:employee_id>/', views.employee_profile, name='employee_profile'),
+    path('messages/', views.message_list, name='message_list'),
+    path('messages/read/', views.mark_messages_read, name='mark_messages_read'),
+    path('groups/', views.group_list, name='group_list'),
+    path('groups/<int:pk>/', views.group_detail, name='group_detail'),
+    path('groups/<int:pk>/membership/', views.group_membership, name='group_membership'),
+    path('heartbeat/', views.heartbeat, name='heartbeat'),
+    path('chat-summaries/', views.chat_summaries, name='chat_summaries'),
 ]
-
-
