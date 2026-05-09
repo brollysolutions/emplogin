@@ -53,17 +53,22 @@ class ChatMessageSerializer(serializers.ModelSerializer):
         if obj.sender_id.lower() == 'admin':
             return 'Admin'
         try:
-            # Case-insensitive lookup for employee_id
-            profile = Profile.objects.filter(employee_id__iexact=obj.sender_id).first()
-            if profile:
-                # Return the name from profile if it looks like a real name
-                return profile.name or profile.user.username
-            
-            # Fallback to username lookup
+            # Primary: Look up from Attendance records (most reliable — stores full name)
+            attendance = Attendance.objects.filter(
+                employee_id__iexact=obj.sender_id
+            ).exclude(name='').order_by('-timestamp').first()
+            if attendance and attendance.name and attendance.name != '—':
+                return attendance.name
+
+            # Fallback 1: User model full name
             user = User.objects.filter(username__iexact=obj.sender_id).first()
             if user:
-                return user.get_full_name() or user.username
+                full_name = user.get_full_name()
+                if full_name:
+                    return full_name
+                return user.username
         except Exception:
             pass
+        # Last resort: return the raw sender ID
         return obj.sender_id
 
