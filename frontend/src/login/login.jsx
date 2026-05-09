@@ -26,10 +26,11 @@ const T = {
 };
 
 /* ── Helpers ───────────────────────────────────────────────── */
-const pad = n => String(n).padStart(2, "0");
-const fmtTime = d => d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
-const fmtDate = d => d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-const fmtShort = d => d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
+/* ── Helpers ───────────────────────────────────────────────── */
+function pad(n) { return String(n).padStart(2, "0"); }
+function fmtTime(d) { return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }); }
+function fmtDate(d) { return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }); }
+function fmtShort(d) { return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" }); }
 
 function calcHrs(a, b) {
   if (!a || !b) return null;
@@ -2587,11 +2588,11 @@ function AdminDashboard({ onSignOut, allEmployees = [] }) {
   const todayRecs = records.filter(r => r.date === today);
 
   // Helper to format input date (YYYY-MM-DD) to DD MMM YYYY
-  const formatInputDate = (dateStr) => {
+  function formatInputDate(dateStr) {
     if (!dateStr) return "";
     const d = new Date(dateStr);
     return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-  };
+  }
   const registeredCount = allEmployees.length;
   const fullDayToday = todayRecs.filter(r => r.status === "Full Day").length;
   const iwdToday = todayRecs.filter(r => r.status === "Incomplete Workday(IWD)").length;
