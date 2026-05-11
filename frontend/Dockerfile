@@ -11,5 +11,6 @@ FROM nginx:stable-alpine as production-stage
 RUN mkdir -p /usr/share/nginx/html/login
 COPY --from=build-stage /app/dist /usr/share/nginx/html/login
 # Use the default nginx config
-EXPOSE 80
+# EXPOSE 80
+EXPOSE 8003
 CMD ["nginx", "-g", "daemon off;"]
