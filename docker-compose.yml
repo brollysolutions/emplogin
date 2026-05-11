@@ -1,9 +1,10 @@
 
 
+name: brolly-test-system
 services:
   backend:
     build: ./backend
-    image: brolly-login-backend:test
+    image: emplogin-test-backend:v1
     container_name: brolly-test-login-backend
     volumes:
       - ./backend/db.sqlite3:/app/db.sqlite3
@@ -13,7 +14,7 @@ services:
 
   frontend:
     build: ./frontend
-    image: brolly-login-frontend:test
+    image: emplogin-test-frontend:v1
     container_name: brolly-test-login-frontend
     depends_on:
       - backend
