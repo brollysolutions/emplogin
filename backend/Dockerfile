@@ -15,6 +15,6 @@ COPY . .
 RUN python manage.py collectstatic --noinput
 
 # EXPOSE 8001
-EXPOSE 8003
+EXPOSE 8001
 
-CMD ["sh", "-c", "python manage.py makemigrations && python manage.py migrate && gunicorn --bind 0.0.0.0:8003 core.wsgi:application"]
+CMD ["sh", "-c", "python manage.py makemigrations && python manage.py migrate && gunicorn --bind 0.0.0.0:8001 core.wsgi:application"]
