@@ -3,22 +3,20 @@
 services:
   backend:
     build: ./backend
-    # container_name: brolly-login-backend
+    image: brolly-login-backend:test
     container_name: brolly-test-login-backend
-    network_mode: host
     volumes:
       - ./backend/db.sqlite3:/app/db.sqlite3
     ports:
-      # - "800:8001"
       - "8003:8003"
     restart: always
 
   frontend:
     build: ./frontend
-    # container_name: brolly-login-frontend
+    image: brolly-login-frontend:test
     container_name: brolly-test-login-frontend
     depends_on:
       - backend
     ports:
-      - "3003:8003"
+      - "3003:80"
     restart: always

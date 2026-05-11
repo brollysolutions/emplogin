@@ -36,8 +36,8 @@ CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWED_ORIGINS = [
     "https://brollysolutions.in",
     "http://localhost:3001",
-    "http://localhost:8001",
-    
+    "http://localhost:8003",
+    "http://localhost:3003",
 ]# Application definition
 
 INSTALLED_APPS = [
@@ -155,6 +155,6 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # Always use the exact API proxy path so Nginx guarantees forwarding it to Django.
 # Nginx is heavily restricting which paths get proxied to the backend.
-MEDIA_URL = "/login/api/v1/media/"
+MEDIA_URL = "/test_login/api/v1/media/"
 
 MEDIA_ROOT = BASE_DIR / "media"

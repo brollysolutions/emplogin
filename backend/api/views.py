@@ -211,9 +211,9 @@ def request_password_reset(request):
         token = str(uuid.uuid4())
         PasswordResetToken.objects.create(email=target_email, username=user.username, token=token)
 
-        # Build the reset link
+        # Build the reset link - Updated to /test_login/ for testing environment
         origin = request.headers.get('Origin', 'https://brollysolutions.in')
-        reset_link = f"{origin}/login/?token={token}"
+        reset_link = f"{origin}/test_login/?token={token}"
 
         subject = "Password Reset Request - Brolly Solutions"
         body = (
