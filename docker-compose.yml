@@ -4,7 +4,7 @@ services:
   backend:
     build: ./backend
     # container_name: brolly-login-backend
-    contanier_name: brolly-test-login-backend
+    container_name: brolly-test-login-backend
     network_mode: host
     volumes:
       - ./backend/db.sqlite3:/app/db.sqlite3
@@ -16,7 +16,7 @@ services:
   frontend:
     build: ./frontend
     # container_name: brolly-login-frontend
-    contanier_name: brolly-test-login-frontend
+    container_name: brolly-test-login-frontend
     depends_on:
       - backend
     ports:
