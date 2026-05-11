@@ -2116,7 +2116,7 @@ function AssignTaskModal({ employee, onClose, onAssigned }) {
 }
 
 /* ── Chat Panel ────────────────────────────────────────────── */
-function ChatPanel({ currentUser, targetUser, onBack, groupId = null, subStatus = null }) {
+function ChatPanel({ currentUser, targetUser, onBack, groupId = null, subStatus = null, groupName = null, onUserClick = null }) {
   const [msgs, setMsgs] = useState([]);
   const [input, setInput] = useState("");
   const [file, setFile] = useState(null);
@@ -2244,7 +2244,7 @@ function ChatPanel({ currentUser, targetUser, onBack, groupId = null, subStatus 
         {onBack && <button onClick={onBack} style={{ background: "none", border: "none", color: "white", cursor: "pointer", display: "flex", alignItems: "center" }}><Icon d={icons.chevronLeft} size={18} /></button>}
         {targetUser && <Avatar name={targetUser.name} size={32} />}
         <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 700, fontSize: 14 }}>{targetUser ? targetUser.name : (groupId?.replace('group_', 'Team: ') || 'Group Chat')}</div>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>{targetUser ? targetUser.name : (groupName || groupId?.replace('group_', 'Team: ') || 'Group Chat')}</div>
           <div style={{ fontSize: 10, color: T.faint }}>{subStatus || (targetUser ? (targetUser.id === "admin" ? "System Administrator" : "Employee") : "Group Conversation")}</div>
         </div>
       </div>
@@ -2270,7 +2270,10 @@ function ChatPanel({ currentUser, targetUser, onBack, groupId = null, subStatus 
               display: "flex", flexDirection: "column"
             }}>
               {groupId && !isMe && (
-                <div style={{ fontSize: 10, fontWeight: 700, color: T.accent, marginBottom: 3 }}>
+                <div 
+                  style={{ fontSize: 10, fontWeight: 700, color: T.accent, marginBottom: 3, cursor: onUserClick ? "pointer" : "default" }}
+                  onClick={() => onUserClick && onUserClick(m.sender_id, m.sender_username)}
+                >
                   {m.sender_username || m.sender_id}
                 </div>
               )}
@@ -3416,7 +3419,14 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                         const isMember = selGroup.member_usernames?.includes(e.id);
                         return (
                           <div key={e.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 8, background: isMember ? T.surface : "none" }}>
-                            <div style={{ fontSize: 13, fontWeight: 600 }}>{e.name} <span style={{ fontSize: 10, opacity: 0.6 }}>({e.id})</span></div>
+                            <div 
+                              style={{ fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "color 0.2s" }}
+                              onClick={() => setChatWith({ id: e.id, name: e.name })}
+                              onMouseEnter={(ev) => ev.currentTarget.style.color = T.accent}
+                              onMouseLeave={(ev) => ev.currentTarget.style.color = T.ink}
+                            >
+                              {e.name} <span style={{ fontSize: 10, opacity: 0.6 }}>({e.id})</span>
+                            </div>
                             <button onClick={async () => {
                               try {
                                 const resp = await fetch(`${GROUPS_URL}${selGroup.id}/membership/`, {
@@ -3448,6 +3458,8 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                       currentUser={{ id: "admin", name: "Admin" }}
                       targetUser={null}
                       groupId={`group_${selGroup.id}`}
+                      groupName={selGroup.name}
+                      onUserClick={(id, name) => setChatWith({ id, name: name || id })}
                     />
                   </div>
                 </div>

@@ -153,9 +153,8 @@ DEFAULT_FROM_EMAIL = f"Brolly Solutions <{EMAIL_HOST_USER}>"
 GOOGLE_SCRIPT_URL = os.environ.get('GOOGLE_SCRIPT_URL', '')
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-# Media files
-# Always use /login/api_media/ so that it works seamlessly behind the production proxy
-# and bypasses any broken Nginx rules for the word 'media'.
-MEDIA_URL = "/login/api_media/"
+# Always use the exact API proxy path so Nginx guarantees forwarding it to Django.
+# Nginx is heavily restricting which paths get proxied to the backend.
+MEDIA_URL = "/login/api/v1/media/"
 
 MEDIA_ROOT = BASE_DIR / "media"

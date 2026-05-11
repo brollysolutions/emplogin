@@ -8,7 +8,8 @@ services:
     volumes:
       - ./backend/db.sqlite3:/app/db.sqlite3
     ports:
-      - "8001:8001"
+      # - "800:8001"
+      - "8003:8003"
     restart: always
 
   frontend:
@@ -17,5 +18,5 @@ services:
     depends_on:
       - backend
     ports:
-      - "3001:80"
+      - "3003:80"
     restart: always

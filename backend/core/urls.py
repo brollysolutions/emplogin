@@ -7,8 +7,7 @@ from django.views.static import serve
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/", include("api.urls")),
-    # Serve media files under /api_media/ to bypass Nginx interception.
-    # We include both variants to be perfectly safe against path stripping.
-    re_path(r'^api_media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
-    re_path(r'^login/api_media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+    # Serve media files through the API path to perfectly bypass ANY strict Nginx proxy rules.
+    # Nginx only proxies /login/api/ to Django, so we disguise media requests as API requests.
+    re_path(r'^api/v1/media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
