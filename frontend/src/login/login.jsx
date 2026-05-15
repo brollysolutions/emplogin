@@ -107,6 +107,7 @@ const MESSAGES_READ_URL = API_BASE + "messages/read/";
 const GROUPS_URL = API_BASE + "groups/";
 const HEARTBEAT_URL = API_BASE + "heartbeat/";
 const CHAT_SUMMARIES_URL = API_BASE + "chat-summaries/";
+const HEALTH_CHECK_URL = API_BASE + "health/";
 
 
 /* ── Avatar ────────────────────────────────────────────────── */
@@ -945,17 +946,18 @@ function Dashboard({ employee, onSignOut, showToast }) {
   };
 
   const triggerAutoSync = (lt, lot, curStatus, startTimeOverride, workOverride, breakOverride) => {
+    const syncTime = new Date();
     const sTime = startTimeOverride || (curStatus === "working" ? sessionStartTime : (curStatus === "break" ? breakStartTime : null));
 
     const tWork = workOverride !== undefined ? workOverride : (
       curStatus === "working" && sTime
-        ? totalWorkSeconds + Math.floor((new Date() - sTime) / 1000)
+        ? totalWorkSeconds + Math.floor((syncTime - sTime) / 1000)
         : totalWorkSeconds
     );
 
     const tBreak = breakOverride !== undefined ? breakOverride : (
       curStatus === "break" && sTime
-        ? totalBreakSeconds + Math.floor((new Date() - sTime) / 1000)
+        ? totalBreakSeconds + Math.floor((syncTime - sTime) / 1000)
         : totalBreakSeconds
     );
 
@@ -982,7 +984,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
       extraHours: "—",
       tasks: taskInput || "—",
       status: curStatus === "working" ? "Active" : curStatus === "break" ? "On Break" : dayStatus,
-      lastStatusChange: sTime ? sTime.toISOString() : null
+      lastStatusChange: (curStatus === "working" || curStatus === "break") ? syncTime.toISOString() : (sTime ? sTime.toISOString() : null)
     };
 
     // Fast sync to local backend
@@ -990,6 +992,17 @@ function Dashboard({ employee, onSignOut, showToast }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
+    }).then(resp => {
+      if (resp.ok) {
+        // Update local state to match what was synced
+        if (curStatus === "working") {
+          setTotalWorkSeconds(tWork);
+          setSessionStartTime(syncTime);
+        } else if (curStatus === "break") {
+          setTotalBreakSeconds(tBreak);
+          setBreakStartTime(syncTime);
+        }
+      }
     }).catch(e => console.warn("Auto-sync failed", e));
   };
   const handleLogout = () => {
@@ -1054,16 +1067,31 @@ function Dashboard({ employee, onSignOut, showToast }) {
   const handleSave = async () => {
     if (!loginTime) { _showToast("Please clock in first", "error"); return; }
 
-    _showToast("Syncing to Google Sheets...", "info");
-    const lt = logoutTime || new Date();
+    _showToast("Syncing to Cloud...", "info");
+    const syncTime = new Date();
+    const lt = logoutTime || syncTime;
+
+    // Use current live values for the sync
+    const tWork = status === "working" && sessionStartTime
+      ? totalWorkSeconds + Math.floor((syncTime - sessionStartTime) / 1000)
+      : totalWorkSeconds;
+    
+    const tBreak = status === "break" && breakStartTime
+      ? totalBreakSeconds + Math.floor((syncTime - breakStartTime) / 1000)
+      : totalBreakSeconds;
+
+    const hrs = secondsToHMS(tWork);
+    const brk = secondsToHMS(tBreak);
+
     const WORK_GOAL = 8;
     const HALF_DAY_THRESHOLD = 4.5;
     let dayStatus = "Half Day";
-    if (liveHrs.total >= WORK_GOAL) {
+    if (hrs.total >= WORK_GOAL) {
       dayStatus = "Full Day";
-    } else if (liveHrs.total >= HALF_DAY_THRESHOLD) {
+    } else if (hrs.total >= HALF_DAY_THRESHOLD) {
       dayStatus = "Incomplete Workday(IWD)";
     }
+
     const formData = new FormData();
     formData.append('date', fmtDate(loginTime));
     formData.append('id', employee.id);
@@ -1071,44 +1099,56 @@ function Dashboard({ employee, onSignOut, showToast }) {
     formData.append('dept', employee.dept);
     formData.append('loginT', fmtTime(loginTime));
     formData.append('logoutT', fmtTime(lt));
-    formData.append('hours', hmsStr(liveHrs));
-    formData.append('breakTime', hmsStr(liveBreakHrs));
-    formData.append('extraHours', liveHrs.total > 8 ? hmsStr(secondsToHMS(Math.floor((liveHrs.total - 8) * 3600))) : "—");
+    formData.append('hours', hmsStr(hrs));
+    formData.append('breakTime', hmsStr(brk));
+    formData.append('extraHours', hrs.total > 8 ? hmsStr(secondsToHMS(Math.floor((hrs.total - 8) * 3600))) : "—");
     formData.append('tasks', taskInput || "—");
-    formData.append('status', dayStatus);
+    formData.append('status', status === "working" ? "Active" : status === "break" ? "On Break" : dayStatus);
+    formData.append('lastStatusChange', (status === "working" || status === "break") ? syncTime.toISOString() : (sessionStartTime || breakStartTime || loginTime).toISOString());
     if (taskScreenshot) formData.append('screenshot', taskScreenshot);
 
     try {
-      await fetch(BACKEND_URL, {
+      const resp = await fetch(BACKEND_URL, {
         method: "POST",
         body: formData
       });
 
+      if (resp.ok) {
+        // Update local state to match synced values
+        if (status === "working") {
+          setTotalWorkSeconds(tWork);
+          setSessionStartTime(syncTime);
+        } else if (status === "break") {
+          setTotalBreakSeconds(tBreak);
+          setBreakStartTime(syncTime);
+        }
+      }
+
+      const syncPayload = {
+        date: fmtDate(loginTime), id: employee.id, name: employee.name, dept: employee.dept,
+        loginT: fmtTime(loginTime), logoutT: fmtTime(lt), hours: hmsStr(hrs),
+        breakTime: hmsStr(brk), tasks: taskInput || "—", status: dayStatus
+      };
+
       if (SCRIPT_URL && !SCRIPT_URL.includes("YOUR_SCRIPT_URL_HERE")) {
-        // Send a simple object for Google Sheets (cannot handle FormData/Files)
-        const payload = {
-          date: fmtDate(loginTime), id: employee.id, name: employee.name, dept: employee.dept,
-          loginT: fmtTime(loginTime), logoutT: fmtTime(lt), hours: hmsStr(liveHrs),
-          breakTime: hmsStr(liveBreakHrs), tasks: taskInput || "—", status: dayStatus
-        };
         await fetch(SCRIPT_URL, {
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(syncPayload)
         });
       }
       setTaskScreenshot(null);
 
       setHistory(prev => {
-        const idx = prev.findIndex(r => r.date === payload.date);
+        const idx = prev.findIndex(r => r.date === syncPayload.date);
         const newRec = {
-          date: payload.date,
-          loginT: payload.loginT,
-          logoutT: payload.logoutT,
-          hours: payload.hours,
-          breakTime: payload.breakTime,
-          extraHours: liveHrs.total > 8 ? hmsStr(secondsToHMS(Math.floor((liveHrs.total - 8) * 3600))) : "—",
-          tasks: payload.tasks,
+          date: syncPayload.date,
+          loginT: syncPayload.loginT,
+          logoutT: syncPayload.logoutT,
+          hours: syncPayload.hours,
+          breakTime: syncPayload.breakTime,
+          extraHours: hrs.total > 8 ? hmsStr(secondsToHMS(Math.floor((hrs.total - 8) * 3600))) : "—",
+          tasks: syncPayload.tasks,
           status: dayStatus
         };
         if (idx >= 0) {
@@ -4249,6 +4289,43 @@ export default function App() {
 
   // Bind globally so internal dashboard functions can call it
   window.showToast = showToast;
+
+  // ── Version Check (Auto-Refresh on Deploy) ──
+  const currentVersion = useRef(null);
+  useEffect(() => {
+    const checkVersion = async () => {
+      try {
+        const resp = await fetch(HEALTH_CHECK_URL);
+        if (resp.ok) {
+          const data = await resp.json();
+          const newVersion = data.version;
+          if (currentVersion.current && currentVersion.current !== newVersion) {
+            console.log(`New version detected: ${newVersion}. Refreshing...`);
+            // If we are on the login page, just refresh immediately
+            if (view === "login") {
+              window.location.reload();
+            } else {
+              // On dashboard, show a polite notification before refreshing
+              showToast("System update detected. Refreshing to apply new features...", "info");
+              setTimeout(() => {
+                window.location.reload();
+              }, 4000);
+            }
+          }
+          currentVersion.current = newVersion;
+        }
+      } catch (e) {
+        console.warn("Version check failed:", e);
+      }
+    };
+
+    // Initial check
+    checkVersion();
+    
+    // Check every 2 minutes for updates
+    const interval = setInterval(checkVersion, 120000);
+    return () => clearInterval(interval);
+  }, [view]);
 
   if (isAdmin) return (
     <>

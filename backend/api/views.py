@@ -22,7 +22,13 @@ import threading
 
 @api_view(['GET'])
 def health_check(request):
-    return Response({"status": "ok", "message": "VERSION 2.0 - PICKING UP CHANGES"}, status=status.HTTP_200_OK)
+    # This version string should be updated manually or via CI/CD on every deploy
+    # Current Version: 2.1.0 (Auto-Refresh Implementation)
+    return Response({
+        "status": "ok", 
+        "version": "2.1.0",
+        "message": "System is running smoothly"
+    }, status=status.HTTP_200_OK)
 
 @api_view(['GET', 'POST'])
 def attendance_list(request):
