@@ -36,58 +36,75 @@ class Command(BaseCommand):
                 processed += 1
                 self.stdout.write(f"[{processed}] Processing hanging session for {rec.name} (ID: {rec.employee_id}) on {rec.date} (Status: {rec.status})")
                 
-                # 1. Update status and logout time
+                # 1. Determine logout time (Prefer last_active heartbeat over hardcoded midnight)
                 original_status = rec.status
-                rec.logout_time = "11:59:59 PM"
-                # Default status if calculation fails
+                logout_time_str = "11:59:59 PM"
+                logout_dt_obj = None
+                
+                if rec.last_active:
+                    logout_time_str = rec.last_active.strftime('%I:%M:%S %p')
+                    logout_dt_obj = rec.last_active
+                
+                rec.logout_time = logout_time_str
                 rec.status = "Complete (Auto)"
 
-                # 2. Recalculate Hours and Overtime
+                # 2. Recalculate Hours and Overtime using Incremental Logic
+                # (Prevents over-calculating if there were gaps in the day)
                 try:
-                    # Clean up time string
-                    if rec.login_time and rec.login_time != "—":
+                    def parse_hms_to_secs(s):
+                        if not s or s == "—": return 0
+                        parts = s.split(':')
+                        if len(parts) != 3: return 0
+                        return int(parts[0])*3600 + int(parts[1])*60 + int(parts[2])
+
+                    def secs_to_hms(secs):
+                        h = int(secs // 3600)
+                        m = int((secs % 3600) // 60)
+                        s = int(secs % 60)
+                        return f"{h:02d}:{m:02d}:{s:02d}"
+
+                    current_work_secs = parse_hms_to_secs(rec.hours)
+                    current_break_secs = parse_hms_to_secs(rec.total_break_time)
+
+                    # If we have heartbeat data, add the time since the last recorded status change
+                    if rec.last_status_change and rec.last_active:
+                        diff = (rec.last_active - rec.last_status_change).total_seconds()
+                        if diff > 0:
+                            if original_status in ['Active', 'working', 'Login', 'Started']:
+                                current_work_secs += diff
+                            elif original_status in ['On Break', 'break']:
+                                current_break_secs += diff
+
+                    # Fallback for old records without last_status_change: 
+                    # use the old login-to-logout duration (capped at 12h to be safe)
+                    elif rec.login_time and rec.login_time != "—":
                         lt_str = rec.login_time.replace('am', 'AM').replace('pm', 'PM').strip()
                         login_dt = datetime.strptime(lt_str, '%I:%M:%S %p')
-                        logout_dt = datetime.strptime("11:59:59 PM", '%I:%M:%S %p')
+                        logout_dt = datetime.strptime(logout_time_str, '%I:%M:%S %p')
+                        duration = (logout_dt - login_dt).total_seconds()
+                        if duration < 0: duration += 86400 # Midnight cross
+                        current_work_secs = min(duration - current_break_secs, 43200) # Cap at 12h
+
+                    rec.hours = secs_to_hms(current_work_secs)
+                    rec.total_break_time = secs_to_hms(current_break_secs)
+
+                    # Calculate overtime (Goal = 8 hours)
+                    GOAL_SECONDS = 8 * 3600
+                    if current_work_secs > GOAL_SECONDS:
+                        rec.extra_hours = secs_to_hms(current_work_secs - GOAL_SECONDS)
+                    else:
+                        rec.extra_hours = "—"
+                    
+                    # Determine Badge Status
+                    HALF_DAY = 4.5 * 3600
+                    if current_work_secs >= GOAL_SECONDS:
+                        rec.status = "Full Day"
+                    elif current_work_secs >= HALF_DAY:
+                        rec.status = "Incomplete Workday(IWD)"
+                    else:
+                        rec.status = "Half Day"
                         
-                        duration_seconds = (logout_dt - login_dt).total_seconds()
-                        
-                        # Subtract breaks
-                        break_str = rec.total_break_time or "00:00:00"
-                        break_parts = break_str.split(':')
-                        if len(break_parts) == 3:
-                            break_seconds = int(break_parts[0])*3600 + int(break_parts[1])*60 + int(break_parts[2])
-                            duration_seconds -= break_seconds
-                        
-                        if duration_seconds < 0: duration_seconds = 0
-                        
-                        # Format work hours
-                        wh = int(duration_seconds // 3600)
-                        wm = int((duration_seconds % 3600) // 60)
-                        ws = int(duration_seconds % 60)
-                        rec.hours = f"{wh:02d}:{wm:02d}:{ws:02d}"
-                        
-                        # Calculate overtime (Goal = 8 hours)
-                        GOAL_SECONDS = 8 * 3600
-                        if duration_seconds > GOAL_SECONDS:
-                            ot_seconds = duration_seconds - GOAL_SECONDS
-                            oh = int(ot_seconds // 3600)
-                            om = int((ot_seconds % 3600) // 60)
-                            os = int(ot_seconds % 60)
-                            rec.extra_hours = f"{oh:02d}:{om:02d}:{os:02d}"
-                        else:
-                            rec.extra_hours = "—"
-                        
-                        # Determine Badge Status
-                        HALF_DAY = 4.5 * 3600
-                        if duration_seconds >= GOAL_SECONDS:
-                            rec.status = "Full Day"
-                        elif duration_seconds >= HALF_DAY:
-                            rec.status = "Incomplete Workday(IWD)"
-                        else:
-                            rec.status = "Half Day"
-                        
-                        self.stdout.write(f"   - Calculated: {rec.hours} work, {rec.extra_hours} overtime. Status: {rec.status}")
+                    self.stdout.write(f"   - Calculated: {rec.hours} work, {rec.extra_hours} overtime. Status: {rec.status}")
                 except Exception as e:
                     self.stdout.write(f"   - Failed to calculate hours: {e}")
                     # Keep status as "Complete (Auto)"

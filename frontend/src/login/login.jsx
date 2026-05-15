@@ -1064,6 +1064,42 @@ function Dashboard({ employee, onSignOut, showToast }) {
     if (liveHrs.total < 8) eightHourSyncedRef.current = false;
   }, [liveHrs.total, status]);
 
+  // ── Heartbeat & Periodic Sync (Fixes "wrong working hours" mismatch) ──
+  useEffect(() => {
+    if (!employee?.id || (status !== "working" && status !== "break")) return;
+
+    const runHeartbeat = async () => {
+      try {
+        // 1. Update 'last_active' timestamp on server (Every 1 min)
+        fetch(HEARTBEAT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            employee_id: employee.id, 
+            date: fmtDate(loginTime || new Date()) 
+          })
+        });
+      } catch (e) { console.warn("Heartbeat failed", e); }
+    };
+
+    const runBackgroundSync = () => {
+      // 2. Sync actual hours to server (Every 5 mins)
+      // This ensures Admin Dashboard shows real-time progress
+      if (status === "working" || status === "break") {
+        console.log("Performing background hours sync...");
+        triggerAutoSync(loginTime, logoutTime, status);
+      }
+    };
+
+    const heartbeatIv = setInterval(runHeartbeat, 60000); // 1 min
+    const syncIv = setInterval(runBackgroundSync, 300000); // 5 mins
+    
+    return () => {
+      clearInterval(heartbeatIv);
+      clearInterval(syncIv);
+    };
+  }, [employee?.id, status, loginTime, logoutTime]);
+
   const handleSave = async () => {
     if (!loginTime) { _showToast("Please clock in first", "error"); return; }
 
@@ -2621,21 +2657,72 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
     return () => clearInterval(t);
   }, []);
 
-  // Derived stats
+  // Derive stats with live calculation
   const departments = Array.from(new Set(allEmployees.map(e => e.dept).filter(Boolean)));
-  const today = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-  const todayRecs = records.filter(r => r.date === today);
+  const today = fmtDate(new Date());
 
-  // Helper to format input date (YYYY-MM-DD) to DD MMM YYYY
-  function formatInputDate(dateStr) {
-    if (!dateStr) return "";
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  // Helper to parse "HH:MM:SS" string to seconds
+  function parseHMS(str) {
+    if (!str || str === "—") return 0;
+    const parts = str.split(":");
+    if (parts.length !== 3) return 0;
+    const [h, m, s] = parts.map(Number);
+    return h * 3600 + m * 60 + s;
   }
+
+  // Helper to format seconds to "HH:MM:SS"
+  function formatHMS(totalSeconds) {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  }
+
+  // Pre-process records to include live data
+  const processedRecords = records.map(r => {
+    if (r.date === today && r.status === "Active" && r.last_status_change) {
+      const base = parseHMS(r.hours || r.workinghours);
+      const lastChange = new Date(r.last_status_change).getTime();
+      const elapsed = Math.floor((now - lastChange) / 1000);
+      const liveTotalSecs = base + (elapsed > 0 ? elapsed : 0);
+      
+      const liveHoursStr = formatHMS(liveTotalSecs);
+      const liveOvertimeSecs = liveTotalSecs > 28800 ? liveTotalSecs - 28800 : 0;
+      const liveOvertimeStr = liveOvertimeSecs > 0 ? formatHMS(liveOvertimeSecs) : "—";
+      
+      // Determine dynamic status based on live hours if still Active
+      let liveStatus = "Active";
+      if (liveTotalSecs >= 28800) liveStatus = "Full Day";
+      else if (liveTotalSecs >= 16200) liveStatus = "Incomplete Workday(IWD)";
+      else liveStatus = "Half Day";
+
+      return { 
+        ...r, 
+        live_hours: liveHoursStr, 
+        live_hours_secs: liveTotalSecs,
+        live_overtime: liveOvertimeStr,
+        live_status: liveStatus,
+        is_live: true
+      };
+    }
+    
+    // For non-active or past records, use stored values
+    const hSecs = parseHMS(r.hours || r.workinghours);
+    return { 
+      ...r, 
+      live_hours: r.hours || r.workinghours || "—", 
+      live_hours_secs: hSecs,
+      live_overtime: r.extrahours || r.extra_hours || "—",
+      live_status: r.status,
+      is_live: false
+    };
+  });
+
+  const todayRecs = processedRecords.filter(r => r.date === today);
   const registeredCount = allEmployees.length;
-  const fullDayToday = todayRecs.filter(r => r.status === "Full Day").length;
-  const iwdToday = todayRecs.filter(r => r.status === "Incomplete Workday(IWD)").length;
-  const halfDayToday = todayRecs.filter(r => r.status === "Half Day").length;
+  const fullDayToday = todayRecs.filter(r => r.live_status === "Full Day" || r.status === "Full Day").length;
+  const iwdToday = todayRecs.filter(r => r.live_status === "Incomplete Workday(IWD)" || r.status === "Incomplete Workday(IWD)").length;
+  const halfDayToday = todayRecs.filter(r => r.live_status === "Half Day" || r.status === "Half Day").length;
 
   // Filtered records
   const filtered = (() => {
@@ -2726,12 +2813,16 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
         }));
     }
 
-    const base = records.filter(r => {
+    const base = processedRecords.filter(r => {
       const ms = !q || (r.name || r.employeename || "").toLowerCase().includes(q)
         || (r.id || r.employeeid || "").toLowerCase().includes(q)
         || (r.dept || r.department || "").toLowerCase().includes(q);
       const md = !filterDate || (r.date || "") === targetDate;
-      const mst = filterStatus === "all" || r.status === filterStatus;
+      
+      // Use live_status for filtering if it's today
+      const currentStatus = (r.date === today && r.status === "Active") ? r.live_status : r.status;
+      const mst = filterStatus === "all" || currentStatus === filterStatus || r.status === filterStatus;
+      
       const mdt = filterDept === "all" || (r.dept || r.department) === filterDept;
       return ms && md && mst && mdt;
     });
@@ -2739,6 +2830,11 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
     return [...base].sort((a, b) => {
       if (!sortConfig) return 0;
       const { key, dir } = sortConfig;
+      
+      if (key === "hours") {
+        return dir === "asc" ? a.live_hours_secs - b.live_hours_secs : b.live_hours_secs - a.live_hours_secs;
+      }
+      
       let valA = a[key] || "";
       let valB = b[key] || "";
 
@@ -2758,14 +2854,14 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
         };
 
         valA = parseTime(valA); valB = parseTime(valB);
-      } else if (key === "hours" || key === "extrahours") {
+      } else if (key === "extrahours") {
         const parseDur = (s) => {
           if (!s || s === "—") return 0;
           const parts = s.split(":").map(Number);
           if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
           return parseFloat(s) || 0;
         };
-        valA = parseDur(valA); valB = parseDur(valB);
+        valA = parseDur(a.live_overtime); valB = parseDur(b.live_overtime);
       }
 
       if (dir === "asc") return valA > valB ? 1 : -1;
@@ -3192,14 +3288,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                       <td style={{ ...cellStyle, color: T.green, fontWeight: 600 }}>{r.logint || r.intime}</td>
                       <td style={{ ...cellStyle, color: T.red, fontWeight: 600 }}>{r.logoutt || r.outtime}</td>
                       <td style={{ ...cellStyle, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
-                        {r.status === "Active" && r.last_status_change
-                          ? (() => {
-                            const base = parseHMS(r.hours || r.workinghours);
-                            const lastChange = new Date(r.last_status_change).getTime();
-                            const elapsed = Math.floor((now - lastChange) / 1000);
-                            return formatHMS(base + (elapsed > 0 ? elapsed : 0));
-                          })()
-                          : (r.hours || r.workinghours || "—")}
+                        {r.live_hours}
                       </td>
                       <td style={{ ...cellStyle, color: T.amber, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
                         {r.status === "On Break" && r.last_status_change
@@ -3211,11 +3300,11 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                           })()
                           : (r.break_time || r.breaktime || "—")}
                       </td>
-                      <td style={{ ...cellStyle, fontWeight: 700, color: r.extrahours && r.extrahours !== "—" ? T.amber : T.faint, fontVariantNumeric: "tabular-nums" }}>
-                        {r.extrahours || "—"}
+                      <td style={{ ...cellStyle, fontWeight: 700, color: r.live_overtime && r.live_overtime !== "—" ? T.amber : T.faint, fontVariantNumeric: "tabular-nums" }}>
+                        {r.live_overtime}
                       </td>
                       <td style={cellStyle}>
-                        <Badge status={r.status || "Incomplete"} />
+                        <Badge status={r.live_status || "Incomplete"} />
                       </td>
                       <td style={{ ...cellStyle, color: T.ink2, maxWidth: 220, fontSize: 12 }}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
