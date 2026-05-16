@@ -81,6 +81,13 @@ function formatHMS(totalSeconds) {
   return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
+// Converts HTML date input "YYYY-MM-DD" → "DD MMM YYYY" (matches fmtDate format)
+function formatInputDate(val) {
+  if (!val) return "";
+  const d = new Date(val + "T00:00:00"); // Force local time, not UTC
+  return fmtDate(d);
+}
+
 function getStartOfWeek(date) {
   const d = new Date(date);
   const day = d.getDay();
