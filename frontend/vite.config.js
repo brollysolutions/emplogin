@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/test_login/',
+  // base: '/test_login/', // TEST
+  base: '/login/',         // PRODUCTION
 })
 

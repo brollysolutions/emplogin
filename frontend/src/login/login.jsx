@@ -134,9 +134,12 @@ const FALLBACK_CREDS = [
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxNHIX32g4_K2FlxAJO6g0XpEdUW7ennEEnwH-0XK_SoecTAzZ66hcRIhGh2HxCYsGj/exec";
 // Use relative path in production to work behind the /login/ proxy
+// const API_BASE = window.location.hostname === "localhost"
+//   ? "http://localhost:8003/api/v1/"
+//   : "/test_login/api/v1/";
 const API_BASE = window.location.hostname === "localhost"
-  ? "http://localhost:8003/api/v1/"
-  : "/test_login/api/v1/";
+  ? "http://localhost:8001/api/v1/"
+  : "/login/api/v1/";
 const BACKEND_URL = API_BASE + "attendance/";
 const TASKS_URL = API_BASE + "tasks/";
 const LEAVES_URL = API_BASE + "leaves/";
