@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import * as XLSX from "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
 import logo from "../assets/brolly_logo.png";
 
@@ -27,9 +27,23 @@ const T = {
 
 /* ── Helpers ───────────────────────────────────────────────── */
 function pad(n) { return String(n).padStart(2, "0"); }
-function fmtTime(d) { return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }); }
-function fmtDate(d) { return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }); }
-function fmtShort(d) { return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" }); }
+function fmtDate(d) {
+  if (!d) return "";
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const day = pad(d.getDate());
+  const month = months[d.getMonth()];
+  const year = d.getFullYear();
+  return `${day} ${month} ${year}`; // Matches Python's %d %b %Y
+}
+function fmtTime(d) {
+  if (!d) return "—";
+  let h = d.getHours();
+  const m = pad(d.getMinutes());
+  const s = pad(d.getSeconds());
+  const ampm = h >= 12 ? "pm" : "am";
+  h = h % 12 || 12;
+  return `${h}:${m}:${s} ${ampm}`;
+}
 
 function calcHrs(a, b) {
   if (!a || !b) return null;
@@ -48,6 +62,32 @@ function secondsToHMS(totalSeconds) {
   const m = Math.floor((totalSeconds % 3600) / 60);
   const s = totalSeconds % 60;
   return { h, m, s, total: totalSeconds / 3600 };
+}
+
+// Helper to parse "HH:MM:SS" string to seconds
+function parseHMS(str) {
+  if (!str || str === "—") return 0;
+  const parts = str.split(":");
+  if (parts.length !== 3) return 0;
+  const [h, m, s] = parts.map(Number);
+  return h * 3600 + m * 60 + s;
+}
+
+// Helper to format seconds to "HH:MM:SS"
+function formatHMS(totalSeconds) {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
+
+function getStartOfWeek(date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday
+  d.setDate(diff);
+  d.setHours(0,0,0,0);
+  return d;
 }
 
 let masterAudioCtx = null;
@@ -173,6 +213,8 @@ const LOGIN_STYLES = `
   @keyframes pillSlide { from{opacity:0;transform:translateX(-20px)} to{opacity:1;transform:translateX(0)} }
   @keyframes glowPulse { 0%,100%{box-shadow:0 0 0 0 rgba(21,96,189,0.3)} 50%{box-shadow:0 0 0 8px rgba(21,96,189,0)} }
   @keyframes logoSpin { 0%{transform:rotateY(0deg)} 100%{transform:rotateY(360deg)} }
+  @keyframes pulse { 0% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } 100% { transform: scale(0.95); opacity: 0.8; } }
+  @keyframes popIn { 0% { opacity: 0; transform: scale(0.8) translateY(20px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
   @keyframes dotPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
 
   .login-inp {
@@ -589,12 +631,15 @@ function LoginPage({ onLogin, error, isSyncing, onForgot }) {
 /* ══════════════════════════════════════════════════════════════
    STAT CARD
 ══════════════════════════════════════════════════════════════ */
-function StatCard({ label, value, sub, icon, color, bg }) {
+function StatCard({ label, value, sub, icon, color, bg, isLive }) {
   return (
-    <div style={{
-      background: T.white, borderRadius: 16, padding: "20px 22px",
-      border: `1px solid ${T.border}`, flex: 1, minWidth: 0
-    }}>
+    <div className="stat-card" style={{ background: T.white, padding: "18px 20px", borderRadius: 20, border: `1px solid ${T.border}`, display: "flex", flexDirection: "column", gap: 12, position: "relative", overflow: "hidden", transition: "all 0.3s ease" }}>
+      {isLive && (
+        <div style={{ position: "absolute", top: 12, right: 12, display: "flex", alignItems: "center", gap: 4 }}>
+          <div style={{ width: 6, height: 6, borderRadius: "50%", background: T.green, animation: "pulse 1.5s infinite", boxShadow: `0 0 8px ${T.green}` }} />
+          <span style={{ fontSize: 9, fontWeight: 800, color: T.green, textTransform: "uppercase", letterSpacing: "0.5px" }}>Live</span>
+        </div>
+      )}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
         <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.6, color: T.muted, textTransform: "uppercase" }}>{label}</span>
         <div style={{
@@ -628,6 +673,7 @@ function Badge({ status }) {
     "Rejected": { bg: "#fef2f2", color: "#991b1b", dot: "#ef4444" },
     "Pending": { bg: "#fffbeb", color: "#92400e", dot: "#f59e0b" },
     "On Break": { bg: "#fff1f1", color: "#d93b3b", dot: "#d93b3b", pulse: true },
+    "Offline": { bg: "#f3f4f6", color: "#6b7280", dot: "#9ca3af" },
   };
   const s = map[status] || map["Incomplete"];
   return (
@@ -724,13 +770,33 @@ function Dashboard({ employee, onSignOut, showToast }) {
           const todayRec = myHistory.find(r => r.date === today);
 
           if (todayRec) {
-            const parseHMS = (str) => {
-              if (!str || str === "—") return 0;
-              const parts = str.split(":");
-              if (parts.length !== 3) return 0;
-              const [h, m, s] = parts.map(Number);
-              return (h * 3600) + (m * 60) + s;
-            };
+            const nowTime = new Date().getTime();
+            const lastActive = todayRec.last_active ? new Date(todayRec.last_active).getTime() : 0;
+            const isStale = lastActive > 0 && (nowTime - lastActive) > 90000; // 90 seconds threshold (3 heartbeats)
+
+            // GAP DETECTION: If status is Active/Break but heartbeat is stale, 
+            // it means the user closed the browser and just came back.
+            // We must "pause" the timer at lastActive and resume at nowTime.
+            if (isStale && (todayRec.status === "Active" || todayRec.status === "On Break")) {
+              console.log("Gap detected! Resuming from stale session. Correcting hours to exclude offline gap...");
+              const workBase = parseHMS(todayRec.hours);
+              const breakBase = parseHMS(todayRec.break_time);
+              const lastChange = todayRec.last_status_change ? new Date(todayRec.last_status_change).getTime() : lastActive;
+              const elapsed = Math.max(0, Math.floor((lastActive - lastChange) / 1000));
+
+              const correctedWork = todayRec.status === "Active" ? workBase + elapsed : workBase;
+              const correctedBreak = todayRec.status === "On Break" ? breakBase + elapsed : breakBase;
+
+              triggerAutoSync(
+                new Date(today + " " + todayRec.logint),
+                null,
+                todayRec.status === "Active" ? "working" : "break",
+                new Date(), // startTimeOverride: reset to now
+                correctedWork,
+                correctedBreak
+              );
+              return; // Let the next poll handle the refreshed state
+            }
 
             const serverStatusMap = { "Active": "working", "On Break": "break" };
             const mappedStatus = serverStatusMap[todayRec.status] || (todayRec.logoutt && todayRec.logoutt !== "—" ? "loggedOut" : "idle");
@@ -1091,7 +1157,8 @@ function Dashboard({ employee, onSignOut, showToast }) {
       }
     };
 
-    const heartbeatIv = setInterval(runHeartbeat, 60000); // 1 min
+    const heartbeatIv = setInterval(runHeartbeat, 30000); // 30 seconds
+    runHeartbeat(); // Run immediately on mount or status change
     const syncIv = setInterval(runBackgroundSync, 300000); // 5 mins
     
     return () => {
@@ -2432,6 +2499,14 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
   const [filterDate, setFilterDate] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDept, setFilterDept] = useState("all");
+  const [weeklyFrom, setWeeklyFrom] = useState(() => {
+    const d = getStartOfWeek(new Date());
+    return d.toISOString().split('T')[0];
+  });
+  const [weeklyTo, setWeeklyTo] = useState(() => {
+    const d = new Date();
+    return d.toISOString().split('T')[0];
+  });
   const [activeTab, setTab] = useState(() => localStorage.getItem("wt_tab_adm") || "attendance");
 
   useEffect(() => {
@@ -2628,7 +2703,6 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
     return () => clearInterval(iv);
   }, [selGroup]);
 
-
   const handleApproveLeave = async (leaveId, status) => {
     try {
       const resp = await fetch(`${LEAVES_URL}${leaveId}/approve/`, {
@@ -2661,48 +2735,41 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
   const departments = Array.from(new Set(allEmployees.map(e => e.dept).filter(Boolean)));
   const today = fmtDate(new Date());
 
-  // Helper to parse "HH:MM:SS" string to seconds
-  function parseHMS(str) {
-    if (!str || str === "—") return 0;
-    const parts = str.split(":");
-    if (parts.length !== 3) return 0;
-    const [h, m, s] = parts.map(Number);
-    return h * 3600 + m * 60 + s;
-  }
-
-  // Helper to format seconds to "HH:MM:SS"
-  function formatHMS(totalSeconds) {
-    const h = Math.floor(totalSeconds / 3600);
-    const m = Math.floor((totalSeconds % 3600) / 60);
-    const s = totalSeconds % 60;
-    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-  }
-
   // Pre-process records to include live data
   const processedRecords = records.map(r => {
-    if (r.date === today && r.status === "Active" && r.last_status_change) {
-      const base = parseHMS(r.hours || r.workinghours);
+    // 1. Check Heartbeat Staleness (If last_active is older than 90 seconds, they are offline)
+    const lastActive = r.last_active ? new Date(r.last_active).getTime() : 0;
+    const isHeartbeatStale = (now - lastActive) > 90000; // 90 seconds threshold (3 heartbeats)
+    
+    if (r.date === today && (r.status === "Active" || r.status === "On Break") && r.last_status_change) {
+      const workBase = parseHMS(r.hours || r.workinghours);
+      const breakBase = parseHMS(r.break_time || r.breaktime || "00:00:00");
       const lastChange = new Date(r.last_status_change).getTime();
-      const elapsed = Math.floor((now - lastChange) / 1000);
-      const liveTotalSecs = base + (elapsed > 0 ? elapsed : 0);
       
-      const liveHoursStr = formatHMS(liveTotalSecs);
-      const liveOvertimeSecs = liveTotalSecs > 28800 ? liveTotalSecs - 28800 : 0;
+      // If signal is fresh, count up to 'now'
+      // If signal is stale, count only up to 'lastActive'
+      const endTime = (!isHeartbeatStale) ? now : Math.max(lastActive, lastChange);
+      const elapsed = Math.floor((endTime - lastChange) / 1000);
+      
+      const liveWorkSecs = r.status === "Active" ? workBase + (elapsed > 0 ? elapsed : 0) : workBase;
+      const liveBreakSecs = r.status === "On Break" ? breakBase + (elapsed > 0 ? elapsed : 0) : breakBase;
+      
+      const liveHoursStr = formatHMS(liveWorkSecs);
+      const liveBreakStr = formatHMS(liveBreakSecs);
+      const liveOvertimeSecs = liveWorkSecs > 28800 ? liveWorkSecs - 28800 : 0;
       const liveOvertimeStr = liveOvertimeSecs > 0 ? formatHMS(liveOvertimeSecs) : "—";
       
-      // Determine dynamic status based on live hours if still Active
-      let liveStatus = "Active";
-      if (liveTotalSecs >= 28800) liveStatus = "Full Day";
-      else if (liveTotalSecs >= 16200) liveStatus = "Incomplete Workday(IWD)";
-      else liveStatus = "Half Day";
-
+      // Determine status
+      let liveStatus = isHeartbeatStale ? "Offline" : r.status;
+      
       return { 
         ...r, 
         live_hours: liveHoursStr, 
-        live_hours_secs: liveTotalSecs,
+        live_hours_secs: liveWorkSecs,
+        live_break_time: liveBreakStr,
         live_overtime: liveOvertimeStr,
         live_status: liveStatus,
-        is_live: true
+        is_live: !isHeartbeatStale
       };
     }
     
@@ -2712,11 +2779,80 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
       ...r, 
       live_hours: r.hours || r.workinghours || "—", 
       live_hours_secs: hSecs,
+      live_break_time: r.break_time || r.breaktime || "—",
       live_overtime: r.extrahours || r.extra_hours || "—",
       live_status: r.status,
       is_live: false
     };
   });
+
+  // Weekly aggregation logic
+  const weeklyReportData = useMemo(() => {
+    const start = new Date(weeklyFrom);
+    const end = new Date(weeklyTo);
+    
+    const weekDates = [];
+    let curr = new Date(start);
+    // Limit to prevent infinite loop or massive arrays
+    let count = 0;
+    while (curr <= end && count < 31) {
+      weekDates.push(fmtDate(new Date(curr)));
+      curr.setDate(curr.getDate() + 1);
+      count++;
+    }
+
+    return allEmployees.map(emp => {
+      // Get all records for this employee in the current week
+      const empRecs = records.filter(r => (r.id === emp.id || r.employeeid === emp.id) && weekDates.includes(r.date));
+      
+      let totalWorkSecs = 0;
+      let totalBreakSecs = 0;
+      let daysPresent = 0;
+      let weeklyTasks = [];
+
+      // Map to keep track of processed daily values (for live data support)
+      const dateMap = {};
+      empRecs.forEach(r => {
+        // If it's today, we might have live data in processedRecords
+        let work = parseHMS(r.hours || r.workinghours);
+        let brk = parseHMS(r.break_time || r.breaktime);
+        
+        if (r.date === today) {
+           const liveRec = processedRecords.find(pr => pr.id === emp.id || pr.employeeid === emp.id);
+           if (liveRec) {
+              work = parseHMS(liveRec.live_hours);
+              brk = parseHMS(liveRec.live_break_time);
+           }
+        }
+        
+        // Use the latest record for each date in the week
+        if (!dateMap[r.date] || parseHMS(r.hours || r.workinghours) > dateMap[r.date].work) {
+          dateMap[r.date] = { work, brk, hasLog: r.logint && r.logint !== "—", task: r.tasks || r.workstatus };
+        }
+      });
+
+      Object.values(dateMap).forEach(v => {
+        totalWorkSecs += v.work;
+        totalBreakSecs += v.brk;
+        if (v.hasLog) daysPresent++;
+        if (v.task && v.task !== "—" && v.task !== "Not Signed In" && v.task !== "On Approved Leave") {
+          weeklyTasks.push(v.task);
+        }
+      });
+
+      return {
+        id: emp.id,
+        name: emp.name,
+        dept: emp.dept,
+        totalWork: formatHMS(totalWorkSecs),
+        totalBreak: formatHMS(totalBreakSecs),
+        daysPresent,
+        avgWork: formatHMS(daysPresent > 0 ? Math.floor(totalWorkSecs / daysPresent) : 0),
+        tasks: weeklyTasks.join(" | ")
+      };
+    });
+  }, [processedRecords, records, allEmployees, today]);
+
 
   const todayRecs = processedRecords.filter(r => r.date === today);
   const registeredCount = allEmployees.length;
@@ -2885,22 +3021,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
   };
   const cellStyle = { padding: "11px 14px", fontSize: 13, color: T.ink, borderBottom: `1px solid ${T.border}` };
 
-  // Helper to parse "HH:MM:SS" string to seconds
-  function parseHMS(str) {
-    if (!str || str === "—") return 0;
-    const parts = str.split(":");
-    if (parts.length !== 3) return 0;
-    const [h, m, s] = parts.map(Number);
-    return h * 3600 + m * 60 + s;
-  }
 
-  // Helper to format seconds to "HH:MM:SS"
-  function formatHMS(totalSeconds) {
-    const h = Math.floor(totalSeconds / 3600);
-    const m = Math.floor((totalSeconds % 3600) / 60);
-    const s = totalSeconds % 60;
-    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-  }
 
   return (
     <div style={{ minHeight: "100vh", background: "#eef3f9", fontFamily: "'Segoe UI',system-ui,sans-serif" }}>
@@ -3051,7 +3172,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                 </div>
                 <div style={{ paddingLeft: 10 }}>
                   <div style={{ fontSize: 10, color: T.muted, fontWeight: 700, marginBottom: 4, textTransform: "uppercase" }}>Hours (Work / Break)</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{selectedRecord.hours || selectedRecord.workinghours || "—"} / {selectedRecord.break_time || selectedRecord.breaktime || "—"}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{selectedRecord.live_hours || "—"} / {selectedRecord.live_break_time || "—"}</div>
                 </div>
               </div>
 
@@ -3061,7 +3182,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                     <Icon d={icons.tasks} size={15} color={T.purple} />
                   </div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>Task Report</div>
-                  <div style={{ marginLeft: "auto" }}><Badge status={selectedRecord.status} /></div>
+                  <div style={{ marginLeft: "auto" }}><Badge status={selectedRecord.live_status || selectedRecord.status} /></div>
                 </div>
                 <div style={{
                   background: T.surface, padding: 18, borderRadius: 14,
@@ -3110,7 +3231,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                 Close
               </button>
               <button onClick={() => {
-                const text = `Attendance: ${selectedRecord.name || selectedRecord.employeename}\nDate: ${selectedRecord.date}\nHours: ${selectedRecord.hours || selectedRecord.workinghours}\nTasks: ${selectedRecord.tasks || selectedRecord.workstatus || "—"}`;
+                const text = `Attendance: ${selectedRecord.name || selectedRecord.employeename}\nDate: ${selectedRecord.date}\nHours: ${selectedRecord.live_hours}\nTasks: ${selectedRecord.tasks || selectedRecord.workstatus || "—"}`;
                 navigator.clipboard.writeText(text);
                 alert("Report copied to clipboard!");
               }} style={{
@@ -3165,7 +3286,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
         {/* Stat cards */}
         <div className="stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 14, marginBottom: 24 }}>
           <StatCard label="Total Employees" value={String(registeredCount)} sub="Registered" icon={icons.user} color={T.accent} bg="#e8f0fc" />
-          <StatCard label="Today Present" value={String(todayRecs.length)} sub={fmtDate(new Date())} icon={icons.check} color={T.green} bg={T.greenBg} />
+          <StatCard label="Today Present" value={String(todayRecs.length)} sub={today} icon={icons.check} color={T.green} bg={T.greenBg} isLive={true} />
           <StatCard label="Full Day Today" value={String(fullDayToday)} sub="≥ 8 hours" icon={icons.clock} color={T.green} bg={T.greenBg} />
           <StatCard label="IWD Today" value={String(iwdToday)} sub="4.5 - 8 hrs" icon={icons.chart} color={T.orange} bg={T.orangeBg} />
           <StatCard label="Half Day Today" value={String(halfDayToday)} sub="< 4.5 hours" icon={icons.clock} color={T.amber} bg={T.amberBg} />
@@ -3179,6 +3300,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
         }}>
           {[
             { k: "attendance", label: "Attendance Records" },
+            { k: "weekly", label: "Weekly Report" },
             { k: "tasks", label: "Live Task Feed" },
             { k: "leaves", label: "Leave Requests" },
             { k: "groups", label: "Manage Groups", badge: Object.values(groupUnreadMapAdmin).reduce((a, b) => a + b, 0) },
@@ -3204,34 +3326,109 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
               value={search} onChange={e => setSearch(e.target.value)}
               style={{ width: "100%", paddingLeft: 32, boxSizing: "border-box" }} />
           </div>
-          <input
-            className="adm-inp"
-            type="date"
-            placeholder="Filter date..."
-            value={filterDate}
-            onChange={e => setFilterDate(e.target.value)}
-            style={{ minWidth: 150 }}
-          />
-          <select className="adm-inp" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-            <option value="all">All Status</option>
-            <option value="Active">Active Today</option>
-            <option value="On Break">On Break</option>
-            <option value="notlogin">Not Logged In</option>
-            <option value="leaves">On Leave</option>
-            <option value="Full Day">Full Day</option>
-            <option value="Incomplete Workday(IWD)">Incomplete Workday(IWD)</option>
-            <option value="Half Day">Half Day</option>
-            <option value="messages">Unread Messages</option>
-          </select>
+          {activeTab === "weekly" ? (
+            <>
+              <div style={{ fontSize: 12, fontWeight: 700, color: T.muted }}>From:</div>
+              <input className="adm-inp" type="date" value={weeklyFrom} onChange={e => setWeeklyFrom(e.target.value)} style={{ minWidth: 140 }} />
+              <div style={{ fontSize: 12, fontWeight: 700, color: T.muted }}>To:</div>
+              <input className="adm-inp" type="date" value={weeklyTo} onChange={e => setWeeklyTo(e.target.value)} style={{ minWidth: 140 }} />
+            </>
+          ) : (
+            <>
+              <input
+                className="adm-inp"
+                type="date"
+                placeholder="Filter date..."
+                value={filterDate}
+                onChange={e => setFilterDate(e.target.value)}
+                style={{ minWidth: 150 }}
+              />
+              <select className="adm-inp" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+                <option value="all">All Status</option>
+                <option value="Active">Active Today</option>
+                <option value="On Break">On Break</option>
+                <option value="notlogin">Not Logged In</option>
+                <option value="leaves">On Leave</option>
+                <option value="Full Day">Full Day</option>
+                <option value="Incomplete Workday(IWD)">Incomplete Workday(IWD)</option>
+                <option value="Half Day">Half Day</option>
+                <option value="messages">Unread Messages</option>
+              </select>
+            </>
+          )}
+
           <select className="adm-inp" value={filterDept} onChange={e => setFilterDept(e.target.value)} style={{ minWidth: 150 }}>
             <option value="all">All Departments</option>
             {departments.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
 
-          <div style={{ fontSize: 12, color: T.muted, marginLeft: 4 }}>
-            {loading ? "Syncing..." : `${filtered.length} records`}
-          </div>
+          {activeTab !== "weekly" && (
+            <div style={{ fontSize: 12, color: T.muted, marginLeft: 4 }}>
+              {loading ? "Syncing..." : `${filtered.length} records`}
+            </div>
+          )}
         </div>
+
+        {/* Weekly Report Table */}
+        {activeTab === "weekly" && (
+          <div className="premium-card">
+            <div style={{ padding: "18px 24px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontWeight: 800, color: T.ink }}>Performance Summary Report</div>
+              <div style={{ fontSize: 11, color: T.muted, background: T.surface, padding: "4px 10px", borderRadius: 8 }}>Range: {fmtDate(new Date(weeklyFrom))} — {fmtDate(new Date(weeklyTo))}</div>
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ background: T.surface }}>
+                    {["Employee", "Dept", "Days Present", "Total Work", "Total Break", "Avg Hours/Day", "Activity Log"].map(h => (
+                      <th key={h} style={{ padding: "14px 24px", textAlign: "left", fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: 0.6 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {weeklyReportData.filter(emp => !search || emp.name.toLowerCase().includes(search.toLowerCase()) || emp.id.toLowerCase().includes(search.toLowerCase())).map(r => (
+                    <tr key={r.id} style={{ borderBottom: `1px solid ${T.border}`, transition: "background 0.2s" }} className="adm-row">
+                      <td style={{ padding: "16px 24px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <Avatar name={r.name} size={32} />
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{r.name}</div>
+                            <div style={{ fontSize: 11, color: T.muted }}>{r.id}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ padding: "16px 24px", fontSize: 13, color: T.ink2 }}>{r.dept}</td>
+                      <td style={{ padding: "16px 24px" }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{r.daysPresent} days</div>
+                      </td>
+                      <td style={{ padding: "16px 24px" }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: T.green }}>{r.totalWork}</div>
+                      </td>
+                      <td style={{ padding: "16px 24px", fontSize: 13, color: T.red }}>{r.totalBreak}</td>
+                      <td style={{ padding: "16px 24px" }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: T.accent }}>{r.avgWork}</div>
+                      </td>
+                      <td style={{ padding: "16px 24px" }}>
+                        <div style={{ 
+                          fontSize: 11, color: T.ink2, maxWidth: 250, 
+                          maxHeight: 60, overflowY: "auto", whiteSpace: "pre-wrap",
+                          lineHeight: 1.4, padding: "4px 8px", background: T.surface, borderRadius: 8
+                        }}>
+                          {r.tasks || "No activity logged."}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {weeklyReportData.length === 0 && (
+                    <tr>
+                      <td colSpan="6" style={{ padding: "40px", textAlign: "center", color: T.muted }}>No data available for the current week.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Attendance Records Table */}
         {activeTab === "attendance" && (
@@ -3291,14 +3488,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                         {r.live_hours}
                       </td>
                       <td style={{ ...cellStyle, color: T.amber, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
-                        {r.status === "On Break" && r.last_status_change
-                          ? (() => {
-                            const base = parseHMS(r.break_time || r.breaktime);
-                            const lastChange = new Date(r.last_status_change).getTime();
-                            const elapsed = Math.floor((now - lastChange) / 1000);
-                            return formatHMS(base + (elapsed > 0 ? elapsed : 0));
-                          })()
-                          : (r.break_time || r.breaktime || "—")}
+                        {r.live_break_time}
                       </td>
                       <td style={{ ...cellStyle, fontWeight: 700, color: r.live_overtime && r.live_overtime !== "—" ? T.amber : T.faint, fontVariantNumeric: "tabular-nums" }}>
                         {r.live_overtime}
@@ -4418,6 +4608,7 @@ export default function App() {
 
   if (isAdmin) return (
     <>
+      <style>{LOGIN_STYLES}</style>
       <AdminDashboard onSignOut={handleSignOut} allEmployees={creds} showToast={showToast} />
       {toast.show && (
         <div className="notif-toast" style={{ animation: "popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275)" }}>
@@ -4435,6 +4626,7 @@ export default function App() {
   
   if (employee) return (
     <>
+      <style>{LOGIN_STYLES}</style>
       <Dashboard employee={employee} onSignOut={handleSignOut} showToast={showToast} />
       {toast.show && (
         <div className="notif-toast" style={{ animation: "popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275)" }}>

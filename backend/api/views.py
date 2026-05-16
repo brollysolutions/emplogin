@@ -23,10 +23,10 @@ import threading
 @api_view(['GET'])
 def health_check(request):
     # This version string should be updated manually or via CI/CD on every deploy
-    # Current Version: 2.1.0 (Auto-Refresh Implementation)
+    # Current Version: 2.1.2 (Pulse Implementation)
     return Response({
         "status": "ok", 
-        "version": "2.1.0",
+        "version": "2.1.2",
         "message": "System is running smoothly"
     }, status=status.HTTP_200_OK)
 
