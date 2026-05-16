@@ -13,6 +13,7 @@ class Attendance(models.Model):
     extra_hours = models.CharField(max_length=50, default="—")
     tasks = models.TextField(blank=True, default="—")
     total_break_time = models.CharField(max_length=50, default="00:00:00")
+    break_logs = models.TextField(blank=True, default="[]")
     status = models.CharField(max_length=50)
     last_status_change = models.DateTimeField(null=True, blank=True)
     last_active = models.DateTimeField(null=True, blank=True)

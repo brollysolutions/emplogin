@@ -728,6 +728,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
   const [totalBreakSeconds, setTotalBreakSeconds] = useState(savedSession?.totalBreakSeconds || 0);
   const [sessionStartTime, setSessionStartTime] = useState(savedSession?.sessionStartTime ? new Date(savedSession.sessionStartTime) : null);
   const [breakStartTime, setBreakStartTime] = useState(savedSession?.breakStartTime ? new Date(savedSession.breakStartTime) : null);
+  const [breakLogs, setBreakLogs] = useState(savedSession?.breakLogs || []);
 
   const [loginTime, setLT] = useState(savedSession?.loginTime ? new Date(savedSession.loginTime) : null);
   const [logoutTime, setLOT] = useState(savedSession?.logoutTime ? new Date(savedSession.logoutTime) : null);
@@ -770,6 +771,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
             logoutT: r.logoutt,
             hours: r.hours,
             breakTime: r.break_time,
+            breakLogs: r.break_logs,
             extraHours: r.extrahours,
             tasks: r.tasks,
             status: r.status,
@@ -821,6 +823,9 @@ function Dashboard({ employee, onSignOut, showToast }) {
                 console.log(`Syncing with server: Status=${mappedStatus}, LastChange=${todayRec.last_status_change}`);
                 setTotalWorkSeconds(parseHMS(todayRec.hours));
                 setTotalBreakSeconds(parseHMS(todayRec.break_time));
+                try {
+                  setBreakLogs(todayRec.break_logs ? JSON.parse(todayRec.break_logs) : []);
+                } catch { setBreakLogs([]); }
                 setLT(new Date(today + " " + todayRec.logint));
 
                 if (todayRec.status === "Active") {
@@ -966,6 +971,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
       totalBreakSeconds,
       sessionStartTime: sessionStartTime?.toISOString() || null,
       breakStartTime: breakStartTime?.toISOString() || null,
+      breakLogs,
       loginTime: loginTime?.toISOString() || null,
       logoutTime: logoutTime?.toISOString() || null,
       status,
@@ -1008,20 +1014,29 @@ function Dashboard({ employee, onSignOut, showToast }) {
       setBreakStartTime(t);
       setStatus("break");
       _showToast("Break started", "amber");
-      triggerAutoSync(loginTime, null, "break", t, newTotalWork);
+      triggerAutoSync(loginTime, null, "break", t, newTotalWork, undefined, breakLogs);
     } else if (status === "break" && breakStartTime) {
       const addedBreak = Math.floor((t - breakStartTime) / 1000);
       const newTotalBreak = totalBreakSeconds + addedBreak;
+      
+      const newLog = {
+        in: fmtTime(breakStartTime),
+        out: fmtTime(t),
+        duration: hmsStr(secondsToHMS(addedBreak))
+      };
+      const newBreakLogs = [...breakLogs, newLog];
+      
       setTotalBreakSeconds(newTotalBreak);
+      setBreakLogs(newBreakLogs);
       setBreakStartTime(null);
       setSessionStartTime(t);
       setStatus("working");
       _showToast("Work resumed", "success");
-      triggerAutoSync(loginTime, null, "working", t, totalWorkSeconds, newTotalBreak);
+      triggerAutoSync(loginTime, null, "working", t, totalWorkSeconds, newTotalBreak, newBreakLogs);
     }
   };
 
-  const triggerAutoSync = (lt, lot, curStatus, startTimeOverride, workOverride, breakOverride) => {
+  const triggerAutoSync = (lt, lot, curStatus, startTimeOverride, workOverride, breakOverride, logsOverride) => {
     const syncTime = new Date();
     const sTime = startTimeOverride || (curStatus === "working" ? sessionStartTime : (curStatus === "break" ? breakStartTime : null));
 
@@ -1059,6 +1074,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
       breakTime: hmsStr(brk),
       extraHours: "—",
       tasks: taskInput || "—",
+      breakLogs: JSON.stringify(logsOverride || breakLogs),
       status: curStatus === "working" ? "Active" : curStatus === "break" ? "On Break" : dayStatus,
       lastStatusChange: (curStatus === "working" || curStatus === "break") ? syncTime.toISOString() : (sTime ? sTime.toISOString() : null)
     };
@@ -2508,6 +2524,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
   const [search, setSearch] = useState("");
   const [filterDate, setFilterDate] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [weeklyExpandedEmp, setWeeklyExpandedEmp] = useState(null); // ID of expanded employee in weekly report
   const [filterDept, setFilterDept] = useState("all");
   const [weeklyFrom, setWeeklyFrom] = useState(() => {
     const d = getStartOfWeek(new Date());
@@ -2779,7 +2796,8 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
         live_break_time: liveBreakStr,
         live_overtime: liveOvertimeStr,
         live_status: liveStatus,
-        is_live: !isHeartbeatStale
+        is_live: !isHeartbeatStale,
+        break_logs_parsed: (() => { try { return r.break_logs ? JSON.parse(r.break_logs) : []; } catch { return []; } })()
       };
     }
     
@@ -2792,7 +2810,8 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
       live_break_time: r.break_time || r.breaktime || "—",
       live_overtime: r.extrahours || r.extra_hours || "—",
       live_status: r.status,
-      is_live: false
+      is_live: false,
+      break_logs_parsed: (() => { try { return r.break_logs ? JSON.parse(r.break_logs) : []; } catch { return []; } })()
     };
   });
 
@@ -2827,17 +2846,23 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
         let work = parseHMS(r.hours || r.workinghours);
         let brk = parseHMS(r.break_time || r.breaktime);
         
+        let logs = [];
+        
         if (r.date === today) {
            const liveRec = processedRecords.find(pr => pr.id === emp.id || pr.employeeid === emp.id);
            if (liveRec) {
               work = parseHMS(liveRec.live_hours);
               brk = parseHMS(liveRec.live_break_time);
+              logs = liveRec.break_logs_parsed || [];
            }
+        } else {
+           const processedRec = processedRecords.find(pr => (pr.id === r.id || pr.employeeid === r.id) && pr.date === r.date);
+           logs = processedRec ? processedRec.break_logs_parsed : [];
         }
         
         // Use the latest record for each date in the week
         if (!dateMap[r.date] || parseHMS(r.hours || r.workinghours) > dateMap[r.date].work) {
-          dateMap[r.date] = { work, brk, hasLog: r.logint && r.logint !== "—", task: r.tasks || r.workstatus };
+          dateMap[r.date] = { work, brk, hasLog: r.logint && r.logint !== "—", task: r.tasks || r.workstatus, breakLogs: logs };
         }
       });
 
@@ -2850,6 +2875,11 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
         }
       });
 
+      // Build daily breakdown array sorted by date
+      const dailyBreakdown = Object.entries(dateMap)
+        .sort(([a], [b]) => new Date(a) - new Date(b))
+        .map(([date, v]) => ({ date, ...v }));
+
       return {
         id: emp.id,
         name: emp.name,
@@ -2858,7 +2888,8 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
         totalBreak: formatHMS(totalBreakSecs),
         daysPresent,
         avgWork: formatHMS(daysPresent > 0 ? Math.floor(totalWorkSecs / daysPresent) : 0),
-        tasks: weeklyTasks.join(" | ")
+        tasks: weeklyTasks.join(" | "),
+        dailyBreakdown
       };
     });
   }, [processedRecords, records, allEmployees, today]);
@@ -3183,6 +3214,14 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                 <div style={{ paddingLeft: 10 }}>
                   <div style={{ fontSize: 10, color: T.muted, fontWeight: 700, marginBottom: 4, textTransform: "uppercase" }}>Hours (Work / Break)</div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{selectedRecord.live_hours || "—"} / {selectedRecord.live_break_time || "—"}</div>
+                  {selectedRecord.break_logs_parsed && selectedRecord.break_logs_parsed.length > 0 && (
+                    <div style={{ marginTop: 8, fontSize: 11, color: T.muted }}>
+                      <div style={{ fontWeight: 600, marginBottom: 2 }}>Break Logs:</div>
+                      {selectedRecord.break_logs_parsed.map((log, lIdx) => (
+                        <div key={lIdx}>• {log.in} - {log.out} ({log.duration})</div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -3390,48 +3429,121 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: T.surface }}>
-                    {["Employee", "Dept", "Days Present", "Total Work", "Total Break", "Avg Hours/Day", "Activity Log"].map(h => (
+                    {["Employee", "Dept", "Days Present", "Total Work", "Total Break", "Avg Hours/Day", "Activity Log", "Actions"].map(h => (
                       <th key={h} style={{ padding: "14px 24px", textAlign: "left", fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: 0.6 }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {weeklyReportData.filter(emp => !search || emp.name.toLowerCase().includes(search.toLowerCase()) || emp.id.toLowerCase().includes(search.toLowerCase())).map(r => (
-                    <tr key={r.id} style={{ borderBottom: `1px solid ${T.border}`, transition: "background 0.2s" }} className="adm-row">
-                      <td style={{ padding: "16px 24px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                          <Avatar name={r.name} size={32} />
-                          <div>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{r.name}</div>
-                            <div style={{ fontSize: 11, color: T.muted }}>{r.id}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td style={{ padding: "16px 24px", fontSize: 13, color: T.ink2 }}>{r.dept}</td>
-                      <td style={{ padding: "16px 24px" }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{r.daysPresent} days</div>
-                      </td>
-                      <td style={{ padding: "16px 24px" }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: T.green }}>{r.totalWork}</div>
-                      </td>
-                      <td style={{ padding: "16px 24px", fontSize: 13, color: T.red }}>{r.totalBreak}</td>
-                      <td style={{ padding: "16px 24px" }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: T.accent }}>{r.avgWork}</div>
-                      </td>
-                      <td style={{ padding: "16px 24px" }}>
-                        <div style={{ 
-                          fontSize: 11, color: T.ink2, maxWidth: 250, 
-                          maxHeight: 60, overflowY: "auto", whiteSpace: "pre-wrap",
-                          lineHeight: 1.4, padding: "4px 8px", background: T.surface, borderRadius: 8
-                        }}>
-                          {r.tasks || "No activity logged."}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {weeklyReportData.filter(emp => !search || emp.name.toLowerCase().includes(search.toLowerCase()) || emp.id.toLowerCase().includes(search.toLowerCase())).map(r => {
+                    const isExpanded = weeklyExpandedEmp === r.id;
+                    return (
+                      <>
+                        <tr key={r.id} style={{ borderBottom: isExpanded ? "none" : `1px solid ${T.border}`, transition: "background 0.2s", cursor: "pointer" }}
+                          className="adm-row"
+                          onClick={() => setWeeklyExpandedEmp(isExpanded ? null : r.id)}
+                        >
+                          <td style={{ padding: "16px 24px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                              <Avatar name={r.name} size={32} />
+                              <div>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{r.name}</div>
+                                <div style={{ fontSize: 11, color: T.muted }}>{r.id}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ padding: "16px 24px", fontSize: 13, color: T.ink2 }}>{r.dept}</td>
+                          <td style={{ padding: "16px 24px" }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{r.daysPresent} days</div>
+                          </td>
+                          <td style={{ padding: "16px 24px" }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: T.green }}>{r.totalWork}</div>
+                          </td>
+                          <td style={{ padding: "16px 24px", fontSize: 13, color: T.red }}>{r.totalBreak}</td>
+                          <td style={{ padding: "16px 24px" }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: T.accent }}>{r.avgWork}</div>
+                          </td>
+                          <td style={{ padding: "16px 24px" }}>
+                            <div style={{ 
+                              fontSize: 11, color: T.ink2, maxWidth: 250, 
+                              maxHeight: 60, overflowY: "auto", whiteSpace: "pre-wrap",
+                              lineHeight: 1.4, padding: "4px 8px", background: T.surface, borderRadius: 8
+                            }}>
+                              {r.tasks || "No activity logged."}
+                            </div>
+                          </td>
+                          <td style={{ padding: "16px 24px", textAlign: "center" }}>
+                            <button
+                              onClick={e => { e.stopPropagation(); setWeeklyExpandedEmp(isExpanded ? null : r.id); }}
+                              style={{
+                                padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer",
+                                background: isExpanded ? T.accent : T.surface,
+                                color: isExpanded ? "white" : T.accent,
+                                fontWeight: 700, fontSize: 11, transition: "all 0.2s"
+                              }}
+                            >
+                              {isExpanded ? "▲ Hide" : "▼ Daily"}
+                            </button>
+                          </td>
+                        </tr>
+
+                        {/* Day-wise Breakdown Row */}
+                        {isExpanded && (
+                          <tr key={r.id + "_detail"} style={{ borderBottom: `2px solid ${T.accent}30` }}>
+                            <td colSpan="8" style={{ padding: "0 24px 20px 24px", background: `${T.accent}06` }}>
+                              <div style={{ paddingTop: 14 }}>
+                                <div style={{ fontSize: 11, fontWeight: 800, color: T.accent, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
+                                  📅 Day-wise Report for {r.name}
+                                </div>
+                                <table style={{ width: "100%", borderCollapse: "collapse", background: "white", borderRadius: 12, overflow: "hidden", boxShadow: `0 2px 8px ${T.accent}15` }}>
+                                  <thead>
+                                    <tr style={{ background: `${T.accent}15` }}>
+                                      {["Date", "Work Hours", "Break Time", "Status", "Tasks / Notes"].map(h => (
+                                        <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 10, fontWeight: 700, color: T.accent, textTransform: "uppercase", letterSpacing: 0.5 }}>{h}</th>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {(r.dailyBreakdown || []).length === 0 ? (
+                                      <tr><td colSpan="5" style={{ padding: 20, textAlign: "center", color: T.muted, fontSize: 12 }}>No daily records found for this range.</td></tr>
+                                    ) : (
+                                      r.dailyBreakdown.map((day, i) => (
+                                        <tr key={day.date} style={{ borderTop: `1px solid ${T.border}`, background: i % 2 === 0 ? "white" : T.surface }}>
+                                          <td style={{ padding: "10px 16px", fontSize: 13, fontWeight: 700, color: T.ink }}>{day.date}</td>
+                                          <td style={{ padding: "10px 16px", fontSize: 13, fontWeight: 700, color: T.green }}>{formatHMS(day.work)}</td>
+                                          <td style={{ padding: "10px 16px", fontSize: 13, color: T.red }}>
+                                            <div style={{ fontWeight: 700 }}>{formatHMS(day.brk)}</div>
+                                            {day.breakLogs && day.breakLogs.length > 0 && (
+                                              <div style={{ marginTop: 4, fontSize: 10, color: T.muted }}>
+                                                {day.breakLogs.map((log, lIdx) => (
+                                                  <div key={lIdx} style={{ whiteSpace: "nowrap" }}>
+                                                    • {log.in} - {log.out} ({log.duration})
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            )}
+                                          </td>
+                                          <td style={{ padding: "10px 16px" }}>
+                                            <Badge status={day.hasLog ? "Full Day" : "Absent"} />
+                                          </td>
+                                          <td style={{ padding: "10px 16px", fontSize: 12, color: T.ink2, maxWidth: 280, whiteSpace: "pre-wrap" }}>
+                                            {day.task || <span style={{ color: T.faint, fontStyle: "italic" }}>No notes</span>}
+                                          </td>
+                                        </tr>
+                                      ))
+                                    )}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    );
+                  })}
                   {weeklyReportData.length === 0 && (
                     <tr>
-                      <td colSpan="6" style={{ padding: "40px", textAlign: "center", color: T.muted }}>No data available for the current week.</td>
+                      <td colSpan="8" style={{ padding: "40px", textAlign: "center", color: T.muted }}>No data available for the selected range.</td>
                     </tr>
                   )}
                 </tbody>

@@ -84,6 +84,7 @@ def attendance_list(request):
                     "extrahours": r.extra_hours,
                     "tasks": r.tasks,
                     "break_time": r.total_break_time,
+                    "break_logs": r.break_logs,
                     "status": r.status,
                     "last_status_change": r.last_status_change,
                     "last_active": r.last_active,
@@ -106,6 +107,7 @@ def attendance_list(request):
                 instance.logout_time = request.data.get('logoutT', instance.logout_time)
                 instance.hours = request.data.get('hours', instance.hours)
                 instance.total_break_time = request.data.get('breakTime', instance.total_break_time)
+                instance.break_logs = request.data.get('breakLogs', instance.break_logs)
                 instance.extra_hours = request.data.get('extraHours', instance.extra_hours)
                 instance.tasks = request.data.get('tasks', instance.tasks)
                 instance.status = request.data.get('status', instance.status)
@@ -178,6 +180,7 @@ def attendance_list(request):
                     logout_time=request.data.get('logoutT', '—'),
                     hours=request.data.get('hours', '—'),
                     total_break_time=request.data.get('breakTime', '00:00:00'),
+                    break_logs=request.data.get('breakLogs', '[]'),
                     extra_hours=request.data.get('extraHours', '—'),
                     tasks=request.data.get('tasks', '—'),
                     status=st,
