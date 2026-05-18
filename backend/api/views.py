@@ -18,6 +18,12 @@ import requests
 import json
 from django.core.management import call_command
 import threading
+from datetime import datetime as _dt
+
+# Unique timestamp set once when this Django process starts.
+# A new server start produces a new value, allowing the frontend
+# to detect restarts and force employees to re-login.
+SERVER_START_TIME = _dt.utcnow().isoformat() + "Z"
 
 
 @api_view(['GET'])
@@ -25,9 +31,10 @@ def health_check(request):
     # This version string should be updated manually or via CI/CD on every deploy
     # Current Version: 2.1.2 (Pulse Implementation)
     return Response({
-        "status": "ok", 
+        "status": "ok",
         "version": "2.1.2",
-        "message": "System is running smoothly"
+        "message": "System is running smoothly",
+        "server_start_time": SERVER_START_TIME,
     }, status=status.HTTP_200_OK)
 
 @api_view(['GET', 'POST'])
@@ -444,35 +451,36 @@ def approve_leave(request, pk):
         return Response({"error": "Invalid status"}, status=status.HTTP_400_BAD_REQUEST)
 
     if leave.status == 'Pending' and status_val == 'Approved':
-        # Decrement leave count
-        try:
-            profile = Profile.objects.filter(employee_id__iexact=leave.employee_id).first()
-            if not profile:
-                # Fallback: try to find user by username or email
-                user = User.objects.filter(Q(username__iexact=leave.employee_id) | Q(email__iexact=leave.employee_id)).first()
-                if user:
-                    profile, _ = Profile.objects.get_or_create(user=user)
-                    profile.employee_id = leave.employee_id
-                    profile.save()
-                else:
-                    # Final attempt: search Profiles by user username
-                    user_alt = User.objects.filter(username__iexact=leave.employee_name).first()
-                    if user_alt:
-                         profile, _ = Profile.objects.get_or_create(user=user_alt)
-                         profile.employee_id = leave.employee_id
-                         profile.save()
+        # Decrement leave count only if it is not a WFH request
+        if leave.leave_type != 'Work From Home':
+            try:
+                profile = Profile.objects.filter(employee_id__iexact=leave.employee_id).first()
+                if not profile:
+                    # Fallback: try to find user by username or email
+                    user = User.objects.filter(Q(username__iexact=leave.employee_id) | Q(email__iexact=leave.employee_id)).first()
+                    if user:
+                        profile, _ = Profile.objects.get_or_create(user=user)
+                        profile.employee_id = leave.employee_id
+                        profile.save()
                     else:
-                        return Response({"error": f"Employee profile for {leave.employee_id} not found and could not be auto-created."}, status=status.HTTP_404_NOT_FOUND)
+                        # Final attempt: search Profiles by user username
+                        user_alt = User.objects.filter(username__iexact=leave.employee_name).first()
+                        if user_alt:
+                             profile, _ = Profile.objects.get_or_create(user=user_alt)
+                             profile.employee_id = leave.employee_id
+                             profile.save()
+                        else:
+                            return Response({"error": f"Employee profile for {leave.employee_id} not found and could not be auto-created."}, status=status.HTTP_404_NOT_FOUND)
 
-            
-            # Calculate duration (inclusive)
-            leave_days = (leave.end_date - leave.start_date).days + 1
-            
-            # Deduct leaves regardless of current balance (Admin has full discretion)
-            profile.total_leaves -= leave_days
-            profile.save()
-        except Exception as e:
-            return Response({"error": f"Profile processing error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
+                # Calculate duration (inclusive)
+                leave_days = (leave.end_date - leave.start_date).days + 1
+                
+                # Deduct leaves regardless of current balance (Admin has full discretion)
+                profile.total_leaves -= leave_days
+                profile.save()
+            except Exception as e:
+                return Response({"error": f"Profile processing error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
     leave.status = status_val
@@ -484,14 +492,30 @@ def approve_leave(request, pk):
     serializer = LeaveRequestSerializer(leave)
     return Response(serializer.data)
 
-@api_view(['GET'])
+@api_view(['GET', 'PATCH'])
 def employee_profile(request, employee_id):
     try:
         profile = Profile.objects.get(employee_id=employee_id)
+    except Profile.DoesNotExist:
+        # Auto-create if user exists but profile was not created yet
+        user = User.objects.filter(username__iexact=employee_id).first()
+        if user:
+            profile, _ = Profile.objects.get_or_create(user=user)
+            profile.employee_id = employee_id
+            profile.save()
+        else:
+            return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
         serializer = ProfileSerializer(profile)
         return Response(serializer.data)
-    except Profile.DoesNotExist:
-        return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+    elif request.method == 'PATCH':
+        serializer = ProfileSerializer(profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PATCH'])
 def mark_notification_read(request, pk):
@@ -665,7 +689,7 @@ def heartbeat(request):
             latest.last_active = timezone.now()
             latest.save()
             
-    return Response({"success": True})
+    return Response({"success": True, "server_start_time": SERVER_START_TIME})
 
 
 @api_view(['GET'])

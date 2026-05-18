@@ -202,13 +202,14 @@ const icons = {
   chevronLeft: "M15 18l-6-6 6-6",
   message: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
   camera: "M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+  home: "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M9 22V12h6v10",
 };
 
 /* ══════════════════════════════════════════════════════════════
    LOGIN PAGE – Premium Animated Redesign
 ══════════════════════════════════════════════════════════════ */
 const LOGIN_STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@1,600&display=swap');
 
   @keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }
   @keyframes spin { to { transform: rotate(360deg) } }
@@ -226,6 +227,22 @@ const LOGIN_STYLES = `
   @keyframes pulse { 0% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } 100% { transform: scale(0.95); opacity: 0.8; } }
   @keyframes popIn { 0% { opacity: 0; transform: scale(0.8) translateY(20px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
   @keyframes dotPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
+  @keyframes sloganSlideUp {
+    0% { opacity: 0; transform: translateY(20px); filter: blur(4px); }
+    100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+  }
+
+  .status-badge-hover {
+    transition: transform 0.2s ease, filter 0.2s ease;
+  }
+  .status-badge-hover:hover {
+    transform: scale(1.05);
+    filter: brightness(0.95);
+  }
+  .dropdown-item-hover:hover {
+    background: #f5f8fc;
+    color: #1560bd !important;
+  }
 
   .login-inp {
     width:100%; padding:13px 16px; border-radius:12px;
@@ -409,8 +426,9 @@ function LoginPage({ onLogin, error, isSyncing, onForgot }) {
           </div>
 
           <h1 style={{
-            color: "white", fontSize: 34, fontWeight: 800, lineHeight: 1.2,
-            margin: "0 0 18px", letterSpacing: -0.5
+            color: "white", fontSize: 26, fontWeight: 700, lineHeight: 1.3,
+            margin: "0 0 18px", letterSpacing: -0.3,
+            animation: "sloganSlideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both"
           }}>
             Track time.<br />
             <span style={{ color: "#38bdf8" }}>Manage work.</span><br />
@@ -684,6 +702,8 @@ function Badge({ status }) {
     "Pending": { bg: "#fffbeb", color: "#92400e", dot: "#f59e0b" },
     "On Break": { bg: "#fff1f1", color: "#d93b3b", dot: "#d93b3b", pulse: true },
     "Offline": { bg: "#f3f4f6", color: "#6b7280", dot: "#9ca3af" },
+    "Work From Home": { bg: "#e0f2fe", color: "#0369a1", dot: "#0ea5e9" },
+    "WFH": { bg: "#e0f2fe", color: "#0369a1", dot: "#0ea5e9" },
   };
   const s = map[status] || map["Incomplete"];
   return (
@@ -701,6 +721,7 @@ function Badge({ status }) {
     </span>
   );
 }
+
 
 /* ══════════════════════════════════════════════════════════════
    DASHBOARD
@@ -751,6 +772,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [leaveData, setLeaveData] = useState({ start: "", end: "", reason: "" });
+  const [requestType, setRequestType] = useState("Leave");
 
 
   // Polling for status sync across devices
@@ -918,11 +940,12 @@ function Dashboard({ employee, onSignOut, showToast }) {
           employee_name: employee.name,
           start_date: leaveData.start,
           end_date: leaveData.end,
-          reason: leaveData.reason
+          reason: leaveData.reason,
+          leave_type: requestType === "Leave" ? "Casual Leave" : "Work From Home"
         })
       });
       if (resp.ok) {
-        _showToast("Leave request submitted!", "success");
+        _showToast(requestType === "Leave" ? "Leave request submitted!" : "Work From Home request submitted!", "success");
         setLeaveData({ start: "", end: "", reason: "" });
         setShowLeaveForm(false);
         fetchLeaves();
@@ -1162,15 +1185,39 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
     const runHeartbeat = async () => {
       try {
-        // 1. Update 'last_active' timestamp on server (Every 1 min)
-        fetch(HEARTBEAT_URL, {
+        // 1. Send heartbeat to keep last_active fresh
+        const hbResp = await fetch(HEARTBEAT_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            employee_id: employee.id, 
-            date: fmtDate(loginTime || new Date()) 
+          body: JSON.stringify({
+            employee_id: employee.id,
+            date: fmtDate(loginTime || new Date())
           })
         });
+
+        // 2. Check for server restart mid-session via heartbeat response
+        if (hbResp.ok) {
+          const hbData = await hbResp.json();
+          const currentStart = hbData.server_start_time;
+          const savedStart   = localStorage.getItem("wt_server_start");
+
+          if (currentStart && savedStart && currentStart !== savedStart) {
+            // Server was restarted while the employee was actively working.
+            // Sync current work state to DB FIRST so no hours are lost.
+            console.log("Server restart detected mid-session — syncing and logging out.");
+            triggerAutoSync(loginTime, null, status);
+
+            // Update the stored start time
+            localStorage.setItem("wt_server_start", currentStart);
+            localStorage.removeItem("wt_user");
+            localStorage.removeItem("wt_session");
+
+            // Give the sync 2 seconds to complete before redirecting
+            setTimeout(() => {
+              onSignOut();
+            }, 2000);
+          }
+        }
       } catch (e) { console.warn("Heartbeat failed", e); }
     };
 
@@ -1186,7 +1233,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
     const heartbeatIv = setInterval(runHeartbeat, 30000); // 30 seconds
     runHeartbeat(); // Run immediately on mount or status change
     const syncIv = setInterval(runBackgroundSync, 300000); // 5 mins
-    
+
     return () => {
       clearInterval(heartbeatIv);
       clearInterval(syncIv);
@@ -1708,7 +1755,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
           display: "flex", gap: 4, background: "#e4eaf3", borderRadius: 10,
           padding: 4, marginBottom: 20, width: "fit-content"
         }}>
-          {[{ k: "today", label: "Today's Session" }, { k: "history", label: "Attendance History" }, { k: "leaves", label: "Leave Requests" }, { k: "messages", label: "Admin Chat", badge: unreadCount }].map(t => (
+          {[{ k: "today", label: "Today's Session" }, { k: "history", label: "Attendance History" }, { k: "leaves", label: "Requests" }, { k: "messages", label: "Admin Chat", badge: unreadCount }].map(t => (
             <button key={t.k} className={`tab${activeTab === t.k ? " active" : ""}`}
               onClick={() => setTab(t.k)} style={{ position: "relative" }}>
               {t.label}
@@ -2001,13 +2048,50 @@ function Dashboard({ employee, onSignOut, showToast }) {
         {activeTab === "leaves" && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
             <div style={{ background: T.white, borderRadius: 16, border: `1px solid ${T.border}`, padding: 24, alignSelf: "start" }}>
+              
+              {/* Type Switcher Selector */}
+              <div style={{
+                display: "flex", background: T.surface, padding: 4, borderRadius: 10, marginBottom: 20
+              }}>
+                <button 
+                  onClick={() => setRequestType("Leave")} 
+                  style={{
+                    flex: 1, padding: "8px 12px", border: "none", borderRadius: 8, cursor: "pointer",
+                    fontSize: 13, fontWeight: 700, transition: "all 0.2s",
+                    background: requestType === "Leave" ? T.white : "none",
+                    color: requestType === "Leave" ? T.accent : T.muted,
+                    boxShadow: requestType === "Leave" ? "0 2px 8px rgba(0,0,0,0.05)" : "none"
+                  }}
+                >
+                  🌴 Leave Request
+                </button>
+                <button 
+                  onClick={() => setRequestType("Work From Home")} 
+                  style={{
+                    flex: 1, padding: "8px 12px", border: "none", borderRadius: 8, cursor: "pointer",
+                    fontSize: 13, fontWeight: 700, transition: "all 0.2s",
+                    background: requestType === "Work From Home" ? T.white : "none",
+                    color: requestType === "Work From Home" ? T.accent : T.muted,
+                    boxShadow: requestType === "Work From Home" ? "0 2px 8px rgba(0,0,0,0.05)" : "none"
+                  }}
+                >
+                  🏠 Work From Home
+                </button>
+              </div>
+
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
                 <div style={{ width: 44, height: 44, borderRadius: 12, background: T.purpleBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Icon d={icons.calendar} size={20} color={T.purple} />
+                  <Icon d={requestType === "Leave" ? icons.calendar : icons.home} size={20} color={T.purple} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: T.ink }}>Request Leave</div>
-                  <div style={{ fontSize: 13, color: T.muted }}>You have <b style={{ color: T.purple }}>{profile.total_leaves}</b> leaves remaining</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: T.ink }}>
+                    {requestType === "Leave" ? "Request Leave" : "Request Work From Home"}
+                  </div>
+                  {requestType === "Leave" ? (
+                    <div style={{ fontSize: 13, color: T.muted }}>You have <b style={{ color: T.purple }}>{profile.total_leaves}</b> leaves remaining</div>
+                  ) : (
+                    <div style={{ fontSize: 13, color: T.muted }}>Submit a request to work remotely</div>
+                  )}
                 </div>
               </div>
 
@@ -2043,33 +2127,39 @@ function Dashboard({ employee, onSignOut, showToast }) {
               )}
 
               <div style={{ marginBottom: 24 }}>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.muted, marginBottom: 8, letterSpacing: 0.5 }}>REASON FOR LEAVE</label>
-                <textarea className="task-area" style={{ minHeight: 120 }} placeholder="Please provide a brief reason for your leave request..."
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.muted, marginBottom: 8, letterSpacing: 0.5 }}>
+                  {requestType === "Leave" ? "REASON FOR LEAVE" : "REASON FOR REQUEST"}
+                </label>
+                <textarea className="task-area" style={{ minHeight: 120 }} 
+                  placeholder={requestType === "Leave" ? "Please provide a brief reason for your leave request..." : "Please provide a brief reason for your Work From Home request..."}
                   value={leaveData.reason} onChange={e => setLeaveData({ ...leaveData, reason: e.target.value })} />
               </div>
 
               <button className="act-btn" onClick={handleLeaveRequest}
                 style={{ width: "100%", background: T.accent, color: "white", justifyContent: "center", padding: "14px", borderRadius: 12 }}>
                 <Icon d={icons.check} size={16} color="white" />
-                Submit Leave Application
+                {requestType === "Leave" ? "Submit Leave Application" : "Submit WFH Request"}
               </button>
             </div>
 
             <div style={{ background: T.white, borderRadius: 16, border: `1px solid ${T.border}`, padding: 24, overflow: "hidden" }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 20 }}>My Leave History</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 20 }}>My Requests History</div>
               <div style={{ overflowY: "auto", maxHeight: 500, paddingRight: 6 }}>
                 {myLeaves.length === 0 ? (
                   <div style={{ textAlign: "center", color: T.muted, padding: "60px 0" }}>
                     <div style={{ opacity: 0.3, marginBottom: 12 }}><Icon d={icons.calendar} size={48} /></div>
-                    No leave requests found
+                    No requests found
                   </div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     {[...myLeaves].reverse().map(l => (
                       <div key={l.id} style={{ padding: 18, borderRadius: 16, background: T.surface, border: `1px solid ${T.border}`, transition: "transform 0.15s" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, alignItems: "center" }}>
                           <div style={{ fontWeight: 800, fontSize: 14 }}>{new Date(l.start_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })} - {new Date(l.end_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
-                          <Badge status={l.status} />
+                          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                            <Badge status={l.leave_type === "Work From Home" ? "Work From Home" : "Leave"} />
+                            <Badge status={l.status} />
+                          </div>
                         </div>
                         <div style={{ fontSize: 13, color: T.ink2, lineHeight: 1.5, marginBottom: l.admin_comment ? 12 : 0 }}>{l.reason}</div>
                         {l.admin_comment && (
@@ -2716,6 +2806,35 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
     } catch (e) { console.error("Failed to fetch groups", e); }
   };
 
+  const handleStatusChange = async (record, newStatus) => {
+    try {
+      const payload = {
+        id: record.id || record.employeeid,
+        name: record.name || record.employeename,
+        dept: record.dept || record.department,
+        date: record.date,
+        status: newStatus,
+        lastStatusChange: new Date().toISOString()
+      };
+
+      const resp = await fetch(BACKEND_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (resp.ok) {
+        showToast(`Status updated to ${newStatus}`, "success");
+        fetchAttendance();
+      } else {
+        showToast("Failed to update status", "error");
+      }
+    } catch (e) {
+      console.error("Failed to update status", e);
+      showToast("Error updating status", "error");
+    }
+  };
+
   const fetchGroupMessages = async () => {
     if (!selGroup) return;
     try {
@@ -2767,6 +2886,24 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
     // 1. Check Heartbeat Staleness (If last_active is older than 90 seconds, they are offline)
     const lastActive = r.last_active ? new Date(r.last_active).getTime() : 0;
     const isHeartbeatStale = (now - lastActive) > 90000; // 90 seconds threshold (3 heartbeats)
+
+    const hasWfh = leaveRequests.some(l => {
+      if (l.status !== "Approved" || l.leave_type !== "Work From Home") return false;
+      const lId = String(l.employee_id).toLowerCase().trim();
+      const eId = String(r.id || r.employeeid).toLowerCase().trim();
+      if (lId !== eId) return false;
+
+      const checkDate = new Date(r.date);
+      if (isNaN(checkDate)) return false;
+      checkDate.setHours(0, 0, 0, 0);
+
+      const start = new Date(l.start_date);
+      const end = new Date(l.end_date);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(0, 0, 0, 0);
+
+      return checkDate >= start && checkDate <= end;
+    });
     
     if (r.date === today && (r.status === "Active" || r.status === "On Break") && r.last_status_change) {
       const workBase = parseHMS(r.hours || r.workinghours);
@@ -2795,7 +2932,8 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
         live_hours_secs: liveWorkSecs,
         live_break_time: liveBreakStr,
         live_overtime: liveOvertimeStr,
-        live_status: liveStatus,
+        live_status: hasWfh ? "Work From Home" : liveStatus,
+        status: hasWfh ? "Work From Home" : r.status,
         is_live: !isHeartbeatStale,
         break_logs_parsed: (() => { try { return r.break_logs ? JSON.parse(r.break_logs) : []; } catch { return []; } })()
       };
@@ -2809,7 +2947,8 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
       live_hours_secs: hSecs,
       live_break_time: r.break_time || r.breaktime || "—",
       live_overtime: r.extrahours || r.extra_hours || "—",
-      live_status: r.status,
+      live_status: hasWfh ? "Work From Home" : r.status,
+      status: hasWfh ? "Work From Home" : r.status,
       is_live: false,
       break_logs_parsed: (() => { try { return r.break_logs ? JSON.parse(r.break_logs) : []; } catch { return []; } })()
     };
@@ -2956,6 +3095,57 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
         }));
     }
 
+    if (filterStatus === "Work From Home") {
+      let checkDate = new Date();
+      if (filterDate) {
+        checkDate = new Date(filterDate);
+        if (isNaN(checkDate)) checkDate = new Date();
+      }
+      checkDate.setHours(0, 0, 0, 0);
+
+      return allEmployees
+        .filter(emp => {
+          const hasWfh = leaveRequests.some(l => {
+            if (l.status !== "Approved" || l.leave_type !== "Work From Home") return false;
+            const lId = String(l.employee_id).toLowerCase().trim();
+            const eId = String(emp.id).toLowerCase().trim();
+            if (lId !== eId) return false;
+
+            const start = new Date(l.start_date);
+            const end = new Date(l.end_date);
+            start.setHours(0, 0, 0, 0);
+            end.setHours(0, 0, 0, 0);
+
+            return checkDate >= start && checkDate <= end;
+          });
+
+          const matchSearch = !q || emp.name.toLowerCase().includes(q) || emp.id.toLowerCase().includes(q);
+          return hasWfh && matchSearch;
+        })
+        .map(emp => {
+          const realRec = processedRecords.find(r => (r.id === emp.id || r.employeeid === emp.id) && r.date === targetDate);
+          if (realRec) {
+            return {
+              ...realRec,
+              status: "Work From Home",
+              live_status: "Work From Home"
+            };
+          }
+          return {
+            id: emp.id,
+            name: emp.name,
+            dept: emp.dept,
+            date: targetDate,
+            logint: "—",
+            logoutt: "—",
+            hours: "—",
+            break_time: "00:00:00",
+            tasks: "Work From Home",
+            status: "Work From Home"
+          };
+        });
+    }
+
     if (filterStatus === "messages") {
       return allEmployees
         .filter(emp => {
@@ -3082,6 +3272,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
         @keyframes popIn{0%{opacity:0;transform:scale(0.95) translateY(10px)}100%{opacity:1;transform:scale(1) translateY(0)}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
         @keyframes pulse{0%{transform:scale(1);box-shadow:0 0 0 0 rgba(239,68,68,0.7)}70%{transform:scale(1.1);box-shadow:0 0 0 10px rgba(239,68,68,0)}100%{transform:scale(1);box-shadow:0 0 0 0 rgba(239,68,68,0)}}
+
       `}</style>
 
       {/* Topbar */}
@@ -3351,7 +3542,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
             { k: "attendance", label: "Attendance Records" },
             { k: "weekly", label: "Weekly Report" },
             { k: "tasks", label: "Live Task Feed" },
-            { k: "leaves", label: "Leave Requests" },
+            { k: "leaves", label: "Requests" },
             { k: "groups", label: "Manage Groups", badge: Object.values(groupUnreadMapAdmin).reduce((a, b) => a + b, 0) },
             { k: "employees", label: "Employee List", badge: Object.values(unreadMap).reduce((a, b) => a + b, 0) },
           ].map(t => (
@@ -3396,6 +3587,8 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                 <option value="all">All Status</option>
                 <option value="Active">Active Today</option>
                 <option value="On Break">On Break</option>
+                <option value="Offline">Offline</option>
+                <option value="Work From Home">Work From Home</option>
                 <option value="notlogin">Not Logged In</option>
                 <option value="leaves">On Leave</option>
                 <option value="Full Day">Full Day</option>
@@ -3616,7 +3809,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                         {r.live_overtime}
                       </td>
                       <td style={cellStyle}>
-                        <Badge status={r.live_status || "Incomplete"} />
+                        <Badge status={r.live_status || r.status || "Incomplete"} />
                       </td>
                       <td style={{ ...cellStyle, color: T.ink2, maxWidth: 220, fontSize: 12 }}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -3723,22 +3916,22 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
           <div className="premium-card">
             <div style={{ padding: 24, borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <div style={{ fontWeight: 800, fontSize: 18, color: T.ink }}>Employee Leave Requests</div>
-                <div style={{ fontSize: 12, color: T.muted }}>Manage and approve employee leave applications</div>
+                <div style={{ fontWeight: 800, fontSize: 18, color: T.ink }}>Employee Requests</div>
+                <div style={{ fontSize: 12, color: T.muted }}>Manage and approve employee requests (Leave & Work From Home)</div>
               </div>
             </div>
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: T.surface }}>
-                    {["Applied On", "Employee", "Duration", "Reason", "Status", "Actions"].map(h => (
+                    {["Applied On", "Employee", "Type", "Duration", "Reason", "Status", "Actions"].map(h => (
                       <th key={h} style={colStyle}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {leaveRequests.length === 0 ? (
-                    <tr><td colSpan="6" style={{ padding: 40, textAlign: "center", color: T.muted }}>No leave requests found</td></tr>
+                    <tr><td colSpan="7" style={{ padding: 40, textAlign: "center", color: T.muted }}>No requests found</td></tr>
                   ) : (
                     [...leaveRequests].reverse().map((l, i) => (
                       <tr key={i} className="adm-row">
@@ -3749,15 +3942,21 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                             <div>
                               <div style={{ fontWeight: 700 }}>{l.employee_name}</div>
                               <div style={{ fontSize: 10, color: T.muted }}>
-                                {l.employee_id} · <span style={{
-                                  color: (profiles.find(p => String(p.employee_id).toLowerCase() === String(l.employee_id).toLowerCase())?.total_leaves <= 0) ? T.red : T.purple,
-                                  fontWeight: 800
-                                }}>
-                                  {profiles.find(p => String(p.employee_id).toLowerCase() === String(l.employee_id).toLowerCase())?.total_leaves ?? "—"} left
-                                </span>
+                                {l.employee_id}
+                                {l.leave_type !== "Work From Home" && (
+                                  <span> · <span style={{
+                                    color: (profiles.find(p => String(p.employee_id).toLowerCase() === String(l.employee_id).toLowerCase())?.total_leaves <= 0) ? T.red : T.purple,
+                                    fontWeight: 800
+                                  }}>
+                                    {profiles.find(p => String(p.employee_id).toLowerCase() === String(l.employee_id).toLowerCase())?.total_leaves ?? "—"} left
+                                  </span></span>
+                                )}
                               </div>
                             </div>
                           </div>
+                        </td>
+                        <td style={cellStyle}>
+                          <Badge status={l.leave_type === "Work From Home" ? "Work From Home" : "Leave"} />
                         </td>
                         <td style={cellStyle}>
                           <div style={{ fontWeight: 700 }}>{l.start_date}</div>
@@ -3980,9 +4179,42 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                     <div style={{ fontSize: 11, color: T.muted, fontWeight: 600 }}>{isOnline ? "Online Now" : (lastActive && !isNaN(lastActive.getTime()) ? `Last seen: ${lastActive.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}` : "Offline")}</div>
                     <div style={{ fontSize: 10, color: T.faint, fontWeight: 600 }}>{e.role} · {e.id}</div>
                   </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 18, fontWeight: 900, color: T.purple }}>
+                  <div 
+                    onClick={async () => {
+                      const currentVal = profiles.find(p => String(p.employee_id).toLowerCase() === String(e.id).toLowerCase())?.total_leaves ?? 16;
+                      const newStr = prompt(`Update leaves balance for ${e.name} (Current: ${currentVal}):`, currentVal);
+                      if (newStr === null) return;
+                      const newVal = parseInt(newStr, 10);
+                      if (isNaN(newVal)) {
+                        alert("Please enter a valid number of leaves.");
+                        return;
+                      }
+                      
+                      try {
+                        const resp = await fetch(PROFILE_URL(e.id), {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ total_leaves: newVal })
+                        });
+                        if (resp.ok) {
+                          showToast(`Updated leaves for ${e.name} to ${newVal}!`, "success");
+                          fetchAttendance(); // Reload profiles and attendance
+                        } else {
+                          const err = await resp.json();
+                          alert("Failed to update profile: " + (err.error || JSON.stringify(err)));
+                        }
+                      } catch (err) {
+                        alert("Network error: " + err.message);
+                      }
+                    }}
+                    style={{ textAlign: "right", cursor: "pointer", transition: "all 0.2s" }}
+                    title="Click to edit leaves balance"
+                    onMouseOver={el => el.currentTarget.style.opacity = "0.8"}
+                    onMouseOut={el => el.currentTarget.style.opacity = "1"}
+                  >
+                    <div style={{ fontSize: 18, fontWeight: 900, color: T.purple, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4 }}>
                       {profiles.find(p => String(p.employee_id).toLowerCase() === String(e.id).toLowerCase())?.total_leaves ?? 16}
+                      <span style={{ fontSize: 10, opacity: 0.6 }}>✏️</span>
                     </div>
                     <div style={{ fontSize: 9, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: 0.5 }}>Leaves Left</div>
                   </div>
@@ -4565,9 +4797,38 @@ export default function App() {
 
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem("wt_user") || "null");
+
     if (saved) {
-      if (saved.role === "admin") setIsAdmin(true);
-      else setEmployee(saved.data);
+      if (saved.role === "admin") {
+        // Admin credentials are hardcoded — no backend validation needed
+        setIsAdmin(true);
+      } else if (saved.role === "employee" && saved.data) {
+        // For employees, verify the backend server_start_time.
+        // If the server was restarted, the time will differ → force re-login.
+        fetch(HEALTH_CHECK_URL)
+          .then(r => r.json())
+          .then(data => {
+            const currentStart = data.server_start_time;
+            const savedStart   = localStorage.getItem("wt_server_start");
+            if (currentStart && savedStart && currentStart === savedStart) {
+              // Same server instance → session is valid, restore normally
+              setEmployee(saved.data);
+            } else {
+              // Different or missing start time → server was restarted
+              console.log("Server restart detected — clearing employee session.");
+              localStorage.removeItem("wt_user");
+              localStorage.removeItem("wt_session");
+              // Update to the new start time for future comparisons
+              if (currentStart) localStorage.setItem("wt_server_start", currentStart);
+              // Employee stays on login page (no setEmployee call)
+            }
+          })
+          .catch(() => {
+            // If health check fails (e.g. network error), restore the session
+            // so the employee is not locked out during brief connectivity issues.
+            setEmployee(saved.data);
+          });
+      }
     }
 
     // Handle reset password URL
@@ -4639,6 +4900,15 @@ export default function App() {
       setIsAdmin(false);
       setError("");
       localStorage.setItem("wt_user", JSON.stringify({ role: "employee", data: found }));
+      // Save the current server start time so we can detect future restarts
+      fetch(HEALTH_CHECK_URL)
+        .then(r => r.json())
+        .then(data => {
+          if (data.server_start_time) {
+            localStorage.setItem("wt_server_start", data.server_start_time);
+          }
+        })
+        .catch(() => {});
     } else {
       setError("Invalid username or password.");
     }

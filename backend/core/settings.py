@@ -35,8 +35,8 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOWED_ORIGINS = [
     "https://brollysolutions.in",
-    # "http://localhost:3003",  # TEST frontend
-    # "http://localhost:8003",  # TEST backend
+    "http://localhost:3003",  # TEST frontend
+    "http://localhost:8003",  # TEST backend
     "http://localhost:3001",    # PRODUCTION frontend
     "http://localhost:8001",    # PRODUCTION backend
 ]# Application definition
@@ -121,7 +121,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Asia/Kolkata"
 
 USE_I18N = True
 

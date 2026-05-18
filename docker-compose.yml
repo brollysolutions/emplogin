@@ -1,47 +1,47 @@
 
 
 # ── TEST ENVIRONMENT (uncomment to use) ──────────────────────
-# name: brolly-test-system
-# services:
-#   backend:
-#     build: ./backend
-#     image: emplogin-test-backend:v1
-#     container_name: brolly-test-login-backend
-#     volumes:
-#       - ./backend/db.sqlite3:/app/db.sqlite3
-#     ports:
-#       - "8003:8003"
-#     restart: always
-#
-#   frontend:
-#     build: ./frontend
-#     image: emplogin-test-frontend:v1
-#     container_name: brolly-test-login-frontend
-#     depends_on:
-#       - backend
-#     ports:
-#       - "3003:80"
-#     restart: always
-
-# ── PRODUCTION ENVIRONMENT ────────────────────────────────────
-name: brolly-production-system
+name: brolly-test-system
 services:
   backend:
     build: ./backend
-    image: emplogin-backend:v1
-    container_name: brolly-login-backend
+    image: emplogin-test-backend:v1
+    container_name: brolly-test-login-backend
     volumes:
       - ./backend/db.sqlite3:/app/db.sqlite3
     ports:
-      - "8001:8001"
+      - "8003:8003"
     restart: always
 
   frontend:
     build: ./frontend
-    image: emplogin-frontend:v1
-    container_name: brolly-login-frontend
+    image: emplogin-test-frontend:v1
+    container_name: brolly-test-login-frontend
     depends_on:
       - backend
     ports:
-      - "3001:80"
+      - "3003:80"
     restart: always
+
+# # ── PRODUCTION ENVIRONMENT ────────────────────────────────────
+# name: brolly-production-system
+# services:
+#   backend:
+#     build: ./backend
+#     image: emplogin-backend:v1
+#     container_name: brolly-login-backend
+#     volumes:
+#       - ./backend/db.sqlite3:/app/db.sqlite3
+#     ports:
+#       - "8001:8001"
+#     restart: always
+
+#   frontend:
+#     build: ./frontend
+#     image: emplogin-frontend:v1
+#     container_name: brolly-login-frontend
+#     depends_on:
+#       - backend
+#     ports:
+#       - "3001:80"
+#     restart: always

@@ -6,6 +6,7 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from django.conf import settings
 from django.db.models import Q
+from django.utils import timezone
 from api.models import Attendance, Profile
 
 class Command(BaseCommand):
@@ -13,7 +14,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         # Date format in DB: '28 Apr 2026'
-        today_str = datetime.now().strftime('%d %b %Y')
+        today_str = timezone.localtime(timezone.now()).strftime('%d %b %Y')
         
         # Include more variations of active status to be safe
         active_statuses = [
@@ -42,8 +43,9 @@ class Command(BaseCommand):
                 logout_dt_obj = None
                 
                 if rec.last_active:
-                    logout_time_str = rec.last_active.strftime('%I:%M:%S %p')
-                    logout_dt_obj = rec.last_active
+                    local_active = timezone.localtime(rec.last_active)
+                    logout_time_str = local_active.strftime('%I:%M:%S %p')
+                    logout_dt_obj = local_active
                 
                 rec.logout_time = logout_time_str
                 rec.status = "Complete (Auto)"

@@ -1,7 +1,7 @@
 import os
 import json
 import requests
-from datetime import datetime
+from django.utils import timezone
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from django.conf import settings
@@ -11,7 +11,8 @@ class Command(BaseCommand):
     help = 'Sends morning login reminders to employees at 9:30 AM'
 
     def handle(self, *args, **options):
-        now = datetime.now()
+        # Use timezone.localtime to get Asia/Kolkata time instead of Docker's UTC time
+        now = timezone.localtime(timezone.now())
         
         # 1. Skip Sunday (6 is Sunday)
         if now.weekday() == 6:
