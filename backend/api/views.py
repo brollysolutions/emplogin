@@ -228,12 +228,12 @@ def request_password_reset(request):
         PasswordResetToken.objects.create(email=target_email, username=user.username, token=token)
 
         # # Build the reset link - Updated to /test_login/ for testing environment
-        # origin = request.headers.get('Origin', 'https://brollysolutions.in')
-        # reset_link = f"{origin}/login/?token={token}"
-
-        # Build the reset link - Updated to /login/ for testing environment
         origin = request.headers.get('Origin', 'https://brollysolutions.in')
         reset_link = f"{origin}/login/?token={token}"
+
+        # # Build the reset link - Updated to /login/ for testing environment
+        # origin = request.headers.get('Origin', 'https://brollysolutions.in')
+        # reset_link = f"{origin}/login/?token={token}"
 
         subject = "Password Reset Request - Brolly Solutions"
         body = (
@@ -459,32 +459,48 @@ def approve_leave(request, pk):
         if leave.leave_type != 'Work From Home':
             try:
                 profile = Profile.objects.filter(employee_id__iexact=leave.employee_id).first()
+
                 if not profile:
-                    # Fallback: try to find user by username or email
-                    user = User.objects.filter(Q(username__iexact=leave.employee_id) | Q(email__iexact=leave.employee_id)).first()
+                    # Fallback 1: find user by employee_id as username or email
+                    user = User.objects.filter(
+                        Q(username__iexact=leave.employee_id) | Q(email__iexact=leave.employee_id)
+                    ).first()
+
+                    if not user:
+                        # Fallback 2: find user by employee name
+                        user = User.objects.filter(username__iexact=leave.employee_name).first()
+
                     if user:
+                        # User exists but profile is missing — create profile
                         profile, _ = Profile.objects.get_or_create(user=user)
                         profile.employee_id = leave.employee_id
                         profile.save()
+                        print(f"INFO: Auto-linked profile for {leave.employee_id} to user {user.username}")
                     else:
-                        # Final attempt: search Profiles by user username
-                        user_alt = User.objects.filter(username__iexact=leave.employee_name).first()
-                        if user_alt:
-                             profile, _ = Profile.objects.get_or_create(user=user_alt)
-                             profile.employee_id = leave.employee_id
-                             profile.save()
-                        else:
-                            return Response({"error": f"Employee profile for {leave.employee_id} not found and could not be auto-created."}, status=status.HTTP_404_NOT_FOUND)
+                        # No User at all — auto-create User + Profile from leave data
+                        # This handles employees who exist only in Google Sheets
+                        print(f"INFO: Auto-creating User + Profile for {leave.employee_id} ({leave.employee_name})")
+                        new_user = User.objects.create_user(
+                            username=leave.employee_id,
+                            password=leave.employee_id,  # Temporary password = employee_id
+                            first_name=leave.employee_name.split()[0] if leave.employee_name else "",
+                            last_name=" ".join(leave.employee_name.split()[1:]) if leave.employee_name else "",
+                        )
+                        profile = Profile.objects.create(
+                            user=new_user,
+                            employee_id=leave.employee_id,
+                            total_leaves=16  # Default leave balance
+                        )
+                        print(f"INFO: Created User '{leave.employee_id}' and Profile with 16 default leaves.")
 
-                
-                # Calculate duration (inclusive)
+                # Deduct leave days from balance
                 leave_days = (leave.end_date - leave.start_date).days + 1
-                
-                # Deduct leaves regardless of current balance (Admin has full discretion)
                 profile.total_leaves -= leave_days
                 profile.save()
+
             except Exception as e:
-                return Response({"error": f"Profile processing error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                # Log error but still approve the leave — never block admin action
+                print(f"WARNING: Profile processing error for {leave.employee_id}: {str(e)}. Approving without balance update.")
 
 
     leave.status = status_val
@@ -511,11 +527,11 @@ def employee_profile(request, employee_id):
             return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'GET':
-        serializer = ProfileSerializer(profile)
+        serializer = ProfileSerializer(profile, context={'request': request})
         return Response(serializer.data)
         
     elif request.method == 'PATCH':
-        serializer = ProfileSerializer(profile, data=request.data, partial=True)
+        serializer = ProfileSerializer(profile, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -534,7 +550,7 @@ def mark_notification_read(request, pk):
 @api_view(['GET'])
 def profile_list(request):
     profiles = Profile.objects.all()
-    serializer = ProfileSerializer(profiles, many=True)
+    serializer = ProfileSerializer(profiles, many=True, context={'request': request})
     return Response(serializer.data)
 
 

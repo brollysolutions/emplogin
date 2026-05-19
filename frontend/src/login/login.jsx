@@ -141,12 +141,12 @@ const FALLBACK_CREDS = [
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxNHIX32g4_K2FlxAJO6g0XpEdUW7ennEEnwH-0XK_SoecTAzZ66hcRIhGh2HxCYsGj/exec";
 // Use relative path in production to work behind the /login/ proxy
-// const API_BASE = window.location.hostname === "localhost"
-//   ? "http://localhost:8003/api/v1/"
-//   : "/test_login/api/v1/";
 const API_BASE = window.location.hostname === "localhost"
-  ? "http://localhost:8001/api/v1/"
-  : "/login/api/v1/";
+  ? "http://localhost:8003/api/v1/"
+  : "/test_login/api/v1/";
+// const API_BASE = window.location.hostname === "localhost"
+//   ? "http://localhost:8001/api/v1/"
+//   : "/login/api/v1/";
 const BACKEND_URL = API_BASE + "attendance/";
 const TASKS_URL = API_BASE + "tasks/";
 const LEAVES_URL = API_BASE + "leaves/";
@@ -161,11 +161,27 @@ const HEALTH_CHECK_URL = API_BASE + "health/";
 
 
 /* ── Avatar ────────────────────────────────────────────────── */
-function Avatar({ name, size = 40, accent = T.accent }) {
+function Avatar({ name, src, size = 40, accent = T.accent }) {
+  const [imgFailed, setImgFailed] = useState(false);
   const ini = initials(name);
   const hue = name.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
   const bg = `hsl(${hue},55%,92%)`;
   const fg = `hsl(${hue},60%,32%)`;
+
+  if (src && !imgFailed) {
+    return (
+      <img 
+        src={src} 
+        alt={name} 
+        onError={() => setImgFailed(true)}
+        style={{
+          width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0,
+          border: `1.5px solid rgba(0,0,0,0.05)`
+        }} 
+      />
+    );
+  }
+
   return (
     <div style={{
       width: size, height: size, borderRadius: "50%", background: bg,
@@ -173,6 +189,157 @@ function Avatar({ name, size = 40, accent = T.accent }) {
       fontWeight: 700, fontSize: size * 0.36, color: fg, flexShrink: 0, letterSpacing: 0.5
     }}>
       {ini}
+    </div>
+  );
+}
+
+/* ── Premium Form Helper Components ────────────────────────── */
+function PremiumInput({ label, icon, placeholder, value, onChange, type = "text", maxLength }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
+      <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 800, color: T.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>
+        {icon}
+        {label}
+      </label>
+      <div style={{
+        position: "relative",
+        display: "flex",
+        alignItems: "center",
+        borderRadius: 14,
+        background: focused ? "white" : T.surface,
+        border: `1.5px solid ${focused ? T.accent : T.border}`,
+        boxShadow: focused ? `0 0 0 4px ${T.accent}15, 0 4px 15px rgba(21,96,189,0.05)` : "none",
+        transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+        padding: "2px 4px"
+      }}>
+        <input 
+          type={type}
+          placeholder={placeholder} 
+          value={value} 
+          onChange={onChange}
+          maxLength={maxLength}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          style={{
+            width: "100%",
+            border: "none",
+            outline: "none",
+            background: "transparent",
+            padding: "11px 12px",
+            fontSize: "13.5px",
+            fontWeight: 700,
+            color: T.ink,
+            fontFamily: "inherit"
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function PremiumFileUpload({ id, label, fileName, isUploaded, onFileSelect, viewUrl }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
+      gap: 14,
+      background: "white",
+      padding: 24,
+      borderRadius: 24,
+      border: `1.5px solid ${T.border}`,
+      boxShadow: "0 8px 30px rgba(11,31,53,0.02)",
+      flex: 1,
+      transition: "transform 0.2s, box-shadow 0.2s"
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontWeight: 800, fontSize: 13, color: T.ink, letterSpacing: -0.2 }}>{label}</span>
+        <span style={{
+          fontSize: 10,
+          fontWeight: 800,
+          padding: "4px 10px",
+          borderRadius: 8,
+          background: isUploaded ? T.greenBg : T.redBg,
+          color: isUploaded ? T.green : T.red,
+          letterSpacing: 0.2,
+          textTransform: "uppercase"
+        }}>
+          {isUploaded ? "Saved ✓" : "Required ⚠️"}
+        </span>
+      </div>
+
+      <div style={{
+        border: `2px dashed ${hovered ? T.accent : T.border}`,
+        borderRadius: 18,
+        background: T.surface,
+        padding: "24px 16px",
+        textAlign: "center",
+        cursor: "pointer",
+        position: "relative",
+        transition: "all 0.2s ease",
+        transform: hovered ? "scale(1.01)" : "scale(1)"
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      >
+        <input 
+          type="file" 
+          id={id} 
+          accept="image/*" 
+          hidden 
+          onChange={onFileSelect} 
+        />
+        <label htmlFor={id} style={{ cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+          <div style={{
+            width: 44,
+            height: 44,
+            borderRadius: "50%",
+            background: "white",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 6px 16px rgba(11,31,53,0.06)",
+            fontSize: 18
+          }}>
+            📤
+          </div>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: T.ink }}>
+              {fileName ? fileName : "Upload Document"}
+            </div>
+            <div style={{ fontSize: 9, color: T.muted, fontWeight: 700, marginTop: 4, letterSpacing: 0.3 }}>
+              JPEG, PNG or JPG supported
+            </div>
+          </div>
+        </label>
+      </div>
+
+      {viewUrl && (
+        <button 
+          onClick={() => window.open(viewUrl, '_blank')}
+          style={{
+            width: "100%",
+            padding: "12px 14px",
+            borderRadius: 14,
+            border: "none",
+            background: T.accent + "12",
+            color: T.accent,
+            fontSize: 12,
+            fontWeight: 800,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
+          }}
+          onMouseOver={e => { e.currentTarget.style.background = T.accent; e.currentTarget.style.color = "white"; }}
+          onMouseOut={e => { e.currentTarget.style.background = T.accent + "12"; e.currentTarget.style.color = T.accent; }}
+        >
+          👁️ Preview Verified Card
+        </button>
+      )}
     </div>
   );
 }
@@ -769,6 +936,65 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
   // Leave Management State
   const [profile, setProfile] = useState({ total_leaves: 16 });
+  const [profileContact, setProfileContact] = useState("");
+  const [profileDob, setProfileDob] = useState("");
+  const [profileLocation, setProfileLocation] = useState("");
+  const [profileAadharNum, setProfileAadharNum] = useState("");
+  const [profilePanNum, setProfilePanNum] = useState("");
+  const [newPhotoFile, setNewPhotoFile] = useState(null);
+  const [newAadharFile, setNewAadharFile] = useState(null);
+  const [newPanFile, setNewPanFile] = useState(null);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const hasInitializedProfile = useRef(false);
+
+  useEffect(() => {
+    if (profile && !hasInitializedProfile.current && profile.employee_id) {
+      setProfileContact(profile.contact || "");
+      setProfileDob(profile.dob || "");
+      setProfileLocation(profile.location || "");
+      setProfileAadharNum(profile.aadhar_number || "");
+      setProfilePanNum(profile.pan_number || "");
+      hasInitializedProfile.current = true;
+    }
+  }, [profile]);
+
+  const handleSaveProfile = async () => {
+    setSavingProfile(true);
+    const fd = new FormData();
+    fd.append('contact', profileContact);
+    fd.append('dob', profileDob);
+    fd.append('location', profileLocation);
+    fd.append('aadhar_number', profileAadharNum);
+    fd.append('pan_number', profilePanNum);
+    
+    if (newPhotoFile) fd.append('photo', newPhotoFile);
+    if (newAadharFile) fd.append('aadhar_card', newAadharFile);
+    if (newPanFile) fd.append('pan_card', newPanFile);
+    
+    try {
+      const resp = await fetch(PROFILE_URL(employee.id), {
+        method: "PATCH",
+        body: fd
+      });
+      if (resp.ok) {
+        const updated = await resp.json();
+        hasInitializedProfile.current = false;
+        setProfile(updated);
+        setNewPhotoFile(null);
+        setNewAadharFile(null);
+        setNewPanFile(null);
+        _showToast("Profile updated successfully!", "success");
+      } else {
+        const err = await resp.json();
+        alert("Failed to save profile: " + JSON.stringify(err));
+      }
+    } catch (e) {
+      console.error(e);
+      _showToast("Error updating profile.", "error");
+    }
+    setSavingProfile(false);
+  };
+
   const [myLeaves, setMyLeaves] = useState([]);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
@@ -1705,7 +1931,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
             )}
           </button>
 
-          <Avatar name={employee.name} size={32} />
+          <Avatar name={employee.name} src={profile.photo} size={32} />
           <div className="name-label" style={{ marginRight: 4 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{employee.name}</div>
             <div style={{ fontSize: 11, color: T.muted }}>{employee.role}</div>
@@ -1803,7 +2029,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
           display: "flex", gap: 4, background: "#e4eaf3", borderRadius: 10,
           padding: 4, marginBottom: 20, width: "fit-content"
         }}>
-          {[{ k: "today", label: "Today's Session" }, { k: "history", label: "Attendance History" }, { k: "leaves", label: "Requests" }, { k: "messages", label: "Admin Chat", badge: unreadCount }].map(t => (
+          {[{ k: "today", label: "Today's Session" }, { k: "history", label: "Attendance History" }, { k: "leaves", label: "Requests" }, { k: "profile", label: "My Profile" }, { k: "messages", label: "Admin Chat", badge: unreadCount }].map(t => (
             <button key={t.k} className={`tab${activeTab === t.k ? " active" : ""}`}
               onClick={() => setTab(t.k)} style={{ position: "relative" }}>
               {t.label}
@@ -1816,7 +2042,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
         </div>
 
         {/* Stat cards */}
-        {activeTab !== "messages" && (
+        {activeTab !== "messages" && activeTab !== "profile" && (
           <div className="stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 14, marginBottom: 22 }}>
             <StatCard label="Work Time" value={hmsStr(liveHrs)}
               sub={`${pct}% of daily goal (8h)`}
@@ -2235,6 +2461,174 @@ function Dashboard({ employee, onSignOut, showToast }) {
           </div>
         )}
 
+        {activeTab === "profile" && (
+          <div style={{ animation: "fadeIn 0.3s ease", display: "grid", gridTemplateColumns: "1fr 2fr", gap: 28 }}>
+            {/* Left Column: Photo & Main Info */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+              <div className="premium-card" style={{ padding: 36, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", position: "relative", overflow: "hidden" }}>
+                {/* Visual Accent Top Bar */}
+                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 8, background: `linear-gradient(90deg, ${T.accent} 0%, ${T.purple} 100%)` }} />
+
+                <div style={{ position: "relative", marginBottom: 24 }}>
+                  <Avatar name={employee.name} src={newPhotoFile ? URL.createObjectURL(newPhotoFile) : profile.photo} size={130} />
+                  <label htmlFor="profile-photo-upload" style={{
+                    position: "absolute", bottom: 2, right: 2, width: 38, height: 38, borderRadius: "50%",
+                    background: T.accent, border: "3px solid white", display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer", boxShadow: "0 6px 16px rgba(21,96,189,0.3)", transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
+                  }} 
+                  title="Upload New Photo"
+                  onMouseOver={e => e.currentTarget.style.transform = "scale(1.1)"}
+                  onMouseOut={e => e.currentTarget.style.transform = "scale(1)"}
+                  >
+                    <Icon d={icons.camera || "M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"} size={16} color="white" />
+                  </label>
+                  <input type="file" id="profile-photo-upload" accept="image/*" hidden onChange={e => {
+                    if (e.target.files?.[0]) setNewPhotoFile(e.target.files[0]);
+                  }} />
+                </div>
+
+                <div style={{ fontWeight: 900, fontSize: 22, color: T.ink, letterSpacing: "-0.5px", marginBottom: 6 }}>{employee.name}</div>
+                <div style={{ fontSize: 13, color: T.muted, fontWeight: 700, marginBottom: 24, letterSpacing: 0.2 }}>{employee.role} · <span style={{ color: T.accent }}>{employee.dept}</span></div>
+
+                <div style={{ width: "100%", background: T.surface, padding: 18, borderRadius: 20, display: "flex", justifyContent: "space-around", border: `1.5px solid ${T.border}` }}>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 20, fontWeight: 900, color: T.accent }}>{employee.id}</div>
+                    <div style={{ fontSize: 9, fontWeight: 800, color: T.muted, textTransform: "uppercase", letterSpacing: 0.5, marginTop: 2 }}>ID CARD</div>
+                  </div>
+                  <div style={{ borderRight: `1.5px solid ${T.border}` }} />
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 20, fontWeight: 900, color: T.purple }}>{profile.total_leaves ?? 16}</div>
+                    <div style={{ fontSize: 9, fontWeight: 800, color: T.muted, textTransform: "uppercase", letterSpacing: 0.5, marginTop: 2 }}>Leaves Left</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tips / Security banner */}
+              <div className="premium-card" style={{ padding: 26, background: "linear-gradient(135deg, #0b1f35 0%, #1e3a5f 100%)", color: "white", position: "relative", overflow: "hidden" }}>
+                {/* Soft backdrop radial shine */}
+                <div style={{ position: "absolute", top: "-50%", right: "-30%", width: 200, height: 200, borderRadius: "50%", background: "rgba(21,96,189,0.25)", filter: "blur(40px)" }} />
+                
+                <div style={{ fontWeight: 900, fontSize: 15, marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 18 }}>🛡️</span> Security & Verification
+                </div>
+                <p style={{ fontSize: 12.5, lineHeight: 1.6, color: "rgba(255,255,255,0.75)", margin: 0, fontWeight: 500 }}>
+                  Please ensure your Aadhar Card and PAN Card details match your official documents. Updates will be locked for verification once saved.
+                </p>
+              </div>
+            </div>
+
+            {/* Right Column: Personal Info & Identification */}
+            <div className="premium-card" style={{ padding: 36, display: "flex", flexDirection: "column", gap: 30 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1.5px solid ${T.border}`, paddingBottom: 20 }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 20, fontWeight: 900, color: T.ink, letterSpacing: "-0.5px" }}>Personal & Official Profile</h3>
+                  <p style={{ margin: "4px 0 0", fontSize: 12, color: T.muted, fontWeight: 600 }}>Update your official details and identity cards</p>
+                </div>
+                <button 
+                  onClick={handleSaveProfile} 
+                  disabled={savingProfile}
+                  style={{
+                    padding: "12px 28px", borderRadius: 14, border: "none", background: T.accent,
+                    color: "white", fontSize: 13.5, fontWeight: 800, cursor: "pointer",
+                    boxShadow: `0 8px 24px ${T.accent}35`, display: "flex", alignItems: "center", gap: 8,
+                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
+                  }}
+                  onMouseOver={e => { e.currentTarget.style.transform = "translateY(-1.5px)"; e.currentTarget.style.boxShadow = `0 12px 28px ${T.accent}45`; }}
+                  onMouseOut={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `0 8px 24px ${T.accent}35`; }}
+                >
+                  {savingProfile ? (
+                    <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      ⏳ Saving...
+                    </span>
+                  ) : (
+                    <>
+                      <Icon d={icons.save} size={15} color="white" />
+                      Save Profile
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+                <PremiumInput 
+                  label="Contact Number" 
+                  icon={<span>📞</span>} 
+                  placeholder="e.g. +91 83747 05188" 
+                  value={profileContact} 
+                  onChange={e => setProfileContact(e.target.value)} 
+                />
+                <PremiumInput 
+                  label="Date of Birth" 
+                  icon={<span>📅</span>} 
+                  placeholder="YYYY-MM-DD" 
+                  value={profileDob} 
+                  onChange={e => setProfileDob(e.target.value)} 
+                />
+              </div>
+
+              <PremiumInput 
+                label="Location / Address" 
+                icon={<span>📍</span>} 
+                placeholder="e.g. Hyderabad, Telangana, India" 
+                value={profileLocation} 
+                onChange={e => setProfileLocation(e.target.value)} 
+              />
+
+              <div style={{ borderTop: `1.5px solid ${T.border}`, paddingTop: 28 }}>
+                <h4 style={{ margin: "0 0 20px", fontSize: 15, fontWeight: 900, color: T.ink, display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 18 }}>🪪</span> Official Identity Verification
+                </h4>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28 }}>
+                  {/* Aadhar Block */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    <PremiumInput 
+                      label="Aadhar Card Number" 
+                      icon={<span>🪪</span>} 
+                      placeholder="12-digit Aadhar Number" 
+                      value={profileAadharNum} 
+                      maxLength={14}
+                      onChange={e => setProfileAadharNum(e.target.value)} 
+                    />
+                    <PremiumFileUpload 
+                      id="aadhar-upload" 
+                      label="Aadhar Verification File"
+                      fileName={newAadharFile ? newAadharFile.name : null}
+                      isUploaded={!!profile.aadhar_card}
+                      onFileSelect={e => {
+                        if (e.target.files?.[0]) setNewAadharFile(e.target.files[0]);
+                      }}
+                      viewUrl={profile.aadhar_card}
+                    />
+                  </div>
+
+                  {/* PAN Block */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    <PremiumInput 
+                      label="PAN Card Number" 
+                      icon={<span>💳</span>} 
+                      placeholder="10-character PAN Number" 
+                      value={profilePanNum} 
+                      maxLength={10}
+                      onChange={e => setProfilePanNum(e.target.value.toUpperCase())} 
+                    />
+                    <PremiumFileUpload 
+                      id="pan-upload" 
+                      label="PAN Verification File"
+                      fileName={newPanFile ? newPanFile.name : null}
+                      isUploaded={!!profile.pan_card}
+                      onFileSelect={e => {
+                        if (e.target.files?.[0]) setNewPanFile(e.target.files[0]);
+                      }}
+                      viewUrl={profile.pan_card}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeTab === "messages" && (
           <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: 20, height: "75vh" }}>
             <div style={{ background: "white", borderRadius: 20, border: `1px solid ${T.border}`, padding: 10, display: "flex", flexDirection: "column", gap: 4 }}>
@@ -2288,7 +2682,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
           gap: 16, justifyContent: "space-between"
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <Avatar name={employee.name} size={44} />
+            <Avatar name={employee.name} src={profile.photo} size={44} />
             <div>
               <div style={{ fontWeight: 700, fontSize: 15, color: T.ink }}>{employee.name}</div>
               <div style={{ fontSize: 12, color: T.muted }}>{employee.role} · {employee.dept}</div>
@@ -2692,6 +3086,84 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
   const [leaveRequests, setLeaveRequests] = useState([]);
   const [adminComment, setAdminComment] = useState("");
   const [profiles, setProfiles] = useState([]);
+  const [selectedEmployeeProfile, setSelectedEmployeeProfile] = useState(null); // { employee: e, profile: p }
+  const [editingAdminProfile, setEditingAdminProfile] = useState(false);
+  const [adminProfileContact, setAdminProfileContact] = useState("");
+  const [adminProfileDob, setAdminProfileDob] = useState("");
+  const [adminProfileLocation, setAdminProfileLocation] = useState("");
+  const [adminProfileAadharNum, setAdminProfileAadharNum] = useState("");
+  const [adminProfilePanNum, setAdminProfilePanNum] = useState("");
+  const [adminProfileLeaves, setAdminProfileLeaves] = useState(16);
+  const [adminNewPhotoFile, setAdminNewPhotoFile] = useState(null);
+  const [adminNewAadharFile, setAdminNewAadharFile] = useState(null);
+  const [adminNewPanFile, setAdminNewPanFile] = useState(null);
+  const [savingAdminProfile, setSavingAdminProfile] = useState(false);
+
+  useEffect(() => {
+    if (selectedEmployeeProfile) {
+      const p = selectedEmployeeProfile.profile;
+      setAdminProfileContact(p?.contact || "");
+      setAdminProfileDob(p?.dob || "");
+      setAdminProfileLocation(p?.location || "");
+      setAdminProfileAadharNum(p?.aadhar_number || "");
+      setAdminProfilePanNum(p?.pan_number || "");
+      setAdminProfileLeaves(p?.total_leaves ?? 16);
+      setEditingAdminProfile(false);
+      setAdminNewPhotoFile(null);
+      setAdminNewAadharFile(null);
+      setAdminNewPanFile(null);
+    }
+  }, [selectedEmployeeProfile]);
+
+  const handleSaveAdminProfile = async () => {
+    if (!selectedEmployeeProfile) return;
+    setSavingAdminProfile(true);
+    const empId = selectedEmployeeProfile.employee.id;
+    
+    const fd = new FormData();
+    fd.append('contact', adminProfileContact);
+    fd.append('dob', adminProfileDob);
+    fd.append('location', adminProfileLocation);
+    fd.append('aadhar_number', adminProfileAadharNum);
+    fd.append('pan_number', adminProfilePanNum);
+    fd.append('total_leaves', adminProfileLeaves);
+    
+    if (adminNewPhotoFile) fd.append('photo', adminNewPhotoFile);
+    if (adminNewAadharFile) fd.append('aadhar_card', adminNewAadharFile);
+    if (adminNewPanFile) fd.append('pan_card', adminNewPanFile);
+    
+    try {
+      const resp = await fetch(PROFILE_URL(empId), {
+        method: "PATCH",
+        body: fd
+      });
+      if (resp.ok) {
+        const updated = await resp.json();
+        
+        // Update local profiles list state
+        setProfiles(prev => prev.map(p => String(p.employee_id).toLowerCase() === String(empId).toLowerCase() ? updated : p));
+        
+        // Update selectedEmployeeProfile
+        setSelectedEmployeeProfile({
+          employee: selectedEmployeeProfile.employee,
+          profile: updated
+        });
+        
+        setEditingAdminProfile(false);
+        setAdminNewPhotoFile(null);
+        setAdminNewAadharFile(null);
+        setAdminNewPanFile(null);
+        showToast("Employee profile updated successfully!", "success");
+      } else {
+        const err = await resp.json();
+        alert("Failed to save profile: " + JSON.stringify(err));
+      }
+    } catch (e) {
+      console.error(e);
+      showToast("Error updating profile.", "error");
+    }
+    setSavingAdminProfile(false);
+  };
   const [sortConfig, setSortConfig] = useState({ key: "date", dir: "desc" });
   const [chatWith, setChatWith] = useState(() => {
     const saved = localStorage.getItem("wt_chat_with");
@@ -3544,6 +4016,309 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
         </div>
       )}
 
+      {/* ── Employee Profile Details Modal (Admin) ── */}
+      {selectedEmployeeProfile && (() => {
+        const emp = selectedEmployeeProfile.employee;
+        const prof = selectedEmployeeProfile.profile;
+        const photoUrl = adminNewPhotoFile ? URL.createObjectURL(adminNewPhotoFile) : prof?.photo;
+        return (
+          <div style={{
+            position: "fixed", inset: 0, zIndex: 1000,
+            background: "rgba(11,31,53,0.6)", backdropFilter: "blur(4px)",
+            display: "flex", alignItems: "center", justifyContent: "center", padding: 20
+          }} onClick={() => setSelectedEmployeeProfile(null)}>
+            <div style={{
+              background: "white", borderRadius: 24, width: "100%", maxWidth: 680,
+              boxShadow: "0 20px 50px rgba(0,0,0,0.3)", animation: "fadeInUp 0.3s ease",
+              overflow: "hidden"
+            }} onClick={e => e.stopPropagation()}>
+              
+              {/* Modal Header */}
+              <div style={{
+                background: "linear-gradient(135deg, #0b1f35 0%, #1e3a5f 100%)", padding: "24px 30px", color: "white",
+                display: "flex", justifyContent: "space-between", alignItems: "center", position: "relative"
+              }}>
+                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: `linear-gradient(90deg, ${T.accent} 0%, ${T.purple} 100%)` }} />
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <Avatar name={emp.name} src={photoUrl} size={50} />
+                  <div>
+                    <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: "-0.3px" }}>{emp.name}</div>
+                    <div style={{ fontSize: 12, color: T.faint, fontWeight: 700 }}>{emp.id} · <span style={{ color: T.accent2 }}>{emp.role}</span></div>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedEmployeeProfile(null)} style={{ background: "none", border: "none", color: "white", cursor: "pointer", opacity: 0.8, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Icon d="M18 6L6 18M6 6l12 12" size={22} color="white" />
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <div style={{ padding: 30, maxHeight: "70vh", overflowY: "auto" }}>
+                {editingAdminProfile ? (
+                  /* Edit View */
+                  <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                    <div style={{ display: "flex", gap: 20, alignItems: "center", background: T.surface, padding: 20, borderRadius: 20, border: `1.5px solid ${T.border}` }}>
+                      <div style={{ position: "relative" }}>
+                        <Avatar name={emp.name} src={photoUrl} size={70} />
+                        <label htmlFor="admin-photo-upload" style={{
+                          position: "absolute", bottom: -2, right: -2, width: 28, height: 28, borderRadius: "50%",
+                          background: T.accent, border: "2px solid white", display: "flex", alignItems: "center", justifyContent: "center",
+                          cursor: "pointer", boxShadow: "0 4px 10px rgba(0,0,0,0.1)"
+                        }}>
+                          <Icon d={icons.camera || "M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"} size={12} color="white" />
+                        </label>
+                        <input type="file" id="admin-photo-upload" accept="image/*" hidden onChange={e => {
+                          if (e.target.files?.[0]) setAdminNewPhotoFile(e.target.files[0]);
+                        }} />
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: 15, color: T.ink }}>Profile Photo</div>
+                        <div style={{ fontSize: 11, color: T.muted, fontWeight: 700, marginTop: 2 }}>Upload a clear passport-size photo of the employee.</div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                      <PremiumInput 
+                        label="Contact Number" 
+                        icon={<span>📞</span>} 
+                        value={adminProfileContact} 
+                        onChange={e => setAdminProfileContact(e.target.value)} 
+                      />
+                      <PremiumInput 
+                        label="Date of Birth" 
+                        icon={<span>📅</span>} 
+                        placeholder="YYYY-MM-DD" 
+                        value={adminProfileDob} 
+                        onChange={e => setAdminProfileDob(e.target.value)} 
+                      />
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 20 }}>
+                      <PremiumInput 
+                        label="Location / City" 
+                        icon={<span>📍</span>} 
+                        value={adminProfileLocation} 
+                        onChange={e => setAdminProfileLocation(e.target.value)} 
+                      />
+                      <PremiumInput 
+                        label="Leave Balance" 
+                        icon={<span>💜</span>} 
+                        type="number"
+                        value={adminProfileLeaves} 
+                        onChange={e => setAdminProfileLeaves(parseInt(e.target.value) || 0)} 
+                      />
+                    </div>
+
+                    <div style={{ borderTop: `1.5px solid ${T.border}`, paddingTop: 20 }}>
+                      <div style={{ fontWeight: 900, fontSize: 14, color: T.ink, marginBottom: 16 }}>Identity Verification Documents</div>
+                      
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                        {/* Aadhar */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                          <PremiumInput 
+                            label="Aadhar Number" 
+                            icon={<span>🪪</span>} 
+                            value={adminProfileAadharNum} 
+                            maxLength={14}
+                            onChange={e => setAdminProfileAadharNum(e.target.value)} 
+                          />
+                          <PremiumFileUpload 
+                            id="admin-aadhar-file"
+                            label="Aadhar Card File"
+                            fileName={adminNewAadharFile ? adminNewAadharFile.name : null}
+                            isUploaded={!!prof?.aadhar_card}
+                            onFileSelect={e => {
+                              if (e.target.files?.[0]) setAdminNewAadharFile(e.target.files[0]);
+                            }}
+                            viewUrl={prof?.aadhar_card}
+                          />
+                        </div>
+
+                        {/* PAN */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                          <PremiumInput 
+                            label="PAN Number" 
+                            icon={<span>💳</span>} 
+                            value={adminProfilePanNum} 
+                            maxLength={10}
+                            onChange={e => setAdminProfilePanNum(e.target.value.toUpperCase())} 
+                          />
+                          <PremiumFileUpload 
+                            id="admin-pan-file"
+                            label="PAN Card File"
+                            fileName={adminNewPanFile ? adminNewPanFile.name : null}
+                            isUploaded={!!prof?.pan_card}
+                            onFileSelect={e => {
+                              if (e.target.files?.[0]) setAdminNewPanFile(e.target.files[0]);
+                            }}
+                            viewUrl={prof?.pan_card}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* Read View */
+                  <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                    
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 18 }}>
+                      <div style={{ background: T.surface, padding: "16px 20px", borderRadius: 16, border: `1.5px solid ${T.border}`, textAlign: "center" }}>
+                        <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>📞 Contact</div>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{prof?.contact || "—"}</div>
+                      </div>
+                      <div style={{ background: T.surface, padding: "16px 20px", borderRadius: 16, border: `1.5px solid ${T.border}`, textAlign: "center" }}>
+                        <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>📅 Date of Birth</div>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{prof?.dob || "—"}</div>
+                      </div>
+                      <div style={{ background: T.surface, padding: "16px 20px", borderRadius: 16, border: `1.5px solid ${T.border}`, textAlign: "center" }}>
+                        <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>📍 Location</div>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{prof?.location || "—"}</div>
+                      </div>
+                    </div>
+
+                    <div style={{ background: T.surface, padding: "20px 24px", borderRadius: 20, border: `1.5px solid ${T.border}`, display: "flex", justifyContent: "space-around", alignItems: "center" }}>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Leaves Balance</div>
+                        <div style={{ fontSize: 20, fontWeight: 900, color: T.purple }}>{prof?.total_leaves ?? 16} Leaves</div>
+                      </div>
+                      <div style={{ borderRight: `1.5px solid ${T.border}`, height: 40 }} />
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Role & Dept</div>
+                        <div style={{ fontSize: 15, fontWeight: 900, color: T.ink }}>{emp.role} · <span style={{ color: T.accent }}>{emp.dept}</span></div>
+                      </div>
+                    </div>
+
+                    <div style={{ borderTop: `1.5px solid ${T.border}`, paddingTop: 24 }}>
+                      <div style={{ fontWeight: 900, fontSize: 15, color: T.ink, marginBottom: 18, display: "flex", alignItems: "center", gap: 8 }}>
+                        <span>🪪</span> Official Identity Verification
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+                        {/* Aadhar Card Details */}
+                        <div style={{ border: `1.5px solid ${T.border}`, borderRadius: 20, padding: 20, display: "flex", flexDirection: "column", gap: 14, background: "white" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: 11, fontWeight: 800, color: T.muted, letterSpacing: 0.5 }}>AADHAR CARD</span>
+                            <span style={{
+                              fontSize: 10, fontWeight: 800, padding: "4px 10px", borderRadius: 8,
+                              background: prof?.aadhar_card ? T.greenBg : T.redBg,
+                              color: prof?.aadhar_card ? T.green : T.red,
+                              textTransform: "uppercase"
+                            }}>
+                              {prof?.aadhar_card ? "SAVED ✓" : "MISSING ⚠️"}
+                            </span>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 10, color: T.muted, marginBottom: 4, fontWeight: 700 }}>Aadhar Number</div>
+                            <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{prof?.aadhar_number || "—"}</div>
+                          </div>
+                          {prof?.aadhar_card && (
+                            <div style={{ cursor: "pointer", border: `1.5px solid ${T.border}`, borderRadius: 12, overflow: "hidden", height: 110, transition: "all 0.25s" }} 
+                              onClick={() => window.open(prof.aadhar_card, '_blank')}
+                              onMouseOver={e => e.currentTarget.style.transform = "scale(1.02)"}
+                              onMouseOut={e => e.currentTarget.style.transform = "none"}>
+                              <img src={prof.aadhar_card} alt="aadhar card preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* PAN Card Details */}
+                        <div style={{ border: `1.5px solid ${T.border}`, borderRadius: 20, padding: 20, display: "flex", flexDirection: "column", gap: 14, background: "white" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: 11, fontWeight: 800, color: T.muted, letterSpacing: 0.5 }}>PAN CARD</span>
+                            <span style={{
+                              fontSize: 10, fontWeight: 800, padding: "4px 10px", borderRadius: 8,
+                              background: prof?.pan_card ? T.greenBg : T.redBg,
+                              color: prof?.pan_card ? T.green : T.red,
+                              textTransform: "uppercase"
+                            }}>
+                              {prof?.pan_card ? "SAVED ✓" : "MISSING ⚠️"}
+                            </span>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 10, color: T.muted, marginBottom: 4, fontWeight: 700 }}>PAN Number</div>
+                            <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{prof?.pan_number || "—"}</div>
+                          </div>
+                          {prof?.pan_card && (
+                            <div style={{ cursor: "pointer", border: `1.5px solid ${T.border}`, borderRadius: 12, overflow: "hidden", height: 110, transition: "all 0.25s" }} 
+                              onClick={() => window.open(prof.pan_card, '_blank')}
+                              onMouseOver={e => e.currentTarget.style.transform = "scale(1.02)"}
+                              onMouseOut={e => e.currentTarget.style.transform = "none"}>
+                              <img src={prof.pan_card} alt="pan card preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div style={{ padding: "0 30px 30px", display: "flex", gap: 12 }}>
+                {editingAdminProfile ? (
+                  <>
+                    <button 
+                      onClick={() => setEditingAdminProfile(false)} 
+                      style={{
+                        flex: 1, padding: 14, borderRadius: 14, border: `1.5px solid ${T.border}`,
+                        background: "white", color: T.ink, fontWeight: 800, cursor: "pointer",
+                        transition: "all 0.2s"
+                      }}
+                      onMouseOver={e => e.currentTarget.style.background = T.surface}
+                      onMouseOut={e => e.currentTarget.style.background = "white"}
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      onClick={handleSaveAdminProfile} 
+                      disabled={savingAdminProfile}
+                      style={{
+                        flex: 1, padding: 14, borderRadius: 14, border: "none",
+                        background: T.accent, color: "white", fontWeight: 800, cursor: "pointer",
+                        boxShadow: `0 6px 20px ${T.accent}30`, transition: "all 0.2s"
+                      }}
+                      onMouseOver={e => e.currentTarget.style.transform = "translateY(-1px)"}
+                      onMouseOut={e => e.currentTarget.style.transform = "none"}
+                    >
+                      {savingAdminProfile ? "Saving..." : "Save Details"}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button 
+                      onClick={() => setSelectedEmployeeProfile(null)} 
+                      style={{
+                        flex: 1, padding: 14, borderRadius: 14, border: `1.5px solid ${T.border}`,
+                        background: "white", color: T.ink, fontWeight: 800, cursor: "pointer",
+                        transition: "all 0.2s"
+                      }}
+                      onMouseOver={e => e.currentTarget.style.background = T.surface}
+                      onMouseOut={e => e.currentTarget.style.background = "white"}
+                    >
+                      Close Portal
+                    </button>
+                    <button 
+                      onClick={() => setEditingAdminProfile(true)} 
+                      style={{
+                        flex: 1, padding: 14, borderRadius: 14, border: "none",
+                        background: T.purple, color: "white", fontWeight: 800, cursor: "pointer",
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                        boxShadow: `0 6px 20px ${T.purple}30`, transition: "all 0.2s"
+                      }}
+                      onMouseOver={e => e.currentTarget.style.transform = "translateY(-1px)"}
+                      onMouseOut={e => e.currentTarget.style.transform = "none"}
+                    >
+                      ✏️ Edit Profile Info
+                    </button>
+                  </>
+                )}
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
+      
       {/* Assign Task Modal */}
       {assignTaskTo && (
         <AssignTaskModal
@@ -3846,7 +4621,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                       <td style={cellStyle}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
                           onClick={() => setAssignTaskTo({ id: r.id || r.employeeid, name: r.name || r.employeename })}>
-                          <Avatar name={r.name || r.employeename || "?"} size={32} />
+                          <Avatar name={r.name || r.employeename || "?"} src={profiles.find(p => String(p.employee_id).toLowerCase() === String(r.id || r.employeeid).toLowerCase())?.photo} size={32} />
                           <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
                             <span style={{ fontWeight: 700, color: T.accent, fontSize: 13 }}>{r.name || r.employeename}</span>
                             <span style={{ fontSize: 10, color: T.muted, fontWeight: 600 }}>Assign Task +</span>
@@ -3939,7 +4714,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                       <td style={cellStyle}>{new Date(t.assigned_at).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
                       <td style={cellStyle}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <Avatar name={allEmployees.find(e => e.id === t.employee_id)?.name || "?"} size={28} />
+                          <Avatar name={allEmployees.find(e => e.id === t.employee_id)?.name || "?"} src={profiles.find(p => String(p.employee_id).toLowerCase() === String(t.employee_id).toLowerCase())?.photo} size={28} />
                           <div style={{ fontWeight: 600 }}>{allEmployees.find(e => e.id === t.employee_id)?.name || t.employee_id}</div>
                         </div>
                       </td>
@@ -3995,7 +4770,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                         <td style={cellStyle}>{new Date(l.applied_at).toLocaleDateString()}</td>
                         <td style={cellStyle}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            <Avatar name={l.employee_name} size={28} />
+                            <Avatar name={l.employee_name} src={profiles.find(p => String(p.employee_id).toLowerCase() === String(l.employee_id).toLowerCase())?.photo} size={28} />
                             <div>
                               <div style={{ fontWeight: 700 }}>{l.employee_name}</div>
                               <div style={{ fontSize: 10, color: T.muted }}>
@@ -4226,9 +5001,11 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                  const unread = unreadMap[String(e.id).toLowerCase()] || 0;
                 return (
               <div key={e.id} className="premium-card" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20, transition: "transform 0.2s", borderTop: isOnline ? `4px solid ${T.green}` : "none" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 16, cursor: "pointer" }}
+                  onClick={() => setSelectedEmployeeProfile({ employee: e, profile: profiles.find(p => String(p.employee_id).toLowerCase() === String(e.id).toLowerCase()) || { employee_id: e.id, total_leaves: 16 } })}
+                  title="Click to view details">
                   <div style={{ position: "relative" }}>
-                    <Avatar name={e.name} size={56} />
+                    <Avatar name={e.name} src={profiles.find(p => String(p.employee_id).toLowerCase() === String(e.id).toLowerCase())?.photo} size={56} />
                     <div style={{ position: "absolute", bottom: 2, right: 2, width: 14, height: 14, borderRadius: "50%", background: isOnline ? T.green : T.faint, border: "3px solid white" }} />
                   </div>
                   <div style={{ flex: 1 }}>

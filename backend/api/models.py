@@ -53,6 +53,14 @@ class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     employee_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
     total_leaves = models.IntegerField(default=16)
+    photo = models.ImageField(upload_to='profile_photos/', null=True, blank=True)
+    aadhar_number = models.CharField(max_length=20, null=True, blank=True)
+    aadhar_card = models.ImageField(upload_to='documents/', null=True, blank=True)
+    pan_number = models.CharField(max_length=20, null=True, blank=True)
+    pan_card = models.ImageField(upload_to='documents/', null=True, blank=True)
+    contact = models.CharField(max_length=20, null=True, blank=True)
+    dob = models.CharField(max_length=50, null=True, blank=True)
+    location = models.CharField(max_length=255, null=True, blank=True)
     
     def __str__(self):
         return f"{self.user.username} Profile"
