@@ -141,12 +141,12 @@ const FALLBACK_CREDS = [
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxNHIX32g4_K2FlxAJO6g0XpEdUW7ennEEnwH-0XK_SoecTAzZ66hcRIhGh2HxCYsGj/exec";
 // Use relative path in production to work behind the /login/ proxy
-const API_BASE = window.location.hostname === "localhost"
-  ? "http://localhost:8003/api/v1/"
-  : "/test_login/api/v1/";
 // const API_BASE = window.location.hostname === "localhost"
-//   ? "http://localhost:8001/api/v1/"
-//   : "/login/api/v1/";
+//   ? "http://localhost:8003/api/v1/"
+//   : "/test_login/api/v1/";
+const API_BASE = window.location.hostname === "localhost"
+  ? "http://localhost:8001/api/v1/"
+  : "/login/api/v1/";
 const BACKEND_URL = API_BASE + "attendance/";
 const TASKS_URL = API_BASE + "tasks/";
 const LEAVES_URL = API_BASE + "leaves/";
@@ -939,6 +939,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
   const [profileContact, setProfileContact] = useState("");
   const [profileDob, setProfileDob] = useState("");
   const [profileLocation, setProfileLocation] = useState("");
+  const [profileJoiningDate, setProfileJoiningDate] = useState("");
   const [profileAadharNum, setProfileAadharNum] = useState("");
   const [profilePanNum, setProfilePanNum] = useState("");
   const [newPhotoFile, setNewPhotoFile] = useState(null);
@@ -952,6 +953,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
       setProfileContact(profile.contact || "");
       setProfileDob(profile.dob || "");
       setProfileLocation(profile.location || "");
+      setProfileJoiningDate(profile.joining_date || "");
       setProfileAadharNum(profile.aadhar_number || "");
       setProfilePanNum(profile.pan_number || "");
       hasInitializedProfile.current = true;
@@ -964,6 +966,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
     fd.append('contact', profileContact);
     fd.append('dob', profileDob);
     fd.append('location', profileLocation);
+    fd.append('joining_date', profileJoiningDate);
     fd.append('aadhar_number', profileAadharNum);
     fd.append('pan_number', profilePanNum);
     
@@ -2566,13 +2569,22 @@ function Dashboard({ employee, onSignOut, showToast }) {
                 />
               </div>
 
-              <PremiumInput 
-                label="Location / Address" 
-                icon={<span>📍</span>} 
-                placeholder="e.g. Hyderabad, Telangana, India" 
-                value={profileLocation} 
-                onChange={e => setProfileLocation(e.target.value)} 
-              />
+              <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 24 }}>
+                <PremiumInput 
+                  label="Location / Address" 
+                  icon={<span>📍</span>} 
+                  placeholder="e.g. Hyderabad, Telangana, India" 
+                  value={profileLocation} 
+                  onChange={e => setProfileLocation(e.target.value)} 
+                />
+                <PremiumInput 
+                  label="Joining Date" 
+                  icon={<span>📅</span>} 
+                  placeholder="YYYY-MM-DD" 
+                  value={profileJoiningDate} 
+                  onChange={e => setProfileJoiningDate(e.target.value)} 
+                />
+              </div>
 
               <div style={{ borderTop: `1.5px solid ${T.border}`, paddingTop: 28 }}>
                 <h4 style={{ margin: "0 0 20px", fontSize: 15, fontWeight: 900, color: T.ink, display: "flex", alignItems: "center", gap: 8 }}>
@@ -3091,6 +3103,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
   const [adminProfileContact, setAdminProfileContact] = useState("");
   const [adminProfileDob, setAdminProfileDob] = useState("");
   const [adminProfileLocation, setAdminProfileLocation] = useState("");
+  const [adminProfileJoiningDate, setAdminProfileJoiningDate] = useState("");
   const [adminProfileAadharNum, setAdminProfileAadharNum] = useState("");
   const [adminProfilePanNum, setAdminProfilePanNum] = useState("");
   const [adminProfileLeaves, setAdminProfileLeaves] = useState(16);
@@ -3105,6 +3118,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
       setAdminProfileContact(p?.contact || "");
       setAdminProfileDob(p?.dob || "");
       setAdminProfileLocation(p?.location || "");
+      setAdminProfileJoiningDate(p?.joining_date || "");
       setAdminProfileAadharNum(p?.aadhar_number || "");
       setAdminProfilePanNum(p?.pan_number || "");
       setAdminProfileLeaves(p?.total_leaves ?? 16);
@@ -3124,6 +3138,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
     fd.append('contact', adminProfileContact);
     fd.append('dob', adminProfileDob);
     fd.append('location', adminProfileLocation);
+    fd.append('joining_date', adminProfileJoiningDate);
     fd.append('aadhar_number', adminProfileAadharNum);
     fd.append('pan_number', adminProfilePanNum);
     fd.append('total_leaves', adminProfileLeaves);
@@ -4092,12 +4107,19 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                       />
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 20 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr", gap: 20 }}>
                       <PremiumInput 
                         label="Location / City" 
                         icon={<span>📍</span>} 
                         value={adminProfileLocation} 
                         onChange={e => setAdminProfileLocation(e.target.value)} 
+                      />
+                      <PremiumInput 
+                        label="Joining Date" 
+                        icon={<span>📅</span>} 
+                        placeholder="YYYY-MM-DD" 
+                        value={adminProfileJoiningDate} 
+                        onChange={e => setAdminProfileJoiningDate(e.target.value)} 
                       />
                       <PremiumInput 
                         label="Leave Balance" 
@@ -4160,7 +4182,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                   /* Read View */
                   <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
                     
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 18 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 18 }}>
                       <div style={{ background: T.surface, padding: "16px 20px", borderRadius: 16, border: `1.5px solid ${T.border}`, textAlign: "center" }}>
                         <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>📞 Contact</div>
                         <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{prof?.contact || "—"}</div>
@@ -4172,6 +4194,10 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                       <div style={{ background: T.surface, padding: "16px 20px", borderRadius: 16, border: `1.5px solid ${T.border}`, textAlign: "center" }}>
                         <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>📍 Location</div>
                         <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{prof?.location || "—"}</div>
+                      </div>
+                      <div style={{ background: T.surface, padding: "16px 20px", borderRadius: 16, border: `1.5px solid ${T.border}`, textAlign: "center" }}>
+                        <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>📅 Joining Date</div>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{prof?.joining_date || "—"}</div>
                       </div>
                     </div>
 
