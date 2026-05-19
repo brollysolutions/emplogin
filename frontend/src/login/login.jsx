@@ -743,6 +743,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
   })();
 
   const [now, setNow] = useState(new Date());
+  const [initialSyncDone, setInitialSyncDone] = useState(false);
 
   // New States for cumulative tracking
   const [totalWorkSeconds, setTotalWorkSeconds] = useState(savedSession?.totalWorkSeconds || 0);
@@ -808,9 +809,6 @@ function Dashboard({ employee, onSignOut, showToast }) {
             const lastActive = todayRec.last_active ? new Date(todayRec.last_active).getTime() : 0;
             const isStale = lastActive > 0 && (nowTime - lastActive) > 90000; // 90 seconds threshold (3 heartbeats)
 
-            // GAP DETECTION: If status is Active/Break but heartbeat is stale, 
-            // it means the user closed the browser and just came back.
-            // We must "pause" the timer at lastActive and resume at nowTime.
             if (isStale && (todayRec.status === "Active" || todayRec.status === "On Break")) {
               console.log("Gap detected! Resuming from stale session. Correcting hours to exclude offline gap...");
               const workBase = parseHMS(todayRec.hours);
@@ -820,16 +818,29 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
               const correctedWork = todayRec.status === "Active" ? workBase + elapsed : workBase;
               const correctedBreak = todayRec.status === "On Break" ? breakBase + elapsed : breakBase;
+              const newStatus = todayRec.status === "Active" ? "working" : "break";
+              
+              // Synchronously update UI state so user doesn't see "Start Working" and click it
+              setTotalWorkSeconds(correctedWork);
+              setTotalBreakSeconds(correctedBreak);
+              setStatus(newStatus);
+              setLT(new Date(today + " " + todayRec.logint));
+              
+              if (newStatus === "working") {
+                setSessionStartTime(new Date());
+              } else {
+                setBreakStartTime(new Date());
+              }
 
               triggerAutoSync(
                 new Date(today + " " + todayRec.logint),
                 null,
-                todayRec.status === "Active" ? "working" : "break",
+                newStatus,
                 new Date(), // startTimeOverride: reset to now
                 correctedWork,
                 correctedBreak
               );
-              return; // Let the next poll handle the refreshed state
+              return;
             }
 
             const serverStatusMap = { "Active": "working", "On Break": "break" };
@@ -866,6 +877,8 @@ function Dashboard({ employee, onSignOut, showToast }) {
         }
       } catch (e) {
         console.warn("Status sync failed", e);
+      } finally {
+        if (isInitial) setInitialSyncDone(true);
       }
     };
 
@@ -1810,7 +1823,16 @@ function Dashboard({ employee, onSignOut, showToast }) {
               </div>
 
               <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-                {(status === "idle" || status === "loggedOut") ? (
+                {!initialSyncDone ? (
+                  <div style={{ flex: 1, padding: "12px", display: "flex", justifyContent: "center", alignItems: "center", background: T.surface, borderRadius: "11px" }}>
+                    <span style={{
+                      width: 16, height: 16, border: `2.5px solid ${T.border}`,
+                      borderTopColor: T.accent, borderRadius: "50%",
+                      display: "inline-block", animation: "spin 0.8s linear infinite"
+                    }} />
+                    <span style={{ marginLeft: 10, fontSize: 13, color: T.muted, fontWeight: 600 }}>Syncing...</span>
+                  </div>
+                ) : (status === "idle" || status === "loggedOut") ? (
                   <button className="act-btn" onClick={handleLogin}
                     style={{ flex: 1, background: T.green, color: "white", justifyContent: "center" }}>
                     <Icon d={icons.check} size={16} color="white" />
