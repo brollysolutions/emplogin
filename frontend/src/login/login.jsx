@@ -1192,14 +1192,76 @@ function Dashboard({ employee, onSignOut, showToast }) {
     if (liveHrs.total < 8) eightHourSyncedRef.current = false;
   }, [liveHrs.total, status]);
 
-  // ── Heartbeat & Periodic Sync (Fixes "wrong working hours" mismatch) ──
+  // ── Tab-close / Page-hide instant sync ──
+  // Uses navigator.sendBeacon so the request survives even when the tab is being closed.
+  // Also syncs on visibilitychange (tab switch / minimise) so admin always sees fresh hours.
+  useEffect(() => {
+    if (!loginTime || (status !== "working" && status !== "break")) return;
+
+    const buildBeaconPayload = () => {
+      const now = new Date();
+      const sTime = status === "working" ? sessionStartTime : breakStartTime;
+      const tWork = status === "working" && sTime
+        ? totalWorkSeconds + Math.floor((now - sTime) / 1000)
+        : totalWorkSeconds;
+      const tBreak = status === "break" && sTime
+        ? totalBreakSeconds + Math.floor((now - sTime) / 1000)
+        : totalBreakSeconds;
+
+      const hrs = secondsToHMS(tWork);
+      const brk = secondsToHMS(tBreak);
+      const WORK_GOAL = 8;
+      const HALF_DAY_THRESHOLD = 4.5;
+      let dayStatus = "Half Day";
+      if (hrs.total >= WORK_GOAL) dayStatus = "Full Day";
+      else if (hrs.total >= HALF_DAY_THRESHOLD) dayStatus = "Incomplete Workday(IWD)";
+
+      return JSON.stringify({
+        date: fmtDate(loginTime),
+        id: employee.id,
+        name: employee.name,
+        dept: employee.dept,
+        loginT: fmtTime(loginTime),
+        logoutT: "—",
+        hours: hmsStr(hrs),
+        breakTime: hmsStr(brk),
+        extraHours: "—",
+        tasks: taskInput || "—",
+        breakLogs: JSON.stringify(breakLogs),
+        status: status === "working" ? "Active" : "On Break",
+        lastStatusChange: now.toISOString()
+      });
+    };
+
+    const onPageHide = () => {
+      if (!loginTime || (status !== "working" && status !== "break")) return;
+      try {
+        const blob = new Blob([buildBeaconPayload()], { type: "application/json" });
+        navigator.sendBeacon(BACKEND_URL, blob);
+      } catch (e) { console.warn("Beacon sync failed", e); }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") onPageHide();
+    };
+
+    window.addEventListener("pagehide", onPageHide);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("pagehide", onPageHide);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [loginTime, status, totalWorkSeconds, totalBreakSeconds, sessionStartTime, breakStartTime, taskInput, breakLogs, employee]);
+
+  // ── Heartbeat & Periodic Sync ──
+  // Heartbeat only keeps last_active fresh for admin visibility.
+  // It NEVER forces a re-login — session is always restored from DB on page load.
   useEffect(() => {
     if (!employee?.id || (status !== "working" && status !== "break")) return;
 
     const runHeartbeat = async () => {
       try {
-        // 1. Send heartbeat to keep last_active fresh
-        const hbResp = await fetch(HEARTBEAT_URL, {
+        await fetch(HEARTBEAT_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -1207,38 +1269,11 @@ function Dashboard({ employee, onSignOut, showToast }) {
             date: fmtDate(loginTime || new Date())
           })
         });
-
-        // 2. Check for server restart mid-session via heartbeat response
-        if (hbResp.ok) {
-          const hbData = await hbResp.json();
-          const currentStart = hbData.server_start_time;
-          const savedStart   = localStorage.getItem("wt_server_start");
-
-          if (currentStart && savedStart && currentStart !== savedStart) {
-            // Server was restarted while the employee was actively working.
-            // Sync current work state to DB FIRST so no hours are lost.
-            console.log("Server restart detected mid-session — syncing and logging out.");
-            triggerAutoSync(loginTime, null, status);
-
-            // Update the stored start time
-            localStorage.setItem("wt_server_start", currentStart);
-            localStorage.removeItem("wt_user");
-            localStorage.removeItem("wt_session");
-
-            // Give the sync 2 seconds to complete before redirecting
-            setTimeout(() => {
-              onSignOut();
-            }, 2000);
-          }
-        }
       } catch (e) { console.warn("Heartbeat failed", e); }
     };
 
     const runBackgroundSync = () => {
-      // 2. Sync actual hours to server (Every 5 mins)
-      // This ensures Admin Dashboard shows real-time progress
       if (status === "working" || status === "break") {
-        console.log("Performing background hours sync...");
         triggerAutoSync(loginTime, logoutTime, status);
       }
     };
@@ -4922,15 +4957,6 @@ export default function App() {
       setIsAdmin(false);
       setError("");
       localStorage.setItem("wt_user", JSON.stringify({ role: "employee", data: found }));
-      // Save the current server start time so we can detect future restarts
-      fetch(HEALTH_CHECK_URL)
-        .then(r => r.json())
-        .then(data => {
-          if (data.server_start_time) {
-            localStorage.setItem("wt_server_start", data.server_start_time);
-          }
-        })
-        .catch(() => {});
     } else {
       setError("Invalid username or password.");
     }
