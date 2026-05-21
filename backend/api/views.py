@@ -514,17 +514,53 @@ def approve_leave(request, pk):
 
 @api_view(['GET', 'PATCH'])
 def employee_profile(request, employee_id):
-    try:
-        profile = Profile.objects.get(employee_id=employee_id)
-    except Profile.DoesNotExist:
+    # Try to find profile with case-insensitive employee_id
+    profile = Profile.objects.filter(employee_id__iexact=employee_id).first()
+    
+    if not profile:
         # Auto-create if user exists but profile was not created yet
         user = User.objects.filter(username__iexact=employee_id).first()
-        if user:
-            profile, _ = Profile.objects.get_or_create(user=user)
+        if not user:
+            # If the user doesn't exist, we auto-create the User + Profile on the fly
+            # Fetch name from their Attendance records to pre-populate User
+            name = ""
+            attendance = Attendance.objects.filter(employee_id__iexact=employee_id).exclude(name='').order_by('-timestamp').first()
+            if attendance and attendance.name and attendance.name != '—':
+                name = attendance.name
+                
+            name_parts = name.split()
+            first_name = name_parts[0] if len(name_parts) > 0 else ""
+            last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else ""
+            
+            try:
+                user = User.objects.create_user(
+                    username=employee_id,
+                    email=f"{employee_id}@example.com",
+                    password=employee_id,  # Default password = employee_id
+                    first_name=first_name,
+                    last_name=last_name
+                )
+                print(f"INFO: Auto-created User '{employee_id}' from profile request")
+            except Exception as e:
+                # Fallback if username already exists in another case, try to fetch it
+                user = User.objects.filter(username__iexact=employee_id).first()
+                if not user:
+                    return Response({"error": f"Failed to create user: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                    
+        # Now get or create the profile for the user
+        profile, created = Profile.objects.get_or_create(user=user)
+        try:
             profile.employee_id = employee_id
             profile.save()
-        else:
-            return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
+            print(f"INFO: Linked profile for user '{user.username}' with employee_id '{employee_id}'")
+        except Exception as e:
+            print(f"ERROR: Failed to save profile with employee_id '{employee_id}': {e}")
+            # If a unique constraint failure occurred because another user has this ID, resolve safely
+            existing_profile = Profile.objects.filter(employee_id__iexact=employee_id).first()
+            if existing_profile:
+                profile = existing_profile
+            else:
+                return Response({"error": f"Profile linking failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     if request.method == 'GET':
         serializer = ProfileSerializer(profile, context={'request': request})
