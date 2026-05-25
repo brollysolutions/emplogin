@@ -18,5 +18,5 @@ RUN python manage.py collectstatic --noinput
 # EXPOSE 8003  
 EXPOSE 8001
 
-# CMD ["sh", "-c", "python manage.py makemigrations && python manage.py migrate && gunicorn --bind 0.0.0.0:8003 core.wsgi:application"] 
-CMD ["sh", "-c", "python manage.py makemigrations && python manage.py migrate && gunicorn --bind 0.0.0.0:8001 core.wsgi:application"]
+# CMD ["sh", "-c", "python manage.py makemigrations && python manage.py migrate && gunicorn --bind 0.0.0.0:8003 --workers 3 --threads 2 core.wsgi:application"] 
+CMD ["sh", "-c", "python manage.py makemigrations && python manage.py migrate && gunicorn --bind 0.0.0.0:8001 --workers 3 --threads 2 core.wsgi:application"]

@@ -97,6 +97,89 @@ function getStartOfWeek(date) {
   return d;
 }
 
+const compressImage = (file, maxWidth = 800, maxHeight = 800, quality = 0.7) => {
+  return new Promise((resolve) => {
+    try {
+      if (!file || !file.type || !file.type.startsWith('image/')) {
+        resolve(file);
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const img = new Image();
+          img.onload = () => {
+            try {
+              const canvas = document.createElement('canvas');
+              let width = img.width;
+              let height = img.height;
+              
+              if (!width || !height) {
+                resolve(file);
+                return;
+              }
+              
+              if (width > height) {
+                if (width > maxWidth) {
+                  height = Math.round((height * maxWidth) / width);
+                  width = maxWidth;
+                }
+              } else {
+                if (height > maxHeight) {
+                  width = Math.round((width * maxHeight) / height);
+                  height = maxHeight;
+                }
+              }
+              
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, width, height);
+              
+              canvas.toBlob((blob) => {
+                try {
+                  if (!blob) {
+                    resolve(file);
+                    return;
+                  }
+                  const compressedFile = new File([blob], file.name, {
+                    type: 'image/jpeg',
+                    lastModified: Date.now()
+                  });
+                  resolve(compressedFile);
+                } catch (err) {
+                  console.error("Error creating compressed File object:", err);
+                  resolve(file); // Fallback to original file
+                }
+              }, 'image/jpeg', quality);
+            } catch (err) {
+              console.error("Error compressing image on load:", err);
+              resolve(file);
+            }
+          };
+          img.onerror = (err) => {
+            console.error("Error loading image object:", err);
+            resolve(file);
+          };
+          img.src = e.target.result;
+        } catch (err) {
+          console.error("Error reading reader data:", err);
+          resolve(file);
+        }
+      };
+      reader.onerror = (err) => {
+        console.error("FileReader error:", err);
+        resolve(file);
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error("Global compression error:", err);
+      resolve(file); // Fallback to original file
+    }
+  });
+};
+
 let masterAudioCtx = null;
 let lastNotifTime = 0;
 
@@ -1024,6 +1107,9 @@ function Dashboard({ employee, onSignOut, showToast }) {
             hours: r.hours,
             breakTime: r.break_time,
             breakLogs: r.break_logs,
+            offlineLogs: r.offline_logs,
+            break_logs_parsed: (() => { try { return r.break_logs ? JSON.parse(r.break_logs) : []; } catch { return []; } })(),
+            offline_logs_parsed: (() => { try { return r.offline_logs ? JSON.parse(r.offline_logs) : []; } catch { return []; } })(),
             extraHours: r.extrahours,
             tasks: r.tasks,
             status: r.status,
@@ -1153,6 +1239,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
         // Handle notifications for approved/rejected leaves
         const unnotified = data.find(l => !l.is_notified && l.status !== "Pending");
         if (unnotified) {
+          playNotifySound();
           _showToast(`Your leave request was ${unnotified.status}!`, unnotified.status === "Approved" ? "success" : "error");
           // Mark as notified
           fetch(`${LEAVES_URL}${unnotified.id}/notify/`, { method: "PATCH" });
@@ -1192,7 +1279,8 @@ function Dashboard({ employee, onSignOut, showToast }) {
         setShowLeaveForm(false);
         fetchLeaves();
       } else {
-        _showToast("Submission failed", "error");
+        const errorData = await resp.json().catch(() => ({}));
+        _showToast(errorData.error || "Submission failed", "error");
       }
     } catch (e) { console.error(e); }
   };
@@ -1723,6 +1811,20 @@ function Dashboard({ employee, onSignOut, showToast }) {
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
         .pulse-active{animation: pulse 2s infinite;}
 
+        .tabs-container {
+          max-width: 100%;
+        }
+        .leaves-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+        }
+        .profile-grid {
+          display: grid;
+          grid-template-columns: 1fr 2fr;
+          gap: 28px;
+        }
+
         @media (max-width: 768px) {
           .stat-grid { grid-template-columns: 1fr 1fr !important; }
           .main-grid { grid-template-columns: 1fr !important; }
@@ -1738,6 +1840,29 @@ function Dashboard({ employee, onSignOut, showToast }) {
           .profile-footer { flex-direction: column !important; align-items: flex-start !important; gap: 20px; }
           .profile-footer-stats { width: 100%; justify-content: space-between !important; }
           .name-label { display: none !important; }
+          .chat-grid { grid-template-columns: 1fr !important; height: auto !important; }
+          .chat-sidebar { height: 200px !important; }
+          .tabs-container {
+            width: 100% !important;
+            overflow-x: auto !important;
+            white-space: nowrap !important;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+          }
+          .tabs-container::-webkit-scrollbar {
+            display: none;
+          }
+          .tab {
+            flex-shrink: 0 !important;
+          }
+          .leaves-grid {
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
+          }
+          .profile-grid {
+            grid-template-columns: 1fr !important;
+            gap: 20px !important;
+          }
         }
         @media (max-width: 480px) {
           .stat-grid { grid-template-columns: 1fr !important; }
@@ -1868,6 +1993,36 @@ function Dashboard({ employee, onSignOut, showToast }) {
                 }}>
                   {selectedRecord.tasks || "No tasks recorded for this day."}
                 </div>
+              </div>
+
+              {/* Logs Display for Employee */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 15 }}>
+                {selectedRecord.break_logs_parsed && selectedRecord.break_logs_parsed.length > 0 && (
+                  <div style={{ background: T.purpleBg + "44", padding: 15, borderRadius: 12, border: `1px solid ${T.purple}33` }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: T.purple, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                      <Icon d={icons.break} size={14} color={T.purple} /> Break History
+                    </div>
+                    {selectedRecord.break_logs_parsed.map((log, lIdx) => (
+                      <div key={lIdx} style={{ fontSize: 12, color: T.ink2, marginBottom: 4, display: "flex", justifyContent: "space-between" }}>
+                        <span>• {log.in} - {log.out}</span>
+                        <span style={{ fontWeight: 600 }}>{log.duration}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {selectedRecord.offline_logs_parsed && selectedRecord.offline_logs_parsed.length > 0 && (
+                  <div style={{ background: "#fff1f1", padding: 15, borderRadius: 12, border: `1px solid ${T.red}33` }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: T.red, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: T.red }} /> Offline Gaps (Internet/Closure)
+                    </div>
+                    {selectedRecord.offline_logs_parsed.map((log, lIdx) => (
+                      <div key={lIdx} style={{ fontSize: 12, color: T.ink2, marginBottom: 4, display: "flex", justifyContent: "space-between" }}>
+                        <span>• {log.start} - {log.end}</span>
+                        <span style={{ fontWeight: 600 }}>{log.duration}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -2028,7 +2183,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
         )}
 
         {/* Tabs */}
-        <div style={{
+        <div className="tabs-container" style={{
           display: "flex", gap: 4, background: "#e4eaf3", borderRadius: 10,
           padding: 4, marginBottom: 20, width: "fit-content"
         }}>
@@ -2190,7 +2345,11 @@ function Dashboard({ employee, onSignOut, showToast }) {
                     }}>
                       <Icon d={icons.camera} size={16} />
                       {taskScreenshot ? "Change Screenshot" : "Upload Screenshot"}
-                      <input type="file" hidden accept="image/*" onChange={e => setTaskScreenshot(e.target.files[0])} />
+                      <input type="file" hidden accept="image/*" onChange={e => {
+                        if (e.target.files?.[0]) {
+                          compressImage(e.target.files[0]).then(setTaskScreenshot);
+                        }
+                      }} />
                     </label>
                     {taskScreenshot && (
                       <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: T.green, fontWeight: 600 }}>
@@ -2332,7 +2491,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
         )}
 
         {activeTab === "leaves" && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+          <div className="leaves-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
             <div style={{ background: T.white, borderRadius: 16, border: `1px solid ${T.border}`, padding: 24, alignSelf: "start" }}>
               
               {/* Type Switcher Selector */}
@@ -2403,10 +2562,19 @@ function Dashboard({ employee, onSignOut, showToast }) {
                   <div style={{ fontSize: 12, fontWeight: 700, color: T.purple }}>Requested Duration</div>
                   <div style={{ fontSize: 14, fontWeight: 800, color: T.purple }}>
                     {(() => {
+                      if (!leaveData.start || !leaveData.end) return "—";
                       const s = new Date(leaveData.start);
                       const e = new Date(leaveData.end);
-                      const diff = Math.ceil((e - s) / (1000 * 60 * 60 * 24)) + 1;
-                      return diff > 0 ? `${diff} Day${diff > 1 ? 's' : ''}` : "Invalid range";
+                      if (e < s) return "Invalid range";
+                      
+                      let diff = 0;
+                      // Iterate through the dates and count non-Sunday days
+                      for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+                        if (d.getDay() !== 0) { // 0 = Sunday
+                          diff++;
+                        }
+                      }
+                      return `${diff} Day${diff !== 1 ? 's' : ''}`;
                     })()}
                   </div>
                 </div>
@@ -2465,7 +2633,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
         )}
 
         {activeTab === "profile" && (
-          <div style={{ animation: "fadeIn 0.3s ease", display: "grid", gridTemplateColumns: "1fr 2fr", gap: 28 }}>
+          <div className="profile-grid" style={{ animation: "fadeIn 0.3s ease", display: "grid", gridTemplateColumns: "1fr 2fr", gap: 28 }}>
             {/* Left Column: Photo & Main Info */}
             <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
               <div className="premium-card" style={{ padding: 36, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", position: "relative", overflow: "hidden" }}>
@@ -2486,7 +2654,9 @@ function Dashboard({ employee, onSignOut, showToast }) {
                     <Icon d={icons.camera || "M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"} size={16} color="white" />
                   </label>
                   <input type="file" id="profile-photo-upload" accept="image/*" hidden onChange={e => {
-                    if (e.target.files?.[0]) setNewPhotoFile(e.target.files[0]);
+                    if (e.target.files?.[0]) {
+                      compressImage(e.target.files[0]).then(setNewPhotoFile);
+                    }
                   }} />
                 </div>
 
@@ -2608,7 +2778,9 @@ function Dashboard({ employee, onSignOut, showToast }) {
                       fileName={newAadharFile ? newAadharFile.name : null}
                       isUploaded={!!profile.aadhar_card}
                       onFileSelect={e => {
-                        if (e.target.files?.[0]) setNewAadharFile(e.target.files[0]);
+                        if (e.target.files?.[0]) {
+                          compressImage(e.target.files[0]).then(setNewAadharFile);
+                        }
                       }}
                       viewUrl={profile.aadhar_card}
                     />
@@ -2630,7 +2802,9 @@ function Dashboard({ employee, onSignOut, showToast }) {
                       fileName={newPanFile ? newPanFile.name : null}
                       isUploaded={!!profile.pan_card}
                       onFileSelect={e => {
-                        if (e.target.files?.[0]) setNewPanFile(e.target.files[0]);
+                        if (e.target.files?.[0]) {
+                          compressImage(e.target.files[0]).then(setNewPanFile);
+                        }
                       }}
                       viewUrl={profile.pan_card}
                     />
@@ -2642,8 +2816,8 @@ function Dashboard({ employee, onSignOut, showToast }) {
         )}
 
         {activeTab === "messages" && (
-          <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: 20, height: "75vh" }}>
-            <div style={{ background: "white", borderRadius: 20, border: `1px solid ${T.border}`, padding: 10, display: "flex", flexDirection: "column", gap: 4 }}>
+          <div className="chat-grid" style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: 20, height: "75vh" }}>
+            <div className="chat-sidebar" style={{ background: "white", borderRadius: 20, border: `1px solid ${T.border}`, padding: 10, display: "flex", flexDirection: "column", gap: 4 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", padding: "10px 12px" }}>Direct Message</div>
               <button onClick={() => setActiveChat({ type: 'admin', id: 'admin', name: 'Admin Chat' })} style={{
                 padding: "12px 16px", borderRadius: 12, border: "none", cursor: "pointer", textAlign: "left",
@@ -3479,7 +3653,8 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
         live_status: hasWfh ? "Work From Home" : liveStatus,
         status: hasWfh ? "Work From Home" : r.status,
         is_live: !isHeartbeatStale,
-        break_logs_parsed: (() => { try { return r.break_logs ? JSON.parse(r.break_logs) : []; } catch { return []; } })()
+        break_logs_parsed: (() => { try { return r.break_logs ? JSON.parse(r.break_logs) : []; } catch { return []; } })(),
+        offline_logs_parsed: (() => { try { return r.offline_logs ? JSON.parse(r.offline_logs) : []; } catch { return []; } })()
       };
     }
     
@@ -3494,7 +3669,8 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
       live_status: hasWfh ? "Work From Home" : r.status,
       status: hasWfh ? "Work From Home" : r.status,
       is_live: false,
-      break_logs_parsed: (() => { try { return r.break_logs ? JSON.parse(r.break_logs) : []; } catch { return []; } })()
+      break_logs_parsed: (() => { try { return r.break_logs ? JSON.parse(r.break_logs) : []; } catch { return []; } })(),
+      offline_logs_parsed: (() => { try { return r.offline_logs ? JSON.parse(r.offline_logs) : []; } catch { return []; } })()
     };
   });
 
@@ -3817,6 +3993,25 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
         @keyframes pulse{0%{transform:scale(1);box-shadow:0 0 0 0 rgba(239,68,68,0.7)}70%{transform:scale(1.1);box-shadow:0 0 0 10px rgba(239,68,68,0)}100%{transform:scale(1);box-shadow:0 0 0 0 rgba(239,68,68,0)}}
 
+        @media (max-width: 992px) {
+          .adm-topbar { height: auto !important; padding: 12px 20px !important; flex-wrap: wrap; gap: 12px; }
+          .adm-topbar-actions { width: 100%; justify-content: center !important; }
+        }
+        @media (max-width: 768px) {
+          .adm-stat-grid { grid-template-columns: 1fr 1fr !important; gap: 12px !important; }
+          .adm-filter-bar { flex-direction: column !important; align-items: stretch !important; gap: 10px !important; }
+          .adm-filter-bar > * { width: 100% !important; max-width: none !important; min-width: 0 !important; }
+          .adm-tab-container { padding: 4px !important; overflow-x: auto; white-space: nowrap; width: 100%; box-sizing: border-box; }
+          .adm-tab { padding: 8px 14px !important; font-size: 11px !important; border-radius: 8px !important; }
+          .adm-main-content { padding: 16px 12px !important; }
+          .adm-topbar > div:first-child { width: 100%; justify-content: center; }
+          .chat-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+          .chat-sidebar { height: 260px !important; }
+        }
+        @media (max-width: 480px) {
+          .adm-stat-grid { grid-template-columns: 1fr !important; }
+          .adm-btn-text { display: none !important; }
+        }
       `}</style>
 
       {/* Topbar */}
@@ -3957,6 +4152,14 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                       ))}
                     </div>
                   )}
+                  {selectedRecord.offline_logs_parsed && selectedRecord.offline_logs_parsed.length > 0 && (
+                    <div style={{ marginTop: 12, fontSize: 11, color: T.red }}>
+                      <div style={{ fontWeight: 600, marginBottom: 2 }}>Offline Gaps:</div>
+                      {selectedRecord.offline_logs_parsed.map((log, lIdx) => (
+                        <div key={lIdx}>• {log.start} - {log.end} ({log.duration})</div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -4082,7 +4285,9 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                           <Icon d={icons.camera || "M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"} size={12} color="white" />
                         </label>
                         <input type="file" id="admin-photo-upload" accept="image/*" hidden onChange={e => {
-                          if (e.target.files?.[0]) setAdminNewPhotoFile(e.target.files[0]);
+                          if (e.target.files?.[0]) {
+                            compressImage(e.target.files[0]).then(setAdminNewPhotoFile);
+                          }
                         }} />
                       </div>
                       <div>
@@ -4149,7 +4354,9 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                             fileName={adminNewAadharFile ? adminNewAadharFile.name : null}
                             isUploaded={!!prof?.aadhar_card}
                             onFileSelect={e => {
-                              if (e.target.files?.[0]) setAdminNewAadharFile(e.target.files[0]);
+                              if (e.target.files?.[0]) {
+                                compressImage(e.target.files[0]).then(setAdminNewAadharFile);
+                              }
                             }}
                             viewUrl={prof?.aadhar_card}
                           />
@@ -4170,7 +4377,9 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                             fileName={adminNewPanFile ? adminNewPanFile.name : null}
                             isUploaded={!!prof?.pan_card}
                             onFileSelect={e => {
-                              if (e.target.files?.[0]) setAdminNewPanFile(e.target.files[0]);
+                              if (e.target.files?.[0]) {
+                                compressImage(e.target.files[0]).then(setAdminNewPanFile);
+                              }
                             }}
                             viewUrl={prof?.pan_card}
                           />
@@ -4382,7 +4591,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px" }}>
 
         {/* Stat cards */}
-        <div className="stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 14, marginBottom: 24 }}>
+        <div className="adm-stat-grid stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 14, marginBottom: 24 }}>
           <StatCard label="Total Employees" value={String(registeredCount)} sub="Registered" icon={icons.user} color={T.accent} bg="#e8f0fc" />
           <StatCard label="Today Present" value={String(todayRecs.length)} sub={today} icon={icons.check} color={T.green} bg={T.greenBg} isLive={true} />
           <StatCard label="Full Day Today" value={String(fullDayToday)} sub="≥ 8 hours" icon={icons.clock} color={T.green} bg={T.greenBg} />
@@ -4392,7 +4601,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
         </div>
 
         {/* Tabs */}
-        <div style={{
+        <div className="adm-tab-container" style={{
           display: "flex", gap: 4, background: "#e4eaf3", borderRadius: 10,
           padding: 4, marginBottom: 20, width: "fit-content"
         }}>
@@ -4415,7 +4624,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
         </div>
 
         {/* Filters row */}
-        <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+        <div className="adm-filter-bar" style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
           <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
             <div style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }}>
               <Icon d={icons.eye} size={14} color={T.faint} />
@@ -4546,46 +4755,47 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                                 <div style={{ fontSize: 11, fontWeight: 800, color: T.accent, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
                                   📅 Day-wise Report for {r.name}
                                 </div>
-                                <table style={{ width: "100%", borderCollapse: "collapse", background: "white", borderRadius: 12, overflow: "hidden", boxShadow: `0 2px 8px ${T.accent}15` }}>
-                                  <thead>
-                                    <tr style={{ background: `${T.accent}15` }}>
-                                      {["Date", "Work Hours", "Break Time", "Status", "Tasks / Notes"].map(h => (
-                                        <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 10, fontWeight: 700, color: T.accent, textTransform: "uppercase", letterSpacing: 0.5 }}>{h}</th>
-                                      ))}
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {(r.dailyBreakdown || []).length === 0 ? (
-                                      <tr><td colSpan="5" style={{ padding: 20, textAlign: "center", color: T.muted, fontSize: 12 }}>No daily records found for this range.</td></tr>
-                                    ) : (
-                                      r.dailyBreakdown.map((day, i) => (
-                                        <tr key={day.date} style={{ borderTop: `1px solid ${T.border}`, background: i % 2 === 0 ? "white" : T.surface }}>
-                                          <td style={{ padding: "10px 16px", fontSize: 13, fontWeight: 700, color: T.ink }}>{day.date}</td>
-                                          <td style={{ padding: "10px 16px", fontSize: 13, fontWeight: 700, color: T.green }}>{formatHMS(day.work)}</td>
-                                          <td style={{ padding: "10px 16px", fontSize: 13, color: T.red }}>
-                                            <div style={{ fontWeight: 700 }}>{formatHMS(day.brk)}</div>
-                                            {day.breakLogs && day.breakLogs.length > 0 && (
-                                              <div style={{ marginTop: 4, fontSize: 10, color: T.muted }}>
-                                                {day.breakLogs.map((log, lIdx) => (
-                                                  <div key={lIdx} style={{ whiteSpace: "nowrap" }}>
-                                                    • {log.in} - {log.out} ({log.duration})
-                                                  </div>
-                                                ))}
-                                              </div>
-                                            )}
-                                          </td>
-                                          <td style={{ padding: "10px 16px" }}>
-                                            <Badge status={day.hasLog ? "Full Day" : "Absent"} />
-                                          </td>
-                                          <td style={{ padding: "10px 16px", fontSize: 12, color: T.ink2, maxWidth: 280, whiteSpace: "pre-wrap" }}>
-                                            {day.task || <span style={{ color: T.faint, fontStyle: "italic" }}>No notes</span>}
-                                          </td>
-                                        </tr>
-                                      ))
-                                    )}
-                                  </tbody>
-                                </table>
-                              </div>
+                                <div style={{ overflowX: "auto" }}>
+                                  <table style={{ width: "100%", borderCollapse: "collapse", background: "white", borderRadius: 12, overflow: "hidden", boxShadow: `0 2px 8px ${T.accent}15` }}>
+                                    <thead>
+                                      <tr style={{ background: `${T.accent}15` }}>
+                                        {["Date", "Work Hours", "Break Time", "Status", "Tasks / Notes"].map(h => (
+                                          <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 10, fontWeight: 700, color: T.accent, textTransform: "uppercase", letterSpacing: 0.5 }}>{h}</th>
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {(r.dailyBreakdown || []).length === 0 ? (
+                                        <tr><td colSpan="5" style={{ padding: 20, textAlign: "center", color: T.muted, fontSize: 12 }}>No daily records found for this range.</td></tr>
+                                      ) : (
+                                        r.dailyBreakdown.map((day, i) => (
+                                          <tr key={day.date} style={{ borderTop: `1px solid ${T.border}`, background: i % 2 === 0 ? "white" : T.surface }}>
+                                            <td style={{ padding: "10px 16px", fontSize: 13, fontWeight: 700, color: T.ink }}>{day.date}</td>
+                                            <td style={{ padding: "10px 16px", fontSize: 13, fontWeight: 700, color: T.green }}>{formatHMS(day.work)}</td>
+                                            <td style={{ padding: "10px 16px", fontSize: 13, color: T.red }}>
+                                              <div style={{ fontWeight: 700 }}>{formatHMS(day.brk)}</div>
+                                              {day.breakLogs && day.breakLogs.length > 0 && (
+                                                <div style={{ marginTop: 4, fontSize: 10, color: T.muted }}>
+                                                  {day.breakLogs.map((log, lIdx) => (
+                                                    <div key={lIdx} style={{ whiteSpace: "nowrap" }}>
+                                                      • {log.in} - {log.out} ({log.duration})
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              )}
+                                            </td>
+                                            <td style={{ padding: "10px 16px" }}>
+                                              <Badge status={day.hasLog ? "Full Day" : "Absent"} />
+                                            </td>
+                                            <td style={{ padding: "10px 16px", fontSize: 12, color: T.ink2, maxWidth: 280, whiteSpace: "pre-wrap" }}>
+                                              {day.task || <span style={{ color: T.faint, fontStyle: "italic" }}>No notes</span>}
+                                            </td>
+                                          </tr>
+                                        ))
+                                      )}
+                                    </tbody>
+                                  </table>
+                                </div>                              </div>
                             </td>
                           </tr>
                         )}
@@ -4850,9 +5060,9 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
 
         {/* Groups Tab */}
         {activeTab === "groups" && (
-          <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 24 }}>
+          <div className="chat-grid" style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 24 }}>
             {/* Left: Group List */}
-            <div style={{ background: T.white, borderRadius: 20, border: `1px solid ${T.border}`, overflow: "hidden" }}>
+            <div className="chat-sidebar" style={{ background: T.white, borderRadius: 20, border: `1px solid ${T.border}`, overflow: "hidden" }}>
               <div style={{ padding: 20, borderBottom: `1px solid ${T.border}`, background: T.surface }}>
                 <div style={{ fontSize: 15, fontWeight: 800, color: T.ink, marginBottom: 14 }}>Organization Groups</div>
                 <button onClick={() => {
@@ -4891,7 +5101,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
 
             {/* Right: Group Detail */}
             {selGroup ? (
-              <div style={{ background: T.white, borderRadius: 20, border: `1px solid ${T.border}`, padding: 24, display: "flex", flexDirection: "column", gap: 24 }}>
+              <div className="chat-sidebar" style={{ background: "white", borderRadius: 20, border: `1px solid ${T.border}`, padding: 10, display: "flex", flexDirection: "column", gap: 4 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
                     <h2 style={{ margin: "0 0 4px", fontSize: 24, fontWeight: 800 }}>{selGroup.name}</h2>
@@ -5146,7 +5356,7 @@ function ForgotPasswordPage({ onBack, onSendLink }) {
       <style>{LOGIN_STYLES}</style>
 
       {/* Left decorative panel */}
-      <div style={{
+      <div className="login-left-panel" style={{
         flex: "0 0 440px",
         background: "linear-gradient(160deg, #0b1f35 0%, #0d2b4e 50%, #0f3460 100%)",
         display: "flex", flexDirection: "column", justifyContent: "center",
@@ -5225,10 +5435,10 @@ function ForgotPasswordPage({ onBack, onSendLink }) {
       </div>
 
       {/* Right form panel */}
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 24px" }}>
+      <div className="login-right-panel" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 24px" }}>
         <div style={{ width: "100%", maxWidth: 420, animation: "fadeInUp 0.6s cubic-bezier(0.4,0,0.2,1) both" }}>
 
-          <div style={{
+          <div className="login-card" style={{
             background: "white", borderRadius: 24,
             border: "1px solid rgba(220,232,244,0.8)",
             padding: "44px 40px",
@@ -5387,7 +5597,7 @@ function ResetPasswordPage({ token, onReset }) {
       <style>{LOGIN_STYLES}</style>
 
       {/* Left decorative panel */}
-      <div style={{
+      <div className="login-left-panel" style={{
         flex: "0 0 440px",
         background: "linear-gradient(160deg, #0b1f35 0%, #0d2b4e 50%, #0f3460 100%)",
         display: "flex", flexDirection: "column", justifyContent: "center",
@@ -5462,10 +5672,10 @@ function ResetPasswordPage({ token, onReset }) {
       </div>
 
       {/* Right form panel */}
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 24px" }}>
+      <div className="login-right-panel" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 24px" }}>
         <div style={{ width: "100%", maxWidth: 420, animation: "fadeInUp 0.6s cubic-bezier(0.4,0,0.2,1) both" }}>
 
-          <div style={{
+          <div className="login-card" style={{
             background: "white", borderRadius: 24,
             border: "1px solid rgba(220,232,244,0.8)",
             padding: "44px 40px",
@@ -5669,19 +5879,9 @@ export default function App() {
           .then(r => r.json())
           .then(data => {
             const currentStart = data.server_start_time;
-            const savedStart   = localStorage.getItem("wt_server_start");
-            if (currentStart && savedStart && currentStart === savedStart) {
-              // Same server instance → session is valid, restore normally
-              setEmployee(saved.data);
-            } else {
-              // Different or missing start time → server was restarted
-              console.log("Server restart detected — clearing employee session.");
-              localStorage.removeItem("wt_user");
-              localStorage.removeItem("wt_session");
-              // Update to the new start time for future comparisons
-              if (currentStart) localStorage.setItem("wt_server_start", currentStart);
-              // Employee stays on login page (no setEmployee call)
-            }
+            if (currentStart) localStorage.setItem("wt_server_start", currentStart);
+            // Restore session regardless of server start time to prevent unexpected signouts
+            setEmployee(saved.data);
           })
           .catch(() => {
             // If health check fails (e.g. network error), restore the session

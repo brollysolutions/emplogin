@@ -17,8 +17,11 @@ import os
 import requests
 import json
 from django.core.management import call_command
-import threading
+import logging
+from .tasks import run_async
 from datetime import datetime as _dt
+
+logger = logging.getLogger(__name__)
 
 # Unique timestamp set once when this Django process starts.
 # A new server start produces a new value, allowing the frontend
@@ -37,45 +40,42 @@ def health_check(request):
         "server_start_time": SERVER_START_TIME,
     }, status=status.HTTP_200_OK)
 
+@api_view(['POST'])
+def send_test_reminder(request):
+    """
+    Triggers a single test reminder using standard SMTP.
+    """
+    email = request.data.get('email')
+    if not email:
+        return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    name = request.data.get('name', 'Test User')
+    subject = "Test Reminder: Brolly Attendance System"
+    body = (
+        f"Good Morning {name}!\n\n"
+        f"This is a TEST reminder from Brolly Solutions Attendance System using SMTP.\n\n"
+        f"The scheduled login time is 10:00 AM. Please make sure to log in on time.\n\n"
+        f"Regards,\n"
+        f"Brolly Solutions Team"
+    )
+
+    try:
+        # Using standard Django send_mail which uses SMTP credentials from .env
+        send_mail(
+            subject,
+            body,
+            settings.DEFAULT_FROM_EMAIL,
+            [email],
+            fail_silently=False,
+        )
+        return Response({"success": f"Test reminder sent to {email} via SMTP"})
+    except Exception as e:
+        logger.error(f"SMTP Test failed: {e}")
+        return Response({"error": f"SMTP Request failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 @api_view(['GET', 'POST'])
 def attendance_list(request):
     try:
-        # Proactive cleanup and reminders
-        def run_background_tasks():
-            try:
-                now = timezone.now()
-                # Check for aware vs naive if necessary, though timezone.now() is usually aware
-                
-                # 1. Trigger Auto-Logout (Every hour)
-                last_logout_file = os.path.join(settings.BASE_DIR, '.auto_logout_last_run')
-                run_logout = True
-                if os.path.exists(last_logout_file):
-                    with open(last_logout_file, 'r') as f:
-                        last_run_str = f.read().strip()
-                        if last_run_str:
-                            last_run = timezone.datetime.fromisoformat(last_run_str)
-                            if timezone.is_aware(now) and not timezone.is_aware(last_run):
-                                last_run = timezone.make_aware(last_run)
-                            if now - last_run < timedelta(hours=1):
-                                run_logout = False
-                
-                if run_logout:
-                    with open(last_logout_file, 'w') as f:
-                        f.write(now.isoformat())
-                    call_command('auto_logout')
-
-                # 2. Trigger Morning Reminders (Check if it's 9:30 AM window)
-                # The command itself handles Sunday and "already sent" logic
-                call_command('send_reminders')
-
-            except Exception as e:
-                print(f"Background task failed: {e}")
-
-        # Run in a separate thread
-        threading.Thread(target=run_background_tasks).start()
-
-
-
         if request.method == 'GET':
             attendances = Attendance.objects.all().order_by('-date', '-timestamp')
             data = []
@@ -92,6 +92,7 @@ def attendance_list(request):
                     "tasks": r.tasks,
                     "break_time": r.total_break_time,
                     "break_logs": r.break_logs,
+                    "offline_logs": r.offline_logs,
                     "status": r.status,
                     "last_status_change": r.last_status_change,
                     "last_active": r.last_active,
@@ -141,16 +142,15 @@ def attendance_list(request):
                                             f"Best Regards,\n"
                                             f"Brolly Solutions Team"
                                         )
-                                        script_url = settings.GOOGLE_SCRIPT_URL
-                                        if script_url:
-                                            try:
-                                                requests.post(script_url, data=json.dumps({
-                                                    "action": "sendEmail",
-                                                    "to": user_obj.email,
-                                                    "subject": subject,
-                                                    "body": body
-                                                }), headers={"Content-Type": "text/plain"}, timeout=10)
-                                            except: pass
+                                        try:
+                                            send_mail(
+                                                subject,
+                                                body,
+                                                settings.DEFAULT_FROM_EMAIL,
+                                                [user_obj.email],
+                                                fail_silently=False,
+                                            )
+                                        except: pass
 
                                     # Find user
                                     user = User.objects.filter(Q(username__iexact=employee_id) | Q(email__iexact=employee_id)).first()
@@ -159,19 +159,19 @@ def attendance_list(request):
                                         if profile: user = profile.user
                                     
                                     if user and user.email:
-                                        print(f"DEBUG: Sending 8-hour completion email to {user.email}")
+                                        logger.info(f"Submitting 8-hour completion email task for {user.email}")
                                         instance.eight_hour_notified = True
                                         def send_completion_email_with_log(user_obj, emp_name):
                                             try:
                                                 send_completion_email(user_obj, emp_name)
-                                                print(f"DEBUG: 8-hour email sent successfully to {user_obj.email}")
+                                                logger.info(f"8-hour email sent successfully to {user_obj.email}")
                                             except Exception as e:
-                                                print(f"ERROR: Failed to send 8-hour email: {e}")
-                                        threading.Thread(target=send_completion_email_with_log, args=(user, instance.name)).start()
+                                                logger.error(f"Failed to send 8-hour email: {e}")
+                                        run_async(send_completion_email_with_log, user, instance.name)
                                     else:
-                                        print(f"DEBUG: User or email not found for ID {employee_id}, cannot send 8-hour email")
+                                        logger.debug(f"User or email not found for ID {employee_id}, cannot send 8-hour email")
                         except Exception as e:
-                            print(f"DEBUG: 8-hour check failed for {employee_id}: {e}")
+                            logger.error(f"8-hour check failed for {employee_id}: {e}")
 
                 instance.save()
                 return Response({"message": "Record updated"}, status=status.HTTP_200_OK)
@@ -197,9 +197,8 @@ def attendance_list(request):
                 new_record.save()
                 return Response({"message": "Record saved"}, status=status.HTTP_201_CREATED)
     except Exception as e:
-        import traceback
-        print(f"ERROR in attendance_list: {str(e)}")
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        logger.error(f"ERROR in attendance_list: {str(e)}", exc_info=True)
+        return Response({"error": "An internal server error occurred."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['POST'])
@@ -221,8 +220,8 @@ def request_password_reset(request):
             if not target_email:
                 return Response({"error": f"Account '{email}' found, but it has no email address associated with it."}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            import traceback
-            return Response({"error": f"Database error: {str(e)}", "traceback": traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.error(f"Database error in request_password_reset: {str(e)}", exc_info=True)
+            return Response({"error": "A database error occurred."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         token = str(uuid.uuid4())
         PasswordResetToken.objects.create(email=target_email, username=user.username, token=token)
@@ -279,12 +278,12 @@ def request_password_reset(request):
                 return Response({"error": f"Script returned: {gs_response.text}"}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
-            print(f"ERROR calling Google Script: {str(e)}")
-            return Response({"error": f"Failed to call email script: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+            logger.error(f"ERROR calling Google Script in request_password_reset: {str(e)}", exc_info=True)
+            return Response({"error": "Failed to send reset email via external service."}, status=status.HTTP_502_BAD_GATEWAY)
 
     except Exception as e:
-        import traceback
-        return Response({"error": f"System Error: {str(e)}", "traceback": traceback.format_exc()}, status=status.HTTP_400_BAD_REQUEST)
+        logger.error(f"System Error in request_password_reset: {str(e)}", exc_info=True)
+        return Response({"error": "A system error occurred. Please try again later."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 def reset_password(request):
@@ -346,36 +345,45 @@ def reset_password(request):
 
 @api_view(['POST'])
 def sync_users(request):
-    users_data = request.data.get('users', [])
+    users_data = request.data.get('users')
+    if not isinstance(users_data, list):
+        return Response({"error": "Invalid payload format. Expected a list of users."}, status=status.HTTP_400_BAD_REQUEST)
+
     created_count = 0
     updated_count = 0
     
     for user_item in users_data:
+        if not isinstance(user_item, dict):
+            continue
+
         # Prioritize email field if it exists, otherwise construct one
-        email = user_item.get('email')
         username = user_item.get('username') or user_item.get('id')
+        email = user_item.get('email') or (f"{username}@example.com" if username else None)
         password = user_item.get('password')
         
         if not username: continue
-        if not email: email = f"{username}@example.com"
         
-        user, created = User.objects.get_or_create(username=username)
-        if created or not user.email:
-            user.email = email
-            
-        # Ensure Profile exists
-        profile, p_created = Profile.objects.get_or_create(user=user)
-        if p_created or not profile.employee_id:
-            profile.employee_id = username
-        profile.save()
-            
-        # Only set password on creation to avoid overwriting current passwords
-        if created and password:
-            user.set_password(password)
-            created_count += 1
-        else:
-            updated_count += 1
-        user.save()
+        try:
+            user, created = User.objects.get_or_create(username=username)
+            if created or not user.email:
+                user.email = email
+                
+            # Ensure Profile exists
+            profile, p_created = Profile.objects.get_or_create(user=user)
+            if p_created or not profile.employee_id:
+                profile.employee_id = username
+            profile.save()
+                
+            # Only set password on creation to avoid overwriting current passwords
+            if created and password:
+                user.set_password(password)
+                created_count += 1
+            else:
+                updated_count += 1
+            user.save()
+        except Exception as e:
+            logger.error(f"Failed to sync user {username}: {e}")
+            continue
             
     return Response({
         "message": f"Sync complete. Created {created_count}, Updated {updated_count} users.",
@@ -435,6 +443,28 @@ def leave_request_list(request):
 
     elif request.method == 'POST':
         # Employee submitting a request
+        employee_id = request.data.get('employee_id')
+        start_date = request.data.get('start_date')
+        end_date = request.data.get('end_date')
+
+        if not employee_id or not start_date or not end_date:
+            return Response({"error": "Missing required fields"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check for overlaps with existing Pending or Approved requests
+        # Logic: (StartA <= EndB) and (EndA >= StartB)
+        overlapping = LeaveRequest.objects.filter(
+            employee_id=employee_id,
+            status__in=['Pending', 'Approved'],
+            start_date__lte=end_date,
+            end_date__gte=start_date
+        ).exists()
+
+        if overlapping:
+            return Response(
+                {"error": "You already have a pending or approved request overlapping with these dates."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         serializer = LeaveRequestSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -471,7 +501,7 @@ def approve_leave(request, pk):
                         user = User.objects.filter(username__iexact=leave.employee_name).first()
 
                     if user:
-                        # User exists but profile is missing — create profile
+                        # User exists but profile is missing — creaete profile
                         profile, _ = Profile.objects.get_or_create(user=user)
                         profile.employee_id = leave.employee_id
                         profile.save()
@@ -493,14 +523,17 @@ def approve_leave(request, pk):
                         )
                         print(f"INFO: Created User '{leave.employee_id}' and Profile with 16 default leaves.")
 
-                # Deduct leave days from balance
-                leave_days = (leave.end_date - leave.start_date).days + 1
+                # Deduct leave days from balance (EXCLUDING SUNDAYS)
+                leave_days = sum(
+                    1 for i in range((leave.end_date - leave.start_date).days + 1)
+                    if (leave.start_date + timedelta(days=i)).weekday() != 6  # 6 = Sunday
+                )
                 profile.total_leaves -= leave_days
                 profile.save()
 
             except Exception as e:
                 # Log error but still approve the leave — never block admin action
-                print(f"WARNING: Profile processing error for {leave.employee_id}: {str(e)}. Approving without balance update.")
+                logger.error(f"Profile processing error for {leave.employee_id} in approve_leave: {str(e)}", exc_info=True)
 
 
     leave.status = status_val
@@ -540,27 +573,28 @@ def employee_profile(request, employee_id):
                     first_name=first_name,
                     last_name=last_name
                 )
-                print(f"INFO: Auto-created User '{employee_id}' from profile request")
+                logger.info(f"Auto-created User '{employee_id}' from profile request")
             except Exception as e:
                 # Fallback if username already exists in another case, try to fetch it
                 user = User.objects.filter(username__iexact=employee_id).first()
                 if not user:
-                    return Response({"error": f"Failed to create user: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                    logger.error(f"Failed to create user {employee_id}: {str(e)}", exc_info=True)
+                    return Response({"error": "Failed to initialize employee account."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                     
         # Now get or create the profile for the user
         profile, created = Profile.objects.get_or_create(user=user)
         try:
             profile.employee_id = employee_id
             profile.save()
-            print(f"INFO: Linked profile for user '{user.username}' with employee_id '{employee_id}'")
+            logger.info(f"Linked profile for user '{user.username}' with employee_id '{employee_id}'")
         except Exception as e:
-            print(f"ERROR: Failed to save profile with employee_id '{employee_id}': {e}")
+            logger.error(f"Failed to save profile with employee_id '{employee_id}': {e}", exc_info=True)
             # If a unique constraint failure occurred because another user has this ID, resolve safely
             existing_profile = Profile.objects.filter(employee_id__iexact=employee_id).first()
             if existing_profile:
                 profile = existing_profile
             else:
-                return Response({"error": f"Profile linking failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response({"error": "Profile linking failed due to a system conflict."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     if request.method == 'GET':
         serializer = ProfileSerializer(profile, context={'request': request})
@@ -726,24 +760,46 @@ def group_membership(request, pk):
         return Response({"error": f"Failed to update membership: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+def format_seconds_to_hms(secs):
+    h = int(secs // 3600)
+    m = int((secs % 3600) // 60)
+    s = int(secs % 60)
+    return f"{h:02d}:{m:02d}:{s:02d}"
+
 @api_view(['POST'])
 def heartbeat(request):
     employee_id = request.data.get('employee_id')
     if not employee_id:
         return Response({"error": "Missing employee_id"}, status=status.HTTP_400_BAD_REQUEST)
     
-    # Try current date first
     date = request.data.get('date')
-    updated = 0
-    if date:
-        updated = Attendance.objects.filter(employee_id=employee_id, date=date).update(last_active=timezone.now())
+    now = timezone.now()
     
-    if not updated:
-        # Update the absolute latest record for this user
-        latest = Attendance.objects.filter(employee_id=employee_id).order_by('-date', '-timestamp').first()
-        if latest:
-            latest.last_active = timezone.now()
-            latest.save()
+    # Fetch the record to check for gaps
+    if date:
+        record = Attendance.objects.filter(employee_id=employee_id, date=date).first()
+    else:
+        record = Attendance.objects.filter(employee_id=employee_id).order_by('-date', '-timestamp').first()
+
+    if record:
+        # Check for offline gaps (e.g., if last_active was more than 120s ago)
+        # Threshold 120s = 4 missed heartbeats (30s each)
+        if record.last_active:
+            gap = (now - record.last_active).total_seconds()
+            if gap > 120:
+                try:
+                    logs = json.loads(record.offline_logs or "[]")
+                    logs.append({
+                        "start": timezone.localtime(record.last_active).strftime('%I:%M:%S %p'),
+                        "end": timezone.localtime(now).strftime('%I:%M:%S %p'),
+                        "duration": format_seconds_to_hms(gap)
+                    })
+                    record.offline_logs = json.dumps(logs)
+                except Exception as e:
+                    logger.error(f"Failed to update offline logs: {e}")
+
+        record.last_active = now
+        record.save()
             
     return Response({"success": True, "server_start_time": SERVER_START_TIME})
 

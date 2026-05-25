@@ -25,18 +25,23 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-v6g_!z5vxg%&09^e8q+jyejtog2t*$@h%cdyc*3=au&7aek@=t"
+SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-v6g_!z5vxg%&09^e8q+jyejtog2t*$@h%cdyc*3=au&7aek@=t")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
 
 ALLOWED_HOSTS = ["*","brollysolutions.in"]
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOWED_ORIGINS = [
     "https://brollysolutions.in",
-    "http://localhost:3003",  # TEST frontend
-    "http://localhost:8003",  # TEST backend
+    "http://localhost:5173",    # Vite local dev server
+    "http://127.0.0.1:5173",    # Vite local dev server IP
+    "http://localhost:3000",    # React local dev server
+    "http://127.0.0.1:3000",    # React local dev server IP
+    "http://localhost:3003",    # TEST frontend
+    "http://localhost:8003",    # TEST backend
     "http://localhost:3001",    # PRODUCTION frontend
     "http://localhost:8001",    # PRODUCTION backend
 ]# Application definition
@@ -93,6 +98,9 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
+        "OPTIONS": {
+            "timeout": 20,
+        }
     }
 }
 

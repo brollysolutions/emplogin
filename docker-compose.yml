@@ -34,6 +34,11 @@ services:
       - ./backend/db.sqlite3:/app/db.sqlite3
     ports:
       - "8001:8001"
+    command: >
+      sh -c "python manage.py collectstatic --noinput &&
+             python manage.py makemigrations &&
+             python manage.py migrate &&
+             gunicorn --bind 0.0.0.0:8001 --workers 3 --threads 2 core.wsgi:application"
     restart: always
 
   frontend:

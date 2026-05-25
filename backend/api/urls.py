@@ -21,4 +21,5 @@ urlpatterns = [
     path('groups/<int:pk>/membership/', views.group_membership, name='group_membership'),
     path('heartbeat/', views.heartbeat, name='heartbeat'),
     path('chat-summaries/', views.chat_summaries, name='chat_summaries'),
+    path('test-reminder/', views.send_test_reminder, name='test_reminder'),
 ]
