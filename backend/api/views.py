@@ -73,10 +73,47 @@ def send_test_reminder(request):
         logger.error(f"SMTP Test failed: {e}")
         return Response({"error": f"SMTP Request failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+def _trigger_auto_logout_if_needed():
+    """
+    Checks if the auto_logout command has been run today.
+    If not, runs it asynchronously in the background using the managed thread pool.
+    """
+    last_run_file = os.path.join(settings.BASE_DIR, '.auto_logout_last_run')
+    today_str = timezone.localtime(timezone.now()).strftime('%Y-%m-%d')
+    
+    should_run = True
+    if os.path.exists(last_run_file):
+        try:
+            with open(last_run_file, 'r') as f:
+                last_run_content = f.read().strip()
+                if last_run_content.startswith(today_str):
+                    should_run = False
+        except Exception as e:
+            logger.error(f"Failed to read auto logout last run file: {e}")
+            
+    if should_run:
+        try:
+            with open(last_run_file, 'w') as f:
+                f.write(timezone.now().isoformat())
+        except Exception as e:
+            logger.error(f"Failed to write auto logout last run file: {e}")
+            
+        def run_command_bg():
+            try:
+                logger.info("Starting background auto_logout task.")
+                call_command('auto_logout')
+                logger.info("Background auto_logout task completed.")
+            except Exception as e:
+                logger.error(f"Background auto_logout task failed: {e}", exc_info=True)
+                
+        run_async(run_command_bg)
+
+
 @api_view(['GET', 'POST'])
 def attendance_list(request):
     try:
         if request.method == 'GET':
+            _trigger_auto_logout_if_needed()
             attendances = Attendance.objects.all().order_by('-date', '-timestamp')
             data = []
             for r in attendances:
