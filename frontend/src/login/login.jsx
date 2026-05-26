@@ -3601,9 +3601,9 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
 
   // Pre-process records to include live data
   const processedRecords = records.map(r => {
-    // 1. Check Heartbeat Staleness (If last_active is older than 90 seconds, they are offline)
+    // 1. Check Heartbeat Staleness (If last_active is older than 5 minutes, they are offline)
     const lastActive = r.last_active ? new Date(r.last_active).getTime() : 0;
-    const isHeartbeatStale = (now - lastActive) > 90000; // 90 seconds threshold (3 heartbeats)
+    const isHeartbeatStale = (now - lastActive) > 300000; // 300,000 ms threshold (10 heartbeats)
 
     const hasWfh = leaveRequests.some(l => {
       if (l.status !== "Approved" || l.leave_type !== "Work From Home") return false;
@@ -4580,16 +4580,15 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
               subStatus={(() => {
                 const latestRec = records.filter(r => r.id === chatWith.id).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
                 const lastActive = latestRec?.last_active ? new Date(latestRec.last_active) : null;
-                const isOnline = lastActive && (new Date() - lastActive < 120000);
+                const isOnline = lastActive && (new Date() - lastActive < 300000);
                 return isOnline ? "Online Now" : (lastActive ? `Last seen: ${lastActive.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}` : "Offline");
-              })()}
-            />
-          </div>
-        </div>
-      )}
+                })()}
+                />
+                </div>
+                </div>
+                )}
 
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px" }}>
-
+                <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px" }}>
         {/* Stat cards */}
         <div className="adm-stat-grid stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 14, marginBottom: 24 }}>
           <StatCard label="Total Employees" value={String(registeredCount)} sub="Registered" icon={icons.user} color={T.accent} bg="#e8f0fc" />
@@ -5233,11 +5232,10 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                 })[0];
                  const lastActiveRaw = latestRec?.last_active;
                  const lastActive = lastActiveRaw ? new Date(lastActiveRaw) : null;
-                 const isOnline = lastActive && !isNaN(lastActive.getTime()) && (new Date() - lastActive < 120000); 
+                 const isOnline = lastActive && !isNaN(lastActive.getTime()) && (new Date() - lastActive < 300000);
                  const unread = unreadMap[String(e.id).toLowerCase()] || 0;
-                return (
-              <div key={e.id} className="premium-card" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20, transition: "transform 0.2s", borderTop: isOnline ? `4px solid ${T.green}` : "none" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 16, cursor: "pointer" }}
+                 return (
+                 <div key={e.id} className="premium-card" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20, transition: "transform 0.2s", borderTop: isOnline ? `4px solid ${T.green}` : "none" }}>                <div style={{ display: "flex", alignItems: "center", gap: 16, cursor: "pointer" }}
                   onClick={() => setSelectedEmployeeProfile({ employee: e, profile: profiles.find(p => String(p.employee_id).toLowerCase() === String(e.id).toLowerCase()) || { employee_id: e.id, total_leaves: 16 } })}
                   title="Click to view details">
                   <div style={{ position: "relative" }}>

@@ -819,11 +819,11 @@ def heartbeat(request):
         record = Attendance.objects.filter(employee_id=employee_id).order_by('-date', '-timestamp').first()
 
     if record:
-        # Check for offline gaps (e.g., if last_active was more than 120s ago)
-        # Threshold 120s = 4 missed heartbeats (30s each)
+        # Check for offline gaps (e.g., if last_active was more than 300s ago)
+        # Threshold 300s = 10 missed heartbeats (30s each)
         if record.last_active:
             gap = (now - record.last_active).total_seconds()
-            if gap > 120:
+            if gap > 300:
                 try:
                     logs = json.loads(record.offline_logs or "[]")
                     logs.append({
