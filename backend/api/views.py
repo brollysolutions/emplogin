@@ -147,18 +147,45 @@ def attendance_list(request):
             instance = Attendance.objects.filter(employee_id=employee_id, date=date).first()
             
             if instance:
-                # Update fields
-                instance.login_time = request.data.get('loginT', instance.login_time)
-                instance.logout_time = request.data.get('logoutT', instance.logout_time)
-                instance.hours = request.data.get('hours', instance.hours)
-                instance.total_break_time = request.data.get('breakTime', instance.total_break_time)
-                instance.break_logs = request.data.get('breakLogs', instance.break_logs)
-                instance.extra_hours = request.data.get('extraHours', instance.extra_hours)
-                instance.tasks = request.data.get('tasks', instance.tasks)
-                instance.status = request.data.get('status', instance.status)
-                instance.last_status_change = request.data.get('lastStatusChange', instance.last_status_change)
-                if 'screenshot' in request.FILES:
-                    instance.screenshot = request.FILES['screenshot']
+                # Intelligent task accumulation/appending logic:
+                current_tasks = instance.tasks.strip() if instance.tasks else ""
+                incoming_tasks = request.data.get('tasks', '').strip()
+                
+                if incoming_tasks and incoming_tasks != "—":
+                    if not current_tasks or current_tasks == "—":
+                        instance.tasks = incoming_tasks
+                    elif incoming_tasks in current_tasks:
+                        # Incoming is already completely contained in DB. Do nothing.
+                        pass
+                    elif current_tasks in incoming_tasks:
+                        # Incoming is an expanded version of what we have. Overwrite.
+                        instance.tasks = incoming_tasks
+                    else:
+                        # Both are distinct. Append them with a new line.
+                        instance.tasks = f"{current_tasks}\n{incoming_tasks}"
+
+                # Safeguard: If the existing record is already in a completed state,
+                # do not let a stale/late client request set it back to an active state
+                # or clear the logout time.
+                completed_statuses = ['Complete (Auto)']
+                new_status = request.data.get('status')
+                
+                if instance.status in completed_statuses and new_status in ['Active', 'On Break', 'working', 'break']:
+                    logger.warning(f"Prevented stale update from resetting completed record {instance.id} (Status: {instance.status}) for employee {employee_id} on {date}")
+                    if 'screenshot' in request.FILES:
+                        instance.screenshot = request.FILES['screenshot']
+                else:
+                    # Update fields normally
+                    instance.login_time = request.data.get('loginT', instance.login_time)
+                    instance.logout_time = request.data.get('logoutT', instance.logout_time)
+                    instance.hours = request.data.get('hours', instance.hours)
+                    instance.total_break_time = request.data.get('breakTime', instance.total_break_time)
+                    instance.break_logs = request.data.get('breakLogs', instance.break_logs)
+                    instance.extra_hours = request.data.get('extraHours', instance.extra_hours)
+                    instance.status = request.data.get('status', instance.status)
+                    instance.last_status_change = request.data.get('lastStatusChange', instance.last_status_change)
+                    if 'screenshot' in request.FILES:
+                        instance.screenshot = request.FILES['screenshot']
                 
                 # Check for 8-hour completion
                 if not instance.eight_hour_notified:
@@ -507,6 +534,33 @@ def leave_request_list(request):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET', 'PATCH', 'DELETE'])
+def leave_request_detail(request, pk):
+    try:
+        leave = LeaveRequest.objects.get(pk=pk)
+    except LeaveRequest.DoesNotExist:
+        return Response({"error": "Leave request not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        serializer = LeaveRequestSerializer(leave)
+        return Response(serializer.data)
+
+    elif request.method == 'PATCH':
+        if leave.status != 'Pending':
+            return Response({"error": "Only pending requests can be modified"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = LeaveRequestSerializer(leave, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'DELETE':
+        if leave.status != 'Pending':
+            return Response({"error": "Only pending requests can be deleted"}, status=status.HTTP_400_BAD_REQUEST)
+        leave.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 @api_view(['PATCH'])
 def approve_leave(request, pk):

@@ -4,25 +4,26 @@ import logo from "../assets/brolly_logo.png";
 
 /* ── Design tokens ─────────────────────────────────────────── */
 const T = {
-  ink: "#0b1f35",
-  ink2: "#2c4a6e",
-  muted: "#6b82a0",
-  faint: "#a8bcd4",
-  border: "#dce8f4",
-  surface: "#f5f8fc",
-  white: "#ffffff",
-  accent: "#1560bd",
-  accent2: "#0ea5e9",
-  green: "#0d9e6e",
-  greenBg: "#e8fdf5",
-  red: "#d93b3b",
-  redBg: "#fef0f0",
-  amber: "#b45309",
-  amberBg: "#fffbeb",
-  purple: "#6d28d9",
-  purpleBg: "#f3f0ff",
+  ink: "#1e1b4b",
+  ink2: "#312e81",
+  muted: "#6366f1",
+  faint: "#c7d2fe",
+  border: "rgba(99, 102, 241, 0.15)",
+  surface: "rgba(248, 250, 252, 0.9)",
+  white: "rgba(255, 255, 255, 0.95)",
+  glass: "rgba(255, 255, 255, 0.8)",
+  accent: "#4f46e5",
+  accent2: "#818cf8",
+  green: "#10b981",
+  greenBg: "rgba(16, 185, 129, 0.1)",
+  red: "#ef4444",
+  redBg: "rgba(239, 68, 68, 0.1)",
+  amber: "#f59e0b",
+  amberBg: "rgba(245, 158, 11, 0.1)",
+  purple: "#6366f1",
+  purpleBg: "rgba(99, 102, 241, 0.1)",
   orange: "#f97316",
-  orangeBg: "#fff7ed",
+  orangeBg: "rgba(249, 115, 22, 0.1)",
 };
 
 /* ── Helpers ───────────────────────────────────────────────── */
@@ -459,7 +460,7 @@ const icons = {
    LOGIN PAGE – Premium Animated Redesign
 ══════════════════════════════════════════════════════════════ */
 const LOGIN_STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@1,600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Roboto+Slab:wght@100..900&family=Playfair+Display:ital,wght@1,600&display=swap');
 
   @keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }
   @keyframes spin { to { transform: rotate(360deg) } }
@@ -906,29 +907,53 @@ function LoginPage({ onLogin, error, isSyncing, onForgot }) {
   );
 }
 
-/* ══════════════════════════════════════════════════════════════
-   STAT CARD
-══════════════════════════════════════════════════════════════ */
-function StatCard({ label, value, sub, icon, color, bg, isLive }) {
+/* ── Stat Card ─────────────────────────────────────────── */
+function StatCard({ label, value, sub, icon, color, bg, isLive, index = 0 }) {
   return (
-    <div className="stat-card" style={{ background: T.white, padding: "18px 20px", borderRadius: 20, border: `1px solid ${T.border}`, display: "flex", flexDirection: "column", gap: 12, position: "relative", overflow: "hidden", transition: "all 0.3s ease" }}>
+    <div className="stat-card" style={{
+      background: "rgba(255, 255, 255, 0.85)",
+      backdropFilter: "blur(10px)",
+      WebkitBackdropFilter: "blur(10px)",
+      padding: "24px",
+      borderRadius: 24,
+      border: `1px solid ${T.border}`,
+      display: "flex",
+      flexDirection: "column",
+      gap: 16,
+      position: "relative",
+      overflow: "hidden",
+      transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+      boxShadow: "0 10px 30px -5px rgba(0, 0, 0, 0.04)",
+      animation: `slideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) ${index * 0.1}s backwards`
+    }}
+    onMouseOver={e => {
+      e.currentTarget.style.transform = "translateY(-6px)";
+      e.currentTarget.style.boxShadow = "0 20px 40px -10px rgba(0, 0, 0, 0.08)";
+    }}
+    onMouseOut={e => {
+      e.currentTarget.style.transform = "translateY(0)";
+      e.currentTarget.style.boxShadow = "0 10px 30px -5px rgba(0, 0, 0, 0.04)";
+    }}>
       {isLive && (
-        <div style={{ position: "absolute", top: 12, right: 12, display: "flex", alignItems: "center", gap: 4 }}>
-          <div style={{ width: 6, height: 6, borderRadius: "50%", background: T.green, animation: "pulse 1.5s infinite", boxShadow: `0 0 8px ${T.green}` }} />
-          <span style={{ fontSize: 9, fontWeight: 800, color: T.green, textTransform: "uppercase", letterSpacing: "0.5px" }}>Live</span>
+        <div style={{ position: "absolute", top: 16, right: 16, display: "flex", alignItems: "center", gap: 6 }}>
+          <div className="pulse-soft" style={{ width: 8, height: 8, borderRadius: "50%", background: T.green, boxShadow: `0 0 12px ${T.green}40` }} />
+          <span style={{ fontSize: 10, fontWeight: 900, color: T.green, textTransform: "uppercase", letterSpacing: "1px", fontFamily: "'Outfit', sans-serif" }}>Live</span>
         </div>
       )}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.6, color: T.muted, textTransform: "uppercase" }}>{label}</span>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+        <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: T.muted, textTransform: "uppercase", fontFamily: "'Outfit', sans-serif" }}>{label}</span>
         <div style={{
-          width: 34, height: 34, borderRadius: 9, background: bg,
-          display: "flex", alignItems: "center", justifyContent: "center"
+          width: 44, height: 44, borderRadius: 14, background: bg,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: `0 8px 16px ${color}10`
         }}>
-          <Icon d={icon} size={16} color={color} />
+          <Icon d={icon} size={20} color={color} />
         </div>
       </div>
-      <div className="stat-value" style={{ fontSize: 22, fontWeight: 700, color: T.ink, marginBottom: 3, fontVariantNumeric: "tabular-nums" }}>{value}</div>
-      {sub && <div style={{ fontSize: 12, color: T.muted }}>{sub}</div>}
+      <div>
+        <div className="stat-value" style={{ fontSize: 28, fontWeight: 800, color: T.ink, marginBottom: 4, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.5px", fontFamily: "'Outfit', sans-serif" }}>{value}</div>
+        {sub && <div style={{ fontSize: 12, color: T.muted, fontWeight: 600, opacity: 0.8 }}>{sub}</div>}
+      </div>
     </div>
   );
 }
@@ -942,17 +967,17 @@ function Badge({ status }) {
     "Half Day": { bg: "#fffbeb", color: "#92400e", dot: "#f59e0b" },
     "Incomplete Workday(IWD)": { bg: "#fff7ed", color: "#c2410c", dot: "#f97316" },
     "Incomplete": { bg: "#fef2f2", color: "#991b1b", dot: "#ef4444" },
-    "Active": { bg: "#f0fdf4", color: "#166534", dot: "#22c55e", pulse: true },
-    "Leave": { bg: "#f9fafb", color: "#374151", dot: "#9ca3af" },
-    "Viewed": { bg: "#eef2ff", color: "#3730a3", dot: "#6366f1" },
-    "Completed": { bg: "#f0fdf4", color: "#166534", dot: "#22c55e" },
-    "Assigned": { bg: "#fff7ed", color: "#9a3412", dot: "#f97316" },
-    "Approved": { bg: "#f0fdf4", color: "#166534", dot: "#22c55e" },
-    "Rejected": { bg: "#fef2f2", color: "#991b1b", dot: "#ef4444" },
-    "Pending": { bg: "#fffbeb", color: "#92400e", dot: "#f59e0b" },
-    "On Break": { bg: "#fff1f1", color: "#d93b3b", dot: "#d93b3b", pulse: true },
-    "Offline": { bg: "#f3f4f6", color: "#6b7280", dot: "#9ca3af" },
-    "Work From Home": { bg: "#e0f2fe", color: "#0369a1", dot: "#0ea5e9" },
+    "Active": { bg: "rgba(16, 185, 129, 0.08)", color: "#065f46", dot: "#10b981", pulse: true },
+    "Leave": { bg: "rgba(99, 102, 241, 0.08)", color: "#312e81", dot: "#6366f1" },
+    "Viewed": { bg: "rgba(79, 70, 229, 0.08)", color: "#1e1b4b", dot: "#4f46e5" },
+    "Completed": { bg: "rgba(16, 185, 129, 0.08)", color: "#065f46", dot: "#10b981" },
+    "Assigned": { bg: "rgba(249, 115, 22, 0.08)", color: "#9a3412", dot: "#f97316" },
+    "Approved": { bg: "rgba(16, 185, 129, 0.08)", color: "#065f46", dot: "#10b981" },
+    "Rejected": { bg: "rgba(239, 68, 68, 0.08)", color: "#991b1b", dot: "#ef4444" },
+    "Pending": { bg: "rgba(245, 158, 11, 0.08)", color: "#92400e", dot: "#f59e0b" },
+    "On Break": { bg: "rgba(239, 68, 68, 0.08)", color: "#d93b3b", dot: "#d93b3b", pulse: true },
+    "Offline": { bg: "rgba(100, 116, 139, 0.08)", color: "#475569", dot: "#94a3b8" },
+    "Work From Home": { bg: "rgba(14, 165, 233, 0.08)", color: "#0369a1", dot: "#0ea5e9" },
     "WFH": { bg: "#e0f2fe", color: "#0369a1", dot: "#0ea5e9" },
   };
   const s = map[status] || map["Incomplete"];
@@ -1086,6 +1111,19 @@ function Dashboard({ employee, onSignOut, showToast }) {
   const [chatOpen, setChatOpen] = useState(false);
   const [leaveData, setLeaveData] = useState({ start: "", end: "", reason: "" });
   const [requestType, setRequestType] = useState("Leave");
+  const [editingLeave, setEditingLeave] = useState(null);
+
+  const handleEditLeave = (leave) => {
+    setEditingLeave(leave);
+    setLeaveData({
+      start: leave.start_date,
+      end: leave.end_date,
+      reason: leave.reason
+    });
+    setRequestType(leave.leave_type);
+    setTab("leaves"); // Switch to leaves tab to show the form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
 
   // Polling for status sync across devices
@@ -1120,6 +1158,11 @@ function Dashboard({ employee, onSignOut, showToast }) {
           const todayRec = myHistory.find(r => r.date === today);
 
           if (todayRec) {
+            // Restore tasks if available on the server and different (only on initial load or if local input is empty)
+            if (todayRec.tasks && todayRec.tasks !== "—" && (isInitial || !taskInput) && todayRec.tasks !== taskInput) {
+              setTask(todayRec.tasks);
+            }
+
             const nowTime = new Date().getTime();
             const lastActive = todayRec.last_active ? new Date(todayRec.last_active).getTime() : 0;
             const isStale = lastActive > 0 && (nowTime - lastActive) > 90000; // 90 seconds threshold (3 heartbeats)
@@ -1260,9 +1303,14 @@ function Dashboard({ employee, onSignOut, showToast }) {
       _showToast("Please fill all fields", "amber");
       return;
     }
+    
+    const isEditing = !!editingLeave;
+    const url = isEditing ? `${LEAVES_URL}${editingLeave.id}/` : LEAVES_URL;
+    const method = isEditing ? "PATCH" : "POST";
+
     try {
-      const resp = await fetch(LEAVES_URL, {
-        method: "POST",
+      const resp = await fetch(url, {
+        method: method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           employee_id: employee.id,
@@ -1274,13 +1322,26 @@ function Dashboard({ employee, onSignOut, showToast }) {
         })
       });
       if (resp.ok) {
-        _showToast(requestType === "Leave" ? "Leave request submitted!" : "Work From Home request submitted!", "success");
+        _showToast(isEditing ? "Request updated!" : (requestType === "Leave" ? "Leave request submitted!" : "Work From Home request submitted!"), "success");
         setLeaveData({ start: "", end: "", reason: "" });
-        setShowLeaveForm(false);
+        setEditingLeave(null);
         fetchLeaves();
       } else {
         const errorData = await resp.json().catch(() => ({}));
         _showToast(errorData.error || "Submission failed", "error");
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const handleDeleteLeave = async (leaveId) => {
+    if (!confirm("Are you sure you want to cancel this pending request?")) return;
+    try {
+      const resp = await fetch(`${LEAVES_URL}${leaveId}/`, { method: "DELETE" });
+      if (resp.ok) {
+        _showToast("Request cancelled", "success");
+        fetchLeaves();
+      } else {
+        _showToast("Failed to delete request", "error");
       }
     } catch (e) { console.error(e); }
   };
@@ -1334,6 +1395,83 @@ function Dashboard({ employee, onSignOut, showToast }) {
   }, [totalWorkSeconds, totalBreakSeconds, sessionStartTime, breakStartTime, loginTime, logoutTime, status, taskInput]);
 
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
+
+  // Midnight rollover check: if active session belongs to a previous day, auto-logout at midnight
+  useEffect(() => {
+    if (!loginTime || (status !== "working" && status !== "break")) return;
+
+    const todayStr = fmtDate(now);
+    const loginStr = fmtDate(loginTime);
+
+    if (todayStr !== loginStr) {
+      console.log("Midnight rollover detected! Auto-saving previous day's session...");
+      
+      const endOfPrevDay = new Date(loginTime);
+      endOfPrevDay.setHours(23, 59, 59, 999);
+
+      let finalWork = totalWorkSeconds;
+      let finalBreak = totalBreakSeconds;
+
+      if (status === "working" && sessionStartTime) {
+        const timeToMidnight = Math.max(0, Math.floor((endOfPrevDay - sessionStartTime) / 1000));
+        finalWork += timeToMidnight;
+      } else if (status === "break" && breakStartTime) {
+        const timeToMidnight = Math.max(0, Math.floor((endOfPrevDay - breakStartTime) / 1000));
+        finalBreak += timeToMidnight;
+      }
+
+      const hrs = secondsToHMS(finalWork);
+      const brk = secondsToHMS(finalBreak);
+      
+      const WORK_GOAL = 8;
+      const HALF_DAY_THRESHOLD = 4.5;
+      let dayStatus = "Half Day";
+      if (hrs.total >= WORK_GOAL) dayStatus = "Full Day";
+      else if (hrs.total >= HALF_DAY_THRESHOLD) dayStatus = "Incomplete Workday(IWD)";
+
+      const syncPayload = {
+        date: loginStr,
+        id: employee.id,
+        name: employee.name,
+        dept: employee.dept,
+        loginT: fmtTime(loginTime),
+        logoutT: "11:59:59 PM",
+        hours: hmsStr(hrs),
+        breakTime: hmsStr(brk),
+        extraHours: hrs.total > 8 ? hmsStr(secondsToHMS(Math.floor((hrs.total - 8) * 3600))) : "—",
+        tasks: taskInput || "—",
+        status: dayStatus,
+        lastStatusChange: endOfPrevDay.toISOString()
+      };
+
+      // 1. Sync to local backend
+      fetch(BACKEND_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(syncPayload)
+      }).catch(e => console.warn("Rollover sync failed", e));
+
+      // 2. Sync to Google Sheets if configured
+      if (SCRIPT_URL && !SCRIPT_URL.includes("YOUR_SCRIPT_URL_HERE")) {
+        fetch(SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(syncPayload)
+        }).catch(e => console.warn("Sheets rollover sync failed", e));
+      }
+
+      // 3. Clear local states and reset session to idle
+      setTotalWorkSeconds(0);
+      setTotalBreakSeconds(0);
+      setSessionStartTime(null);
+      setBreakStartTime(null);
+      setLT(null);
+      setLOT(null);
+      setStatus("idle");
+      localStorage.removeItem("wt_session");
+      _showToast("Rollover: Session closed at midnight", "info");
+    }
+  }, [now, loginTime, status, totalWorkSeconds, totalBreakSeconds, sessionStartTime, breakStartTime, taskInput, employee]);
 
 
   // Live work calculation
@@ -1790,95 +1928,135 @@ function Dashboard({ employee, onSignOut, showToast }) {
   }, [employee.id]);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#eef3f9", fontFamily: "'Segoe UI',system-ui,sans-serif" }}>
+    <div style={{
+      minHeight: "100vh",
+      background: "linear-gradient(-45deg, #c7d2fe, #fbcfe8, #ddd6fe, #bae6fd, #fce7f3, #d1fae5)",
+      backgroundSize: "400% 400%",
+      animation: "gradientFlow 20s ease infinite",
+      backgroundAttachment: "fixed",
+      fontFamily: "'Inter', sans-serif",
+      color: T.ink,
+    }}>
       <style>{`
-        .tab{padding:8px 18px;border-radius:8px;border:none;cursor:pointer;font-size:13px;
-          font-weight:600;transition:all 0.15s;background:none;color:${T.muted};}
-        .tab.active{background:${T.white};color:${T.ink};box-shadow:0 1px 4px rgba(0,0,0,0.07);}
-        .tab:hover:not(.active){color:${T.ink2};}
-        .act-btn{padding:12px 24px;border-radius:11px;border:none;font-weight:700;
-          font-size:14px;cursor:pointer;display:flex;align-items:center;gap:8px;
-          transition:all 0.15s;}
-        .act-btn:active{transform:scale(0.97);}
-        .act-btn:disabled{opacity:0.45;cursor:not-allowed;transform:none;}
-        .task-area{width:100%;padding:12px 14px;border-radius:11px;border:1.5px solid ${T.border};
-          font-size:13px;resize:vertical;outline:none;font-family:inherit;color:${T.ink};
-          background:white;transition:border 0.2s;min-height:90px;box-sizing:border-box;}
-        .task-area:focus{border-color:${T.accent};}
-        .task-area::placeholder{color:${T.faint};}
-        .hist-row:hover{background:${T.surface};}
-        @keyframes slideIn{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
-        .pulse-active{animation: pulse 2s infinite;}
+        body { margin: 0; padding: 0; }
+        .h-font { font-family: 'Outfit', sans-serif; }
+        
+        @keyframes gradientFlow {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        
+        .premium-card {
+          background: rgba(255, 255, 255, 0.8);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border: 1px solid ${T.border};
+          border-radius: 28px;
+          box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.03);
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          animation: slideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+        }
+        
+        .tab {
+          padding: 10px 24px;
+          border-radius: 14px;
+          border: 1px solid transparent;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 600;
+          font-family: 'Outfit', sans-serif;
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          background: transparent;
+          color: ${T.muted};
+        }
+        
+        .tab.active {
+          background: white;
+          color: ${T.accent};
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+          transform: scale(1.05);
+        }
+        
+        .tab:hover:not(.active) {
+          background: rgba(255, 255, 255, 0.4);
+          color: ${T.ink};
+        }
 
-        .tabs-container {
-          max-width: 100%;
+        .act-btn {
+          padding: 14px 28px;
+          border-radius: 18px;
+          border: none;
+          font-weight: 700;
+          font-family: 'Outfit', sans-serif;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1);
         }
-        .leaves-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
+
+        .act-btn:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.15);
         }
-        .profile-grid {
-          display: grid;
-          grid-template-columns: 1fr 2fr;
-          gap: 28px;
+
+        .act-btn:active { transform: translateY(0) scale(0.98); }
+
+        .task-area {
+          width: 100%;
+          padding: 20px;
+          border-radius: 20px;
+          border: 1px solid ${T.border};
+          font-size: 15px;
+          line-height: 1.6;
+          resize: vertical;
+          outline: none;
+          font-family: 'Inter', sans-serif;
+          color: ${T.ink};
+          background: rgba(255, 255, 255, 0.5);
+          transition: all 0.3s;
+          min-height: 120px;
+          box-sizing: border-box;
         }
+
+        .task-area:focus {
+          background: white;
+          border-color: ${T.accent}40;
+          box-shadow: 0 0 0 4px ${T.accent}10;
+        }
+
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulseSoft {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.1); opacity: 0.7; }
+        }
+
+        .pulse-soft { animation: pulseSoft 2s infinite; }
 
         @media (max-width: 768px) {
           .stat-grid { grid-template-columns: 1fr 1fr !important; }
           .main-grid { grid-template-columns: 1fr !important; }
-          .top-bar { padding: 8px 12px !important; height: auto !important; flex-wrap: wrap !important; gap: 8px !important; }
-          .top-bar-title { display: none !important; }
-          .top-bar-user { order: 2; width: 100%; justify-content: space-between !important; border-top: 1px solid ${T.border}; padding-top: 8px !important; margin-top: 4px; }
-          .top-bar-status { order: 3; width: 100%; justify-content: center !important; }
-          .dashboard-content { padding: 12px 10px !important; }
-          .greeting-row { flex-direction: column; align-items: stretch !important; gap: 12px; }
           .greeting-text { font-size: 18px !important; }
-          .time-display { width: 100% !important; text-align: center !important; padding: 10px !important; }
-          .time-text { font-size: 20px !important; }
-          .profile-footer { flex-direction: column !important; align-items: flex-start !important; gap: 20px; }
-          .profile-footer-stats { width: 100%; justify-content: space-between !important; }
-          .name-label { display: none !important; }
-          .chat-grid { grid-template-columns: 1fr !important; height: auto !important; }
-          .chat-sidebar { height: 200px !important; }
-          .tabs-container {
-            width: 100% !important;
-            overflow-x: auto !important;
-            white-space: nowrap !important;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: none;
-          }
-          .tabs-container::-webkit-scrollbar {
-            display: none;
-          }
-          .tab {
-            flex-shrink: 0 !important;
-          }
-          .leaves-grid {
-            grid-template-columns: 1fr !important;
-            gap: 16px !important;
-          }
-          .profile-grid {
-            grid-template-columns: 1fr !important;
-            gap: 20px !important;
-          }
-        }
-        @media (max-width: 480px) {
-          .stat-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
 
       {/* ── Toast ── */}
       {toast && (
         <div style={{
-          position: "fixed", top: 20, right: 20, zIndex: 999,
-          padding: "12px 20px", borderRadius: 12, fontSize: 13, fontWeight: 600,
-          display: "flex", alignItems: "center", gap: 10, animation: "slideIn 0.25s ease",
+          position: "fixed", top: 24, right: 24, zIndex: 9999,
+          padding: "16px 24px", borderRadius: 16, fontSize: 14, fontWeight: 700,
+          fontFamily: "'Outfit', sans-serif",
+          display: "flex", alignItems: "center", gap: 12, animation: "slideUp 0.4s ease",
           background: toast.type === "success" ? T.green : toast.type === "error" ? T.red : toast.type === "amber" ? T.amber : T.accent,
-          color: "white", boxShadow: "0 4px 20px rgba(0,0,0,0.15)"
+          color: "white", boxShadow: "0 10px 40px rgba(0,0,0,0.1)"
         }}>
-          <Icon d={toast.type === "success" ? icons.check : icons.info} size={15} color="white" />
+          <Icon d={toast.type === "success" ? icons.check : icons.info} size={18} color="white" />
           {toast.msg}
         </div>
       )}
@@ -1887,42 +2065,51 @@ function Dashboard({ employee, onSignOut, showToast }) {
       {showTasksModal && (
         <div style={{
           position: "fixed", inset: 0, zIndex: 1050,
-          background: "rgba(11,31,53,0.6)", backdropFilter: "blur(4px)",
-          display: "flex", alignItems: "center", justifyContent: "center", padding: 20
+          background: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(8px)",
+          display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px",
+          animation: "fadeIn 0.3s ease", overflowY: "auto"
         }} onClick={() => setShowTasksModal(false)}>
           <div style={{
-            background: "white", borderRadius: 24, width: "100%", maxWidth: 500,
-            boxShadow: "0 20px 50px rgba(0,0,0,0.3)", animation: "fadeInUp 0.3s ease",
-            overflow: "hidden"
+            background: "white", borderRadius: 32, width: "100%", maxWidth: 540,
+            boxShadow: "0 30px 70px rgba(0,0,0,0.2)", animation: "slideUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)",
+            overflow: "hidden", border: `1px solid ${T.border}`, margin: "auto"
           }} onClick={e => e.stopPropagation()}>
-            <div style={{ background: T.ink, padding: "20px 24px", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ fontSize: 18, fontWeight: 800 }}>Your Assigned Tasks</div>
-              <button onClick={() => setShowTasksModal(false)} style={{ background: "none", border: "none", color: "white", cursor: "pointer" }}>
+            <div style={{ background: T.ink, padding: "28px 32px", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div className="h-font" style={{ fontSize: 22, fontWeight: 800 }}>Assigned Tasks</div>
+                <div style={{ fontSize: 13, color: T.faint, marginTop: 4 }}>Work prioritized by your administrator</div>
+              </div>
+              <button onClick={() => setShowTasksModal(false)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "white", cursor: "pointer", width: 40, height: 40, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Icon d="M18 6L6 18M6 6l12 12" size={20} color="white" />
               </button>
             </div>
-            <div style={{ padding: 24, maxHeight: 400, overflowY: "auto" }}>
+            <div style={{ padding: 32, maxHeight: 450, overflowY: "auto" }}>
               {assignedTasks.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "40px 0", color: T.muted }}>No tasks assigned to you.</div>
+                <div style={{ textAlign: "center", padding: "60px 0", color: T.muted }}>
+                   <div style={{ fontSize: 40, marginBottom: 16 }}>✨</div>
+                   <div className="h-font" style={{ fontWeight: 700, fontSize: 18 }}>You're all caught up!</div>
+                   <div style={{ fontSize: 14, marginTop: 4 }}>No pending tasks assigned to you.</div>
+                </div>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   {assignedTasks.map(t => (
                     <div key={t.id} style={{
-                      padding: 16, borderRadius: 16, border: `1px solid ${T.border}`,
-                      background: t.status === "Assigned" ? "#fff9f0" : "white"
+                      padding: 20, borderRadius: 24, border: `1px solid ${T.border}`,
+                      background: t.status === "Assigned" ? `${T.accent}05` : "white",
+                      transition: "all 0.3s"
                     }} onMouseEnter={() => t.status === "Assigned" && markTaskViewed(t.id)}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                        <div style={{ fontWeight: 700, color: T.ink }}>{t.title}</div>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+                        <div className="h-font" style={{ fontWeight: 800, color: T.ink, fontSize: 16 }}>{t.title}</div>
                         <Badge status={t.status} />
                       </div>
-                      <p style={{ fontSize: 13, color: T.ink2, margin: "0 0 12px", lineHeight: 1.5 }}>{t.description}</p>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div style={{ fontSize: 11, color: T.muted }}>Assigned {new Date(t.assigned_at).toLocaleDateString()}</div>
+                      <p style={{ fontSize: 14, color: T.ink2, margin: "0 0 20px", lineHeight: 1.6 }}>{t.description}</p>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
+                        <div style={{ fontSize: 11, color: T.muted, fontWeight: 600 }}>Assigned {new Date(t.assigned_at).toLocaleDateString()}</div>
                         {t.status !== "Completed" && (
                           <button onClick={() => markTaskCompleted(t.id)} style={{
-                            padding: "6px 12px", borderRadius: 8, border: "none", background: T.green, color: "white",
-                            fontSize: 12, fontWeight: 700, cursor: "pointer"
-                          }}>Mark as Complete</button>
+                            padding: "10px 20px", borderRadius: 12, border: "none", background: T.green, color: "white",
+                            fontSize: 12, fontWeight: 800, cursor: "pointer", boxShadow: `0 4px 12px ${T.green}30`
+                          }}>Complete Task</button>
                         )}
                       </div>
                     </div>
@@ -1937,101 +2124,73 @@ function Dashboard({ employee, onSignOut, showToast }) {
       {/* ── Details Modal ── */}
       {selectedRecord && (
         <div style={{
-          position: "fixed", inset: 0, zIndex: 1000,
-          background: "rgba(11,31,53,0.6)", backdropFilter: "blur(4px)",
-          display: "flex", alignItems: "center", justifyContent: "center", padding: 20
+          position: "fixed", inset: 0, zIndex: 2000,
+          background: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(8px)",
+          display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px",
+          overflowY: "auto"
         }} onClick={() => setSelectedRecord(null)}>
           <div style={{
-            background: "white", borderRadius: 24, width: "100%", maxWidth: 500,
-            boxShadow: "0 20px 50px rgba(0,0,0,0.3)", animation: "fadeInUp 0.3s ease",
-            overflow: "hidden"
+            background: "white", borderRadius: 32, width: "100%", maxWidth: 540,
+            boxShadow: "0 30px 70px rgba(0,0,0,0.2)", animation: "slideUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)",
+            overflow: "hidden", border: `1px solid ${T.border}`, margin: "auto"
           }} onClick={e => e.stopPropagation()}>
             <div style={{
-              background: T.ink, padding: "24px 30px", color: "white",
+              background: T.ink, padding: "28px 32px", color: "white",
               display: "flex", justifyContent: "space-between", alignItems: "center"
             }}>
               <div>
-                <div style={{ fontSize: 12, color: T.faint, letterSpacing: 1, fontWeight: 700, marginBottom: 4 }}>RECORD DETAILS</div>
-                <div style={{ fontSize: 20, fontWeight: 800 }}>{selectedRecord.date}</div>
+                <div style={{ fontSize: 11, color: T.faint, letterSpacing: 1.5, fontWeight: 800, marginBottom: 4 }}>RECORD ANALYSIS</div>
+                <div className="h-font" style={{ fontSize: 22, fontWeight: 800 }}>{selectedRecord.date}</div>
               </div>
-              <button onClick={() => setSelectedRecord(null)} style={{ background: "none", border: "none", color: "white", cursor: "pointer", opacity: 0.7 }}>
+              <button onClick={() => setSelectedRecord(null)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "white", cursor: "pointer", width: 40, height: 40, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Icon d="M18 6L6 18M6 6l12 12" size={24} color="white" />
               </button>
             </div>
 
-            <div style={{ padding: 30 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 30 }}>
-                <div>
-                  <div style={{ fontSize: 11, color: T.muted, fontWeight: 700, marginBottom: 5 }}>CLOCK IN</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: T.green }}>{selectedRecord.loginT || "—"}</div>
+            <div style={{ padding: 32 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 32 }}>
+                <div style={{ background: T.surface, padding: 16, borderRadius: 16 }}>
+                  <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, marginBottom: 6, textTransform: "uppercase" }}>CLOCK IN</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: T.green }}>{selectedRecord.loginT || "—"}</div>
                 </div>
-                <div>
-                  <div style={{ fontSize: 11, color: T.muted, fontWeight: 700, marginBottom: 5 }}>CLOCK OUT</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: T.red }}>{selectedRecord.logoutT || "—"}</div>
+                <div style={{ background: T.surface, padding: 16, borderRadius: 16 }}>
+                  <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, marginBottom: 6, textTransform: "uppercase" }}>CLOCK OUT</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: T.red }}>{selectedRecord.logoutT || "—"}</div>
                 </div>
-                <div>
-                  <div style={{ fontSize: 11, color: T.muted, fontWeight: 700, marginBottom: 5 }}>WORKING HOURS</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: T.ink }}>{selectedRecord.hours || "—"}</div>
+                <div style={{ background: T.surface, padding: 16, borderRadius: 16 }}>
+                  <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, marginBottom: 6, textTransform: "uppercase" }}>WORKING HOURS</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>{selectedRecord.hours || "—"}</div>
                 </div>
-                <div>
-                  <div style={{ fontSize: 11, color: T.muted, fontWeight: 700, marginBottom: 5 }}>BREAK DURATION</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: T.amber }}>{selectedRecord.breakTime || "—"}</div>
+                <div style={{ background: T.surface, padding: 16, borderRadius: 16 }}>
+                  <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, marginBottom: 6, textTransform: "uppercase" }}>BREAK DURATION</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: T.amber }}>{selectedRecord.breakTime || "—"}</div>
                 </div>
               </div>
 
-              <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 20 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: T.purpleBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Icon d={icons.tasks} size={16} color={T.purple} />
+              <div style={{ borderTop: `1.5px solid ${T.border}`, paddingTop: 24 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: T.purpleBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Icon d={icons.tasks} size={18} color={T.purple} />
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>Tasks Performed</div>
+                  <div className="h-font" style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>Tasks Performed</div>
                 </div>
                 <div style={{
-                  background: T.surface, padding: 20, borderRadius: 14,
+                  background: T.surface, padding: 20, borderRadius: 20,
                   fontSize: 14, color: T.ink2, lineHeight: 1.6, whiteSpace: "pre-wrap",
-                  border: `1px solid ${T.border}`, minHeight: 120
+                  border: `1px solid ${T.border}`, minHeight: 120, maxHeight: 200, overflowY: "auto"
                 }}>
                   {selectedRecord.tasks || "No tasks recorded for this day."}
                 </div>
               </div>
-
-              {/* Logs Display for Employee */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 15 }}>
-                {selectedRecord.break_logs_parsed && selectedRecord.break_logs_parsed.length > 0 && (
-                  <div style={{ background: T.purpleBg + "44", padding: 15, borderRadius: 12, border: `1px solid ${T.purple}33` }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: T.purple, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
-                      <Icon d={icons.break} size={14} color={T.purple} /> Break History
-                    </div>
-                    {selectedRecord.break_logs_parsed.map((log, lIdx) => (
-                      <div key={lIdx} style={{ fontSize: 12, color: T.ink2, marginBottom: 4, display: "flex", justifyContent: "space-between" }}>
-                        <span>• {log.in} - {log.out}</span>
-                        <span style={{ fontWeight: 600 }}>{log.duration}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {selectedRecord.offline_logs_parsed && selectedRecord.offline_logs_parsed.length > 0 && (
-                  <div style={{ background: "#fff1f1", padding: 15, borderRadius: 12, border: `1px solid ${T.red}33` }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: T.red, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
-                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: T.red }} /> Offline Gaps (Internet/Closure)
-                    </div>
-                    {selectedRecord.offline_logs_parsed.map((log, lIdx) => (
-                      <div key={lIdx} style={{ fontSize: 12, color: T.ink2, marginBottom: 4, display: "flex", justifyContent: "space-between" }}>
-                        <span>• {log.start} - {log.end}</span>
-                        <span style={{ fontWeight: 600 }}>{log.duration}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
 
-            <div style={{ padding: "0 30px 30px" }}>
+            <div style={{ padding: "0 32px 32px" }}>
               <button onClick={() => setSelectedRecord(null)} style={{
-                width: "100%", padding: 14, borderRadius: 12, border: "none",
-                background: T.ink, color: "white", fontWeight: 700, cursor: "pointer"
-              }}>
-                Close Details
+                width: "100%", padding: 16, borderRadius: 16, border: "none",
+                background: T.ink, color: "white", fontWeight: 800, cursor: "pointer",
+                fontSize: 15, transition: "all 0.2s"
+              }} onMouseOver={e => e.currentTarget.style.opacity = 0.9} onMouseOut={e => e.currentTarget.style.opacity = 1}>
+                Dismiss
               </button>
             </div>
           </div>
@@ -2040,272 +2199,268 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
       {/* ── Topbar ── */}
       <div className="top-bar" style={{
-        background: T.white, borderBottom: `1px solid ${T.border}`,
-        padding: "0 28px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60,
-        position: "sticky", top: 0, zIndex: 1000, boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
+        background: "rgba(255, 255, 255, 0.8)", backdropFilter: "blur(12px)",
+        borderBottom: `1px solid ${T.border}`,
+        padding: "0 32px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 70,
+        position: "sticky", top: 0, zIndex: 1000
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{
-            width: 36, height: 36, borderRadius: 9, background: "#fff",
-            display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden"
+            width: 42, height: 42, borderRadius: 12, background: "white",
+            display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.05)"
           }}>
             <img src={logo} alt="Brolly Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </div>
           <div className="top-bar-title">
-            <div style={{ fontWeight: 700, fontSize: 15, color: T.ink, letterSpacing: 0.2 }}>Brolly Software Solutions</div>
-            <div style={{ fontSize: 10, color: T.muted, letterSpacing: 0.5 }}>ATTENDANCE SYSTEM</div>
+            <div className="h-font" style={{ fontWeight: 800, fontSize: 16, color: T.ink, letterSpacing: "-0.3px" }}>Brolly Software</div>
+            <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, fontWeight: 700 }}>PORTAL 2.0</div>
           </div>
         </div>
 
         <div className="top-bar-status" style={{
-          display: "flex", alignItems: "center", gap: 8, padding: "6px 8px",
-          borderRadius: 10, background: T.surface, border: `1px solid ${T.border}`
+          display: "flex", alignItems: "center", gap: 10, padding: "8px 14px",
+          borderRadius: 14, background: T.surface, border: `1px solid ${T.border}`
         }}>
-          <div style={{
-            width: 6, height: 6, borderRadius: "50%",
+          <div className="pulse-soft" style={{
+            width: 8, height: 8, borderRadius: "50%",
             background: status === "working" ? T.green : status === "break" ? T.amber : T.faint,
-            animation: (status === "working" || status === "break") ? "pulse 2s infinite" : "none"
           }} />
-          <span style={{ fontSize: 11, color: T.muted }}>
-            {status === "working" ? "Working" : status === "break" ? "On Break" : status === "loggedOut" ? "Session Ended" : "Not Clocked In"}
+          <span style={{ fontSize: 12, color: T.muted, fontWeight: 700 }}>
+            {status === "working" ? "Working" : status === "break" ? "On Break" : "Paused"}
           </span>
         </div>
 
-        <div className="top-bar-user" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {/* Task Notification */}
+        <div className="top-bar-user" style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button onClick={() => setShowTasksModal(true)} style={{
-            position: "relative", width: 36, height: 36, borderRadius: 10, border: `1.5px solid ${T.border}`,
-            background: "none", color: T.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center"
-          }}>
-            <Icon d={icons.tasks} size={18} color={T.muted} />
+            position: "relative", width: 42, height: 42, borderRadius: 12, border: `1px solid ${T.border}`,
+            background: "white", color: T.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+            transition: "all 0.2s"
+          }} onMouseOver={e => e.currentTarget.style.borderColor = T.accent}>
+            <Icon d={icons.tasks} size={20} color={T.muted} />
             {assignedTasks.filter(t => t.status === "Assigned").length > 0 && (
               <span style={{
-                position: "absolute", top: -5, right: -5, width: 18, height: 18, borderRadius: "50%",
-                background: T.red, color: "white", fontSize: 10, fontWeight: 800,
-                display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid white"
+                position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%",
+                background: T.red, color: "white", fontSize: 11, fontWeight: 900,
+                display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid white",
+                boxShadow: "0 4px 10px rgba(239, 68, 68, 0.3)"
               }}>
                 {assignedTasks.filter(t => t.status === "Assigned").length}
               </span>
             )}
           </button>
 
-          <Avatar name={employee.name} src={profile.photo} size={32} />
-          <div className="name-label" style={{ marginRight: 4 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{employee.name}</div>
-            <div style={{ fontSize: 11, color: T.muted }}>{employee.role}</div>
+          <div style={{ height: 32, width: 1, background: T.border, margin: "0 4px" }} />
+
+          <Avatar name={employee.name} src={profile.photo} size={38} />
+          <div className="name-label" style={{ marginRight: 8 }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{employee.name}</div>
+            <div style={{ fontSize: 11, color: T.muted, fontWeight: 600 }}>{employee.role}</div>
           </div>
-          <button onClick={onSignOut} style={{
-            display: "flex", alignItems: "center", gap: 6,
-            padding: "7px 14px", borderRadius: 9, border: `1.5px solid ${T.border}`,
-            background: "none", color: T.muted, cursor: "pointer", fontSize: 12, fontWeight: 600,
-            transition: "all 0.15s"
-          }}>
-            <Icon d={icons.logout} size={14} color={T.muted} />
-            Sign out
-          </button>
           
-          <button onClick={() => setTab("messages")} style={{
-            position: "relative", width: 36, height: 36, borderRadius: 10, border: `1.5px solid ${activeTab === 'messages' ? T.accent : T.border}`,
-            background: activeTab === 'messages' ? T.accent : "none", color: activeTab === 'messages' ? "white" : T.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center"
-          }}>
-            <Icon d={icons.message} size={18} color={activeTab === 'messages' ? "white" : T.muted} />
-            {unreadCount > 0 && (
-              <span style={{
-                position: "absolute", top: -5, right: -5, width: 18, height: 18, borderRadius: "50%",
-                background: T.red, color: "white", fontSize: 10, fontWeight: 800,
-                display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid white"
-              }}>
-                {unreadCount}
-              </span>
-            )}
+          <button onClick={onSignOut} style={{
+            display: "flex", alignItems: "center", gap: 8,
+            padding: "10px 16px", borderRadius: 12, border: "none",
+            background: T.surface, color: T.muted, cursor: "pointer", fontSize: 12, fontWeight: 800,
+            transition: "all 0.2s"
+          }} onMouseOver={e => { e.currentTarget.style.background = T.redBg; e.currentTarget.style.color = T.red; }}>
+            <Icon d={icons.logout} size={15} />
+            Exit
           </button>
         </div>
       </div>
 
       {/* ── Main content ── */}
-      <div className="dashboard-content" style={{ width: "100%", maxWidth: 1080, margin: "0 auto", padding: "28px 24px", boxSizing: "border-box" }}>
+      <div className="dashboard-content" style={{ width: "100%", maxWidth: 1200, margin: "0 auto", padding: "40px 32px", boxSizing: "border-box" }}>
 
         {/* Greeting row */}
-        <div className="greeting-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+        <div className="greeting-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 36 }}>
           <div>
-            <h1 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 700, color: T.ink }}>
+            <h1 className="h-font" style={{ margin: "0 0 6px", fontSize: 28, fontWeight: 900, color: T.ink, letterSpacing: "-0.5px" }}>
               {greeting}, {employee.name.split(" ")[0]} 👋
             </h1>
-            <p style={{ margin: 0, fontSize: 13, color: T.muted }}>
+            <p style={{ margin: 0, fontSize: 14, color: T.muted, fontWeight: 600 }}>
               {now.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
             </p>
           </div>
 
-          <div className="time-display" style={{ background: T.ink, borderRadius: 14, padding: "14px 22px", textAlign: "right" }}>
-            <div className="time-text" style={{
-              fontSize: 26, fontWeight: 700, color: "white",
+          <div className="time-display" style={{ background: T.ink, borderRadius: 20, padding: "16px 28px", textAlign: "right", boxShadow: "0 15px 35px -10px rgba(15, 23, 42, 0.3)" }}>
+            <div className="h-font" style={{
+              fontSize: 32, fontWeight: 800, color: "white",
               fontVariantNumeric: "tabular-nums", letterSpacing: 1
             }}>
               {now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
             </div>
-            <div style={{ fontSize: 11, color: T.faint, marginTop: 2 }}>
-              IST · {now.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}
+            <div style={{ fontSize: 11, color: T.faint, marginTop: 4, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>
+              IST · {now.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
             </div>
           </div>
         </div>
 
         {/* Progress bar */}
         {(status !== "idle") && (
-          <div style={{
-            background: T.white, borderRadius: 14, padding: "16px 20px",
-            border: `1px solid ${T.border}`, marginBottom: 22
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>Daily progress</span>
-              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <div className="premium-card" style={{ padding: "24px 28px", marginBottom: 32 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <span className="h-font" style={{ fontSize: 15, fontWeight: 800, color: T.ink }}>Daily Performance Goal</span>
+              <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
                 {extraStr && (
                   <span style={{
-                    fontSize: 12, fontWeight: 700, color: T.amber,
-                    background: T.amberBg, padding: "2px 10px", borderRadius: 20
+                    fontSize: 12, fontWeight: 800, color: T.amber,
+                    background: T.amberBg, padding: "6px 14px", borderRadius: 20,
+                    border: `1px solid ${T.amber}20`
                   }}>
-                    +{extraStr} overtime
+                    ✨ +{extraStr} OVERTIME
                   </span>
                 )}
-                <span style={{ fontSize: 13, fontWeight: 700, color: pct >= 100 ? T.green : T.accent }}>{pct}%</span>
+                <span className="h-font" style={{ fontSize: 18, fontWeight: 900, color: pct >= 100 ? T.green : T.accent }}>{pct}%</span>
               </div>
             </div>
-            <div style={{ height: 10, background: T.surface, borderRadius: 99, overflow: "hidden" }}>
+            <div style={{ height: 12, background: "rgba(0,0,0,0.05)", borderRadius: 99, overflow: "hidden" }}>
               <div style={{
                 height: "100%", width: `${pct}%`, borderRadius: 99,
-                background: pct >= 100 ? T.green : T.accent, transition: "width 0.5s ease"
+                background: `linear-gradient(90deg, ${T.accent} 0%, ${pct >= 100 ? T.green : T.accent2} 100%)`,
+                transition: "width 1s cubic-bezier(0.34, 1.56, 0.64, 1)"
               }} />
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 11, color: T.muted }}>
-              <span>{hmsStr(liveHrs)} worked</span>
-              <span>Goal: 8:00:00</span>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, fontSize: 12, color: T.muted, fontWeight: 700 }}>
+              <span>{hmsStr(liveHrs)} clocked today</span>
+              <span>Goal: 8h 00m</span>
             </div>
           </div>
         )}
 
         {/* Tabs */}
         <div className="tabs-container" style={{
-          display: "flex", gap: 4, background: "#e4eaf3", borderRadius: 10,
-          padding: 4, marginBottom: 20, width: "fit-content"
+          display: "flex", gap: 6, background: "rgba(0, 0, 0, 0.05)", borderRadius: 18,
+          padding: 6, marginBottom: 32, width: "fit-content"
         }}>
-          {[{ k: "today", label: "Today's Session" }, { k: "history", label: "Attendance History" }, { k: "leaves", label: "Requests" }, { k: "profile", label: "My Profile" }, { k: "messages", label: "Admin Chat", badge: unreadCount }].map(t => (
+          {[
+            { k: "today", label: "My Workspace" }, 
+            { k: "history", label: "Logs & History" }, 
+            { k: "leaves", label: "Requests" }, 
+            { k: "profile", label: "Profile Details" }, 
+            { k: "messages", label: "Support Chat", badge: unreadCount }
+          ].map(t => (
             <button key={t.k} className={`tab${activeTab === t.k ? " active" : ""}`}
               onClick={() => setTab(t.k)} style={{ position: "relative" }}>
               {t.label}
               {t.badge > 0 && (
-                <span style={{ position: "absolute", top: -6, right: -6, background: T.red, color: "white", fontSize: 10, padding: "2px 6px", borderRadius: 10, border: "2px solid white", fontWeight: 800 }}>{t.badge}</span>
+                <span style={{ 
+                  position: "absolute", top: -8, right: -4, background: T.red, color: "white", 
+                  fontSize: 10, padding: "2px 8px", borderRadius: 12, border: "2px solid white", 
+                  fontWeight: 900, boxShadow: "0 4px 10px rgba(239, 68, 68, 0.3)" 
+                }}>{t.badge}</span>
               )}
             </button>
           ))}
-
         </div>
 
         {/* Stat cards */}
         {activeTab !== "messages" && activeTab !== "profile" && (
-          <div className="stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 14, marginBottom: 22 }}>
-            <StatCard label="Work Time" value={hmsStr(liveHrs)}
-              sub={`${pct}% of daily goal (8h)`}
-              icon={icons.clock} color={T.green} bg={T.greenBg} />
-            <StatCard label="Break Time" value={hmsStr(liveBreakHrs)}
-              sub="Total break duration today"
-              icon={icons.refresh} color={T.amber} bg={T.amberBg} />
-            <StatCard label="Login Status" value={status === "working" ? "Working" : status === "break" ? "Gap / Break" : "Paused"}
-              sub={loginTime ? `Started at ${fmtTime(loginTime)}` : "Not started"}
-              icon={icons.user} color={T.accent} bg="#e8f0fc" />
-            <StatCard label="Overtime" value={extraStr || "—"}
-              sub={extraStr ? "Completed 8h goal" : "No overtime yet"}
-              icon={icons.refresh} color={T.purple} bg={T.purpleBg} />
-            <StatCard label="Log Count" value={String(history.length)}
-              sub="Daily entries sync"
-              icon={icons.calendar} color={T.purple} bg={T.purpleBg} />
+          <div className="stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 20, marginBottom: 32 }}>
+            <StatCard index={0} label="Active Work" value={hmsStr(liveHrs)}
+              sub={`${pct}% of daily goal`}
+              icon={icons.clock} color={T.green} bg={T.greenBg} isLive={status === "working"} />
+            <StatCard index={1} label="Total Breaks" value={hmsStr(liveBreakHrs)}
+              sub="Time spent on pause"
+              icon={icons.refresh} color={T.amber} bg={T.amberBg} isLive={status === "break"} />
+            <StatCard index={2} label="Current State" value={status === "working" ? "Working" : status === "break" ? "On Break" : "Offline"}
+              sub={loginTime ? `Login at ${fmtTime(loginTime).split(' ')[0]}` : "Awaiting clock-in"}
+              icon={icons.user} color={T.accent} bg={T.greenBg} />
+            <StatCard index={3} label="Extra Time" value={extraStr || "—"}
+              sub="Beyond 8h goal"
+              icon={icons.chart} color={T.purple} bg={T.purpleBg} />
+            <StatCard index={4} label="Total Records" value={String(history.length)}
+              sub="Entries this month"
+              icon={icons.calendar} color={T.orange} bg={T.orangeBg} />
           </div>
         )}
 
         {activeTab === "today" && (
-          <div className="main-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
+          <div className="main-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28 }}>
 
             {/* Control Panel */}
-            <div style={{
-              background: T.white, borderRadius: 16, padding: "24px",
-              border: `1px solid ${T.border}`
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+            <div className="premium-card" style={{ padding: "36px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 32 }}>
                 <div style={{
-                  width: 38, height: 38, borderRadius: 10, background: "#e8f0fc",
-                  display: "flex", alignItems: "center", justifyContent: "center"
+                  width: 54, height: 54, borderRadius: 16, background: `${T.accent}10`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: `0 8px 20px ${T.accent}08`
                 }}>
-                  <Icon d={icons.clock} size={18} color={T.accent} />
+                  <Icon d={icons.clock} size={24} color={T.accent} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: T.ink }}>Active Tracking</div>
-                  <div style={{ fontSize: 12, color: T.muted }}>Manage sessions and breaks</div>
+                  <div className="h-font" style={{ fontSize: 20, fontWeight: 800, color: T.ink, letterSpacing: "-0.3px" }}>Session Control</div>
+                  <div style={{ fontSize: 13, color: T.muted, fontWeight: 600 }}>Manage your work-life balance</div>
                 </div>
               </div>
 
-              <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+              <div style={{ display: "flex", gap: 14, marginBottom: 32 }}>
                 {!initialSyncDone ? (
-                  <div style={{ flex: 1, padding: "12px", display: "flex", justifyContent: "center", alignItems: "center", background: T.surface, borderRadius: "11px" }}>
-                    <span style={{
-                      width: 16, height: 16, border: `2.5px solid ${T.border}`,
+                  <div style={{ flex: 1, padding: "14px", display: "flex", justifyContent: "center", alignItems: "center", background: T.surface, borderRadius: "18px", border: `1px solid ${T.border}` }}>
+                    <span className="pulse-soft" style={{
+                      width: 14, height: 14, border: `3px solid ${T.border}`,
                       borderTopColor: T.accent, borderRadius: "50%",
                       display: "inline-block", animation: "spin 0.8s linear infinite"
                     }} />
-                    <span style={{ marginLeft: 10, fontSize: 13, color: T.muted, fontWeight: 600 }}>Syncing...</span>
+                    <span style={{ marginLeft: 12, fontSize: 14, color: T.muted, fontWeight: 800, letterSpacing: 0.5 }}>SYNCHRONIZING...</span>
                   </div>
                 ) : (status === "idle" || status === "loggedOut") ? (
                   <button className="act-btn" onClick={handleLogin}
-                    style={{ flex: 1, background: T.green, color: "white", justifyContent: "center" }}>
-                    <Icon d={icons.check} size={16} color="white" />
+                    style={{ flex: 1, background: `linear-gradient(135deg, ${T.green} 0%, #059669 100%)`, color: "white", justifyContent: "center" }}>
+                    <Icon d={icons.check} size={18} color="white" />
                     Start Working
                   </button>
                 ) : (
                   <>
                     {status === "working" ? (
                       <button className="act-btn" onClick={handleBreak}
-                        style={{ flex: 1, background: T.amber, color: "white", justifyContent: "center" }}>
-                        <Icon d={icons.refresh} size={16} color="white" />
+                        style={{ flex: 1, background: `linear-gradient(135deg, ${T.amber} 0%, #d97706 100%)`, color: "white", justifyContent: "center" }}>
+                        <Icon d={icons.refresh} size={18} color="white" />
                         Take Break
                       </button>
                     ) : (
                       <button className="act-btn" onClick={handleBreak}
-                        style={{ flex: 1, background: T.green, color: "white", justifyContent: "center" }}>
-                        <Icon d={icons.check} size={16} color="white" />
+                        style={{ flex: 1, background: `linear-gradient(135deg, ${T.green} 0%, #059669 100%)`, color: "white", justifyContent: "center" }}>
+                        <Icon d={icons.check} size={18} color="white" />
                         Resume Work
                       </button>
                     )}
                     <button className="act-btn" onClick={handleLogout}
-                      style={{ flex: 1, background: T.red, color: "white", justifyContent: "center" }}>
-                      <Icon d={icons.logout} size={16} color="white" />
-                      Pause Work
+                      style={{ flex: 1, background: "#f1f5f9", color: T.red, justifyContent: "center", boxShadow: "none", border: `1px solid ${T.red}20` }}>
+                      <Icon d={icons.logout} size={18} color={T.red} />
+                      Pause Session
                     </button>
                   </>
                 )}
               </div>
 
               {/* Status timeline */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 {[
-                  { label: "Today's First Login", time: loginTime ? fmtTime(loginTime) : null, done: !!loginTime, color: T.accent },
-                  { label: "Active Work Duration", time: hmsStr(liveHrs), done: liveHrs.total > 0, color: T.green },
-                  { label: "Total Break Time", time: hmsStr(liveBreakHrs), done: liveBreakHrs.total > 0, color: T.amber },
+                  { label: "Today's Arrival", time: loginTime ? fmtTime(loginTime) : null, done: !!loginTime, color: T.accent, icon: "🌅" },
+                  { label: "Net Work Hours", time: hmsStr(liveHrs), done: liveHrs.total > 0, color: T.green, icon: "💻" },
+                  { label: "Total Recess", time: hmsStr(liveBreakHrs), done: liveBreakHrs.total > 0, color: T.amber, icon: "☕" },
                 ].map((s, i) => (
                   <div key={i} style={{
-                    display: "flex", alignItems: "center", gap: 12,
-                    padding: "10px 14px", borderRadius: 10,
-                    background: s.done ? `${s.color}10` : T.surface,
-                    border: `1px solid ${s.done ? s.color + "30" : T.border}`
+                    display: "flex", alignItems: "center", gap: 16,
+                    padding: "16px 20px", borderRadius: 20,
+                    background: s.done ? `${s.color}06` : T.surface,
+                    border: `1px solid ${s.done ? s.color + "20" : T.border}`,
+                    transition: "all 0.3s"
                   }}>
                     <div style={{
-                      width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
-                      background: s.done ? s.color : T.border,
-                      display: "flex", alignItems: "center", justifyContent: "center"
+                      width: 42, height: 42, borderRadius: "50%", flexShrink: 0,
+                      background: s.done ? s.color : "white",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      boxShadow: s.done ? `0 6px 15px ${s.color}30` : "none",
+                      fontSize: 18
                     }}>
-                      {s.done
-                        ? <Icon d={icons.check} size={13} color="white" stroke={2.5} />
-                        : <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.faint }} />}
+                      {s.done ? <Icon d={icons.check} size={18} color="white" stroke={3} /> : s.icon}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: s.done ? s.color : T.muted }}>{s.label}</div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: T.ink, marginTop: 1 }}>{s.time || "—"}</div>
+                      <div style={{ fontSize: 11, fontWeight: 800, color: T.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>{s.label}</div>
+                      <div className="h-font" style={{ fontSize: 18, fontWeight: 800, color: T.ink, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>{s.time || "— —"}</div>
                     </div>
                   </div>
                 ))}
@@ -2313,38 +2468,36 @@ function Dashboard({ employee, onSignOut, showToast }) {
             </div>
 
             {/* Tasks + Save */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
 
               {/* Task entry */}
-              <div style={{
-                background: T.white, borderRadius: 16, padding: "24px",
-                border: `1px solid ${T.border}`, flex: 1
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+              <div className="premium-card" style={{ padding: "36px", flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
                   <div style={{
-                    width: 38, height: 38, borderRadius: 10, background: T.purpleBg,
-                    display: "flex", alignItems: "center", justifyContent: "center"
+                    width: 54, height: 54, borderRadius: 16, background: `${T.purple}10`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    boxShadow: `0 8px 20px ${T.purple}08`
                   }}>
-                    <Icon d={icons.tasks} size={18} color={T.purple} />
+                    <Icon d={icons.tasks} size={24} color={T.purple} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: T.ink }}>Tasks Done Today</div>
-                    <div style={{ fontSize: 12, color: T.muted }}>Will be saved to Excel</div>
+                    <div className="h-font" style={{ fontSize: 20, fontWeight: 800, color: T.ink, letterSpacing: "-0.3px" }}>Activity Logging</div>
+                    <div style={{ fontSize: 13, color: T.muted, fontWeight: 600 }}>Document your daily achievements</div>
                   </div>
                 </div>
                 <textarea className="task-area" value={taskInput}
                   onChange={e => setTask(e.target.value)}
-                  placeholder="• Completed feature X&#10;• Reviewed PR #42&#10;• Attended standup meeting&#10;• Fixed bug in auth module" />
+                  placeholder="• Example: Completed API integration&#10;• Example: Resolved UI bugs in dashboard&#10;• Example: Attended weekly sync" />
                 
-                <div style={{ marginTop: 16 }}>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: T.ink, marginBottom: 8 }}>Task Screenshot (Optional)</label>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ marginTop: 24 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                     <label style={{
-                      display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 10,
-                      background: T.surface, border: `1px solid ${T.border}`, cursor: "pointer", fontSize: 13, color: T.ink2
-                    }}>
-                      <Icon d={icons.camera} size={16} />
-                      {taskScreenshot ? "Change Screenshot" : "Upload Screenshot"}
+                      display: "flex", alignItems: "center", gap: 10, padding: "12px 24px", borderRadius: 16,
+                      background: T.surface, border: `1px solid ${T.border}`, cursor: "pointer", 
+                      fontSize: 14, color: T.ink2, fontWeight: 800, transition: "all 0.2s"
+                    }} onMouseOver={e => e.currentTarget.style.background = "white"}>
+                      <Icon d={icons.camera} size={18} color={T.accent} />
+                      {taskScreenshot ? "Change Proof" : "Attach Proof"}
                       <input type="file" hidden accept="image/*" onChange={e => {
                         if (e.target.files?.[0]) {
                           compressImage(e.target.files[0]).then(setTaskScreenshot);
@@ -2352,44 +2505,31 @@ function Dashboard({ employee, onSignOut, showToast }) {
                       }} />
                     </label>
                     {taskScreenshot && (
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: T.green, fontWeight: 600 }}>
-                        <Icon d={icons.check} size={14} />
-                        {taskScreenshot.name}
-                        <button onClick={() => setTaskScreenshot(null)} style={{ background: "none", border: "none", color: T.red, cursor: "pointer", marginLeft: 4 }}>×</button>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: T.green, fontWeight: 800, animation: "fadeIn 0.3s" }}>
+                        <Icon d={icons.check} size={16} />
+                        Image Attached
+                        <button onClick={() => setTaskScreenshot(null)} style={{ background: T.redBg, border: "none", color: T.red, cursor: "pointer", width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900 }}>×</button>
                       </div>
                     )}
                   </div>
                 </div>
-                <div style={{ marginTop: 8, fontSize: 11, color: T.faint, display: "flex", alignItems: "center", gap: 4 }}>
-                  <Icon d={icons.info} size={12} color={T.faint} />
-                  Use bullet points to list individual tasks
-                </div>
               </div>
 
               {/* Sync to Cloud */}
-              <div style={{
-                background: T.white, borderRadius: 16, padding: "20px 24px",
-                border: `1px solid ${T.border}`
-              }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, marginBottom: 14 }}>Sync Attendance</div>
-
+              <div className="premium-card" style={{ padding: "28px 36px" }}>
                 <button onClick={handleSave}
                   style={{
-                    width: "100%", padding: "11px 14px", borderRadius: 10, border: "none",
-                    background: T.accent, color: "white", cursor: "pointer", fontSize: 13,
-                    fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 7
-                  }}>
-                  <Icon d={icons.refresh} size={14} color="white" />
-                  Sync to Cloud
+                    width: "100%", padding: "16px", borderRadius: 18, border: "none",
+                    background: `linear-gradient(135deg, ${T.accent} 0%, ${T.accent2} 100%)`, 
+                    color: "white", cursor: "pointer", fontSize: 15,
+                    fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                    boxShadow: `0 12px 25px ${T.accent}30`, transition: "all 0.3s"
+                  }} onMouseOver={e => e.currentTarget.style.transform = "translateY(-2px)"} onMouseOut={e => e.currentTarget.style.transform = "none"}>
+                  <Icon d={icons.refresh} size={18} color="white" />
+                  Final Sync to Database
                 </button>
-
-                <div style={{
-                  marginTop: 10, padding: "10px 12px", borderRadius: 9,
-                  background: T.surface, border: `1px solid ${T.border}`, fontSize: 12, color: T.muted,
-                  display: "flex", gap: 8, alignItems: "flex-start"
-                }}>
-                  <Icon d={icons.info} size={13} color={T.faint} />
-                  <span>Clock in &amp; out, then click <b style={{ color: T.ink2 }}>Sync to Cloud</b>. Attendance saves directly to your Google Sheet.</span>
+                <div style={{ marginTop: 14, textAlign: "center", fontSize: 12, color: T.muted, fontWeight: 600, opacity: 0.8 }}>
+                  Last sync today: {history.find(r => r.date === fmtDate(now))?.logoutT || "Not yet synced"}
                 </div>
               </div>
             </div>
@@ -2431,7 +2571,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
                 </div>
               </div>
             ) : (
-              <div style={{ overflowX: "auto" }}>
+              <div style={{ overflowX: "auto", maxHeight: 600, overflowY: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>
                     <tr style={{ background: T.surface }}>
@@ -2445,7 +2585,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {[...history].reverse().map((r, i) => (
+                    {[...history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((r, i) => (
                       <tr key={i} className="hist-row"
                         style={{ borderBottom: `1px solid ${T.border}`, transition: "background 0.1s" }}>
                         <td style={{ padding: "12px 16px", color: T.ink, fontWeight: 600 }}>{r.date}</td>
@@ -2491,63 +2631,69 @@ function Dashboard({ employee, onSignOut, showToast }) {
         )}
 
         {activeTab === "leaves" && (
-          <div className="leaves-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-            <div style={{ background: T.white, borderRadius: 16, border: `1px solid ${T.border}`, padding: 24, alignSelf: "start" }}>
+          <div className="leaves-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28 }}>
+            <div className="premium-card" style={{ padding: 32, alignSelf: "start" }}>
               
               {/* Type Switcher Selector */}
               <div style={{
-                display: "flex", background: T.surface, padding: 4, borderRadius: 10, marginBottom: 20
+                display: "flex", background: "rgba(0, 0, 0, 0.05)", padding: 6, borderRadius: 16, marginBottom: 28
               }}>
                 <button 
                   onClick={() => setRequestType("Leave")} 
                   style={{
-                    flex: 1, padding: "8px 12px", border: "none", borderRadius: 8, cursor: "pointer",
-                    fontSize: 13, fontWeight: 700, transition: "all 0.2s",
-                    background: requestType === "Leave" ? T.white : "none",
+                    flex: 1, padding: "12px 20px", border: "none", borderRadius: 12, cursor: "pointer",
+                    fontSize: 14, fontWeight: 800, transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    background: requestType === "Leave" ? "white" : "none",
                     color: requestType === "Leave" ? T.accent : T.muted,
-                    boxShadow: requestType === "Leave" ? "0 2px 8px rgba(0,0,0,0.05)" : "none"
+                    boxShadow: requestType === "Leave" ? "0 4px 15px rgba(0,0,0,0.05)" : "none",
+                    fontFamily: "'Outfit', sans-serif"
                   }}
                 >
-                  🌴 Leave Request
+                  🌴 Casual Leave
                 </button>
                 <button 
                   onClick={() => setRequestType("Work From Home")} 
                   style={{
-                    flex: 1, padding: "8px 12px", border: "none", borderRadius: 8, cursor: "pointer",
-                    fontSize: 13, fontWeight: 700, transition: "all 0.2s",
-                    background: requestType === "Work From Home" ? T.white : "none",
+                    flex: 1, padding: "12px 20px", border: "none", borderRadius: 12, cursor: "pointer",
+                    fontSize: 14, fontWeight: 800, transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    background: requestType === "Work From Home" ? "white" : "none",
                     color: requestType === "Work From Home" ? T.accent : T.muted,
-                    boxShadow: requestType === "Work From Home" ? "0 2px 8px rgba(0,0,0,0.05)" : "none"
+                    boxShadow: requestType === "Work From Home" ? "0 4px 15px rgba(0,0,0,0.05)" : "none",
+                    fontFamily: "'Outfit', sans-serif"
                   }}
                 >
                   🏠 Work From Home
                 </button>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: T.purpleBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Icon d={requestType === "Leave" ? icons.calendar : icons.home} size={20} color={T.purple} />
+              <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 28 }}>
+                <div style={{
+                  width: 54, height: 54, borderRadius: 16, background: `${T.purple}10`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: `0 8px 20px ${T.purple}08`
+                }}>
+                  <Icon d={requestType === "Leave" ? icons.calendar : icons.home} size={24} color={T.purple} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: T.ink }}>
-                    {requestType === "Leave" ? "Request Leave" : "Request Work From Home"}
+                  <div className="h-font" style={{ fontSize: 20, fontWeight: 800, color: T.ink, letterSpacing: "-0.3px" }}>
+                    {editingLeave ? `Edit ${requestType} Request` : `New ${requestType} Request`}
                   </div>
                   {requestType === "Leave" ? (
-                    <div style={{ fontSize: 13, color: T.muted }}>You have <b style={{ color: T.purple }}>{profile.total_leaves}</b> leaves remaining</div>
+                    <div style={{ fontSize: 13, color: T.muted, fontWeight: 600 }}>Balance: <b style={{ color: T.purple }}>{profile.total_leaves}</b> days available</div>
                   ) : (
-                    <div style={{ fontSize: 13, color: T.muted }}>Submit a request to work remotely</div>
+                    <div style={{ fontSize: 13, color: T.muted, fontWeight: 600 }}>Submit for management review</div>
                   )}
                 </div>
               </div>
 
-              <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
+              <div style={{ display: "flex", gap: 20, marginBottom: 24 }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.muted, marginBottom: 8, letterSpacing: 0.5 }}>START DATE</label>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: T.muted, marginBottom: 8, letterSpacing: 1, textTransform: "uppercase" }}>START DATE</label>
                   <input className="adm-inp" type="date" style={{ width: "100%", boxSizing: "border-box" }}
                     value={leaveData.start} onChange={e => setLeaveData({ ...leaveData, start: e.target.value })} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.muted, marginBottom: 8, letterSpacing: 0.5 }}>END DATE</label>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: T.muted, marginBottom: 8, letterSpacing: 1, textTransform: "uppercase" }}>END DATE</label>
                   <input className="adm-inp" type="date" style={{ width: "100%", boxSizing: "border-box" }}
                     value={leaveData.end} onChange={e => setLeaveData({ ...leaveData, end: e.target.value })} />
                 </div>
@@ -2555,74 +2701,110 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
               {(leaveData.start && leaveData.end) && (
                 <div style={{
-                  marginBottom: 16, padding: "10px 14px", borderRadius: 10,
-                  background: T.purpleBg, border: `1px solid ${T.purple}30`,
+                  marginBottom: 24, padding: "16px 20px", borderRadius: 18,
+                  background: `${T.accent}05`, border: `1.5px solid ${T.accent}15`,
                   display: "flex", justifyContent: "space-between", alignItems: "center"
                 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: T.purple }}>Requested Duration</div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: T.purple }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: T.accent }}>Requested Duration</div>
+                  <div className="h-font" style={{ fontSize: 18, fontWeight: 900, color: T.accent }}>
                     {(() => {
                       if (!leaveData.start || !leaveData.end) return "—";
                       const s = new Date(leaveData.start);
                       const e = new Date(leaveData.end);
                       if (e < s) return "Invalid range";
-                      
                       let diff = 0;
-                      // Iterate through the dates and count non-Sunday days
                       for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
-                        if (d.getDay() !== 0) { // 0 = Sunday
-                          diff++;
-                        }
+                        if (d.getDay() !== 0) diff++;
                       }
-                      return `${diff} Day${diff !== 1 ? 's' : ''}`;
+                      return `${diff} Business Day${diff !== 1 ? 's' : ''}`;
                     })()}
                   </div>
                 </div>
               )}
 
-              <div style={{ marginBottom: 24 }}>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.muted, marginBottom: 8, letterSpacing: 0.5 }}>
-                  {requestType === "Leave" ? "REASON FOR LEAVE" : "REASON FOR REQUEST"}
+              <div style={{ marginBottom: 32 }}>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: T.muted, marginBottom: 8, letterSpacing: 1, textTransform: "uppercase" }}>
+                  JUSTIFICATION / REASON
                 </label>
-                <textarea className="task-area" style={{ minHeight: 120 }} 
-                  placeholder={requestType === "Leave" ? "Please provide a brief reason for your leave request..." : "Please provide a brief reason for your Work From Home request..."}
+                <textarea className="task-area" style={{ minHeight: 140 }} 
+                  placeholder={requestType === "Leave" ? "Provide a clear reason for your absence..." : "Briefly explain the reason for your remote work request..."}
                   value={leaveData.reason} onChange={e => setLeaveData({ ...leaveData, reason: e.target.value })} />
               </div>
 
-              <button className="act-btn" onClick={handleLeaveRequest}
-                style={{ width: "100%", background: T.accent, color: "white", justifyContent: "center", padding: "14px", borderRadius: 12 }}>
-                <Icon d={icons.check} size={16} color="white" />
-                {requestType === "Leave" ? "Submit Leave Application" : "Submit WFH Request"}
-              </button>
+              <div style={{ display: "flex", gap: 12 }}>
+                {editingLeave && (
+                  <button className="act-btn" onClick={() => { setEditingLeave(null); setLeaveData({ start: "", end: "", reason: "" }); }}
+                    style={{ flex: 1, background: "#f1f5f9", color: T.ink, justifyContent: "center", border: `1.5px solid ${T.border}`, boxShadow: "none" }}>
+                    Cancel Edit
+                  </button>
+                )}
+                <button className="act-btn" onClick={handleLeaveRequest}
+                  style={{
+                    flex: 2, background: `linear-gradient(135deg, ${T.accent} 0%, ${T.accent2} 100%)`,
+                    color: "white", justifyContent: "center", boxShadow: `0 12px 25px ${T.accent}30`
+                  }}>
+                  <Icon d={icons.check} size={18} color="white" />
+                  {editingLeave ? "Update Request" : "Submit Request"}
+                </button>
+              </div>
             </div>
 
-            <div style={{ background: T.white, borderRadius: 16, border: `1px solid ${T.border}`, padding: 24, overflow: "hidden" }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 20 }}>My Requests History</div>
-              <div style={{ overflowY: "auto", maxHeight: 500, paddingRight: 6 }}>
+            <div className="premium-card" style={{ padding: 32, overflow: "hidden" }}>
+              <div className="h-font" style={{ fontSize: 20, fontWeight: 900, color: T.ink, marginBottom: 28, letterSpacing: "-0.5px" }}>Request Timeline</div>
+              <div style={{ overflowY: "auto", maxHeight: 580, paddingRight: 8 }}>
                 {myLeaves.length === 0 ? (
-                  <div style={{ textAlign: "center", color: T.muted, padding: "60px 0" }}>
-                    <div style={{ opacity: 0.3, marginBottom: 12 }}><Icon d={icons.calendar} size={48} /></div>
-                    No requests found
+                  <div style={{ textAlign: "center", color: T.muted, padding: "100px 0" }}>
+                    <div className="pulse-soft" style={{ fontSize: 48, marginBottom: 20 }}>📋</div>
+                    <div className="h-font" style={{ fontWeight: 800, fontSize: 18, color: T.ink }}>No requests found</div>
+                    <div style={{ fontSize: 14, marginTop: 6, opacity: 0.7 }}>Your submitted requests will appear here.</div>
                   </div>
                 ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    {[...myLeaves].reverse().map(l => (
-                      <div key={l.id} style={{ padding: 18, borderRadius: 16, background: T.surface, border: `1px solid ${T.border}`, transition: "transform 0.15s" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, alignItems: "center" }}>
-                          <div style={{ fontWeight: 800, fontSize: 14 }}>{new Date(l.start_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })} - {new Date(l.end_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
-                          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                   {[...myLeaves].sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime()).map(l => (
+                      <div key={l.id} style={{                        padding: "24px", borderRadius: 24,
+                        background: "rgba(255, 255, 255, 0.4)",
+                        border: `1.5px solid ${T.border}`,
+                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+                      }} onMouseOver={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.background = "white"; e.currentTarget.style.boxShadow = "0 15px 35px -5px rgba(0,0,0,0.05)"; }} onMouseOut={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.background = "rgba(255, 255, 255, 0.4)"; e.currentTarget.style.boxShadow = "none"; }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16, alignItems: "center" }}>
+                          <div className="h-font" style={{ fontWeight: 800, fontSize: 15, color: T.ink }}>{new Date(l.start_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })} - {new Date(l.end_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                             <Badge status={l.leave_type === "Work From Home" ? "Work From Home" : "Leave"} />
                             <Badge status={l.status} />
                           </div>
                         </div>
-                        <div style={{ fontSize: 13, color: T.ink2, lineHeight: 1.5, marginBottom: l.admin_comment ? 12 : 0 }}>{l.reason}</div>
+                        <div style={{ fontSize: 14, color: T.ink2, lineHeight: 1.6, fontWeight: 500, marginBottom: (l.admin_comment || l.status === "Pending") ? 20 : 0 }}>{l.reason}</div>
+                        
                         {l.admin_comment && (
-                          <div style={{ marginTop: 12, fontSize: 12, color: T.accent, background: "white", padding: "10px 14px", borderRadius: 10, borderLeft: `4px solid ${T.accent}`, boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
-                            <div style={{ fontWeight: 800, fontSize: 10, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 }}>Admin Feedback</div>
+                          <div style={{
+                            marginTop: 16, fontSize: 13, color: T.accent, background: "white",
+                            padding: "16px 20px", borderRadius: 18, borderLeft: `5px solid ${T.accent}`,
+                            boxShadow: "0 8px 20px rgba(0,0,0,0.03)", fontWeight: 600
+                          }}>
+                            <div style={{ fontWeight: 900, fontSize: 10, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>OFFICIAL RESPONSE</div>
                             {l.admin_comment}
                           </div>
                         )}
-                        <div style={{ marginTop: 10, fontSize: 10, color: T.muted, textAlign: "right" }}>Applied on {new Date(l.applied_at).toLocaleDateString()}</div>
+
+                        {l.status === "Pending" && (
+                          <div style={{ display: "flex", gap: 10, borderTop: `1.5px solid ${T.border}`, paddingTop: 16, marginTop: 4 }}>
+                            <button onClick={() => handleEditLeave(l)} style={{
+                              flex: 1, padding: "10px", borderRadius: 12, border: `1.5px solid ${T.accent}30`,
+                              background: `${T.accent}08`, color: T.accent, fontSize: 12, fontWeight: 800,
+                              cursor: "pointer", transition: "all 0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: 6
+                            }} onMouseOver={e => { e.currentTarget.style.background = T.accent; e.currentTarget.style.color = "white"; }}>
+                              ✏️ Edit Details
+                            </button>
+                            <button onClick={() => handleDeleteLeave(l.id)} style={{
+                              flex: 1, padding: "10px", borderRadius: 12, border: `1.5px solid ${T.red}30`,
+                              background: `${T.red}08`, color: T.red, fontSize: 12, fontWeight: 800,
+                              cursor: "pointer", transition: "all 0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: 6
+                            }} onMouseOver={e => { e.currentTarget.style.background = T.red; e.currentTarget.style.color = "white"; }}>
+                              🗑️ Cancel
+                            </button>
+                          </div>
+                        )}
+                        <div style={{ marginTop: 16, fontSize: 10, color: T.muted, textAlign: "right", fontWeight: 700, opacity: 0.6 }}>Submitted on {new Date(l.applied_at).toLocaleDateString()}</div>
                       </div>
                     ))}
                   </div>
@@ -2931,15 +3113,14 @@ function AssignTaskModal({ employee, onClose, onAssigned }) {
     <div style={{
       position: "fixed", inset: 0, zIndex: 2100,
       background: "rgba(11, 31, 53, 0.4)", backdropFilter: "blur(8px)",
-      display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
-      animation: "fadeIn 0.3s ease"
+      display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px",
+      animation: "fadeIn 0.3s ease", overflowY: "auto"
     }} onClick={onClose}>
       <div style={{
         background: "white", borderRadius: 28, width: "100%", maxWidth: 480,
         boxShadow: "0 25px 60px -12px rgba(0,0,0,0.25)", animation: "popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
-        overflow: "hidden", border: "1px solid rgba(255,255,255,0.2)"
+        overflow: "hidden", border: "1px solid rgba(255,255,255,0.2)", margin: "auto"
       }} onClick={e => e.stopPropagation()}>
-
         {/* Header with Gradient */}
         <div style={{
           background: `linear-gradient(135deg, ${T.ink} 0%, #1e3a5f 100%)`,
@@ -3915,7 +4096,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
     });
 
     return [...base].sort((a, b) => {
-      if (!sortConfig) return 0;
+      if (!sortConfig) return new Date(b.date).getTime() - new Date(a.date).getTime();
       const { key, dir } = sortConfig;
       
       if (key === "hours") {
@@ -3975,23 +4156,91 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
 
 
   return (
-    <div style={{ minHeight: "100vh", background: "#eef3f9", fontFamily: "'Segoe UI',system-ui,sans-serif" }}>
+    <div style={{
+      minHeight: "100vh",
+      background: "linear-gradient(-45deg, #c7d2fe, #fbcfe8, #ddd6fe, #bae6fd, #fce7f3, #d1fae5)",
+      backgroundSize: "400% 400%",
+      animation: "gradientFlow 20s ease infinite",
+      backgroundAttachment: "fixed",
+      fontFamily: "'Inter', sans-serif",
+      color: T.ink,
+    }}>
       <style>{`
-        .adm-tab{padding:10px 22px;border-radius:12px;border:none;cursor:pointer;font-size:13px;
-          font-weight:700;transition:all 0.25s cubic-bezier(0.4, 0, 0.2, 1);background:none;color:${T.muted};}
-        .adm-tab.active{background:${T.white};color:${T.accent};box-shadow:0 10px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.08);}
-        .adm-tab:hover:not(.active){color:${T.ink};background:rgba(255,255,255,0.5);}
-        .adm-row{transition:all 0.2s;}
-        .adm-row:hover{background:${T.surface};transform:translateY(-1px);}
-        .adm-inp{padding:11px 16px;border-radius:12px;border:1.5px solid ${T.border};
-          font-size:13px;outline:none;color:${T.ink};background:white;transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-          box-shadow:0 1px 2px rgba(0,0,0,0.05);}
-        .adm-inp:focus{border-color:${T.accent};box-shadow:0 0 0 4px ${T.accent}15;background:white;}
-        .premium-card{background:white;border-radius:24px;border:1px solid ${T.border};
-          box-shadow:0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);overflow:hidden;}
-        @keyframes popIn{0%{opacity:0;transform:scale(0.95) translateY(10px)}100%{opacity:1;transform:scale(1) translateY(0)}}
-        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-        @keyframes pulse{0%{transform:scale(1);box-shadow:0 0 0 0 rgba(239,68,68,0.7)}70%{transform:scale(1.1);box-shadow:0 0 0 10px rgba(239,68,68,0)}100%{transform:scale(1);box-shadow:0 0 0 0 rgba(239,68,68,0)}}
+        body { margin: 0; padding: 0; }
+        .h-font { font-family: 'Outfit', sans-serif; }
+        
+        @keyframes gradientFlow {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        
+        .adm-tab {
+          padding: 10px 24px;
+          border-radius: 14px;
+          border: 1px solid transparent;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 700;
+          font-family: 'Outfit', sans-serif;
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          background: transparent;
+          color: ${T.muted};
+        }
+        
+        .adm-tab.active {
+          background: white;
+          color: ${T.accent};
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+          transform: scale(1.05);
+        }
+        
+        .adm-tab:hover:not(.active) {
+          color: ${T.ink};
+          background: rgba(255, 255, 255, 0.4);
+        }
+
+        .adm-row { transition: all 0.3s ease; }
+        .adm-row:hover { 
+          background: rgba(255, 255, 255, 0.6) !important; 
+          transform: translateX(4px);
+          box-shadow: -4px 0 0 ${T.accent};
+        }
+
+        .adm-inp {
+          padding: 12px 18px;
+          border-radius: 16px;
+          border: 1px solid ${T.border};
+          font-size: 14px;
+          outline: none;
+          color: ${T.ink};
+          background: rgba(255, 255, 255, 0.6);
+          backdrop-filter: blur(10px);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          font-family: 'Inter', sans-serif;
+        }
+
+        .adm-inp:focus {
+          border-color: ${T.accent}40;
+          background: white;
+          box-shadow: 0 0 0 4px ${T.accent}10;
+        }
+
+        .premium-card {
+          background: rgba(255, 255, 255, 0.8);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border-radius: 28px;
+          border: 1px solid ${T.border};
+          box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.03);
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          animation: slideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+        }
+
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
 
         @media (max-width: 992px) {
           .adm-topbar { height: auto !important; padding: 12px 20px !important; flex-wrap: wrap; gap: 12px; }
@@ -4002,7 +4251,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
           .adm-filter-bar { flex-direction: column !important; align-items: stretch !important; gap: 10px !important; }
           .adm-filter-bar > * { width: 100% !important; max-width: none !important; min-width: 0 !important; }
           .adm-tab-container { padding: 4px !important; overflow-x: auto; white-space: nowrap; width: 100%; box-sizing: border-box; }
-          .adm-tab { padding: 8px 14px !important; font-size: 11px !important; border-radius: 8px !important; }
+          .adm-tab { padding: 8px 16px !important; font-size: 12px !important; border-radius: 10px !important; }
           .adm-main-content { padding: 16px 12px !important; }
           .adm-topbar > div:first-child { width: 100%; justify-content: center; }
           .chat-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
@@ -4016,70 +4265,71 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
 
       {/* Topbar */}
       <div className="adm-topbar" style={{
-        background: T.ink, padding: "0 28px", display: "flex", alignItems: "center",
-        justifyContent: "space-between", height: 60, boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
+        background: T.ink, padding: "0 32px", display: "flex", alignItems: "center",
+        justifyContent: "space-between", height: 70, boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
         position: "sticky", top: 0, zIndex: 1000
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <a href="https://brollysolutions.in" style={{
-            textDecoration: "none", display: "flex", alignItems: "center", gap: 6,
-            padding: "6px 12px", borderRadius: 10, background: "rgba(255,255,255,0.08)",
-            color: "white", fontWeight: 700, fontSize: 12, border: "1.5px solid rgba(255,255,255,0.15)",
-            transition: "all 0.2s", marginRight: 12
+            textDecoration: "none", display: "flex", alignItems: "center", gap: 8,
+            padding: "8px 16px", borderRadius: 14, background: "rgba(255,255,255,0.08)",
+            color: "white", fontWeight: 700, fontSize: 13, border: "1px solid rgba(255,255,255,0.15)",
+            transition: "all 0.2s", marginRight: 12, fontFamily: "'Outfit', sans-serif"
           }} onMouseOver={e => { e.currentTarget.style.background = "rgba(255,255,255,0.15)"; }}
             onMouseOut={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; }}>
-            <Icon d={icons.chevronLeft} size={13} color="white" />
-            Go Back
+            <Icon d={icons.chevronLeft} size={14} color="white" />
+            Home
           </a>
           <div style={{
-            width: 36, height: 36, borderRadius: 9, background: "#fff",
-            display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden"
+            width: 42, height: 42, borderRadius: 12, background: "white",
+            display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
           }}>
             <img src={logo} alt="Brolly Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </div>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 15, color: "white", letterSpacing: 0.2 }}>Brolly Admin</div>
-            <div style={{ fontSize: 10, color: T.faint, letterSpacing: 0.5 }}>ATTENDANCE CONTROL PANEL</div>
+            <div className="h-font" style={{ fontWeight: 800, fontSize: 18, color: "white", letterSpacing: "-0.3px" }}>Brolly Admin</div>
+            <div style={{ fontSize: 10, color: T.faint, letterSpacing: 1, fontWeight: 700 }}>SYSTEM ARCHIVE</div>
           </div>
         </div>
 
         <div className="adm-topbar-actions" style={{ display: "flex", alignItems: "center", gap: 16 }}>
           {lastSync && (
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 500, background: "rgba(255,255,255,0.05)", padding: "4px 10px", borderRadius: 8 }}>
-              Sync: {lastSync.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontWeight: 700, background: "rgba(255,255,255,0.05)", padding: "6px 14px", borderRadius: 12, fontFamily: "'Outfit', sans-serif" }}>
+              SYNC: {lastSync.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
             </div>
           )}
           <button onClick={fetchAttendance}
             style={{
-              display: "flex", alignItems: "center", gap: 8, padding: "8px 16px",
-              borderRadius: 12, border: "1.5px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.08)",
-              color: "white", cursor: "pointer", fontSize: 13, fontWeight: 700,
-              transition: "all 0.25s"
+              display: "flex", alignItems: "center", gap: 10, padding: "10px 20px",
+              borderRadius: 14, border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.08)",
+              color: "white", cursor: "pointer", fontSize: 13, fontWeight: 800,
+              transition: "all 0.25s", fontFamily: "'Outfit', sans-serif"
             }} onMouseOver={e => e.currentTarget.style.background = "rgba(255,255,255,0.15)"} onMouseOut={e => e.currentTarget.style.background = "rgba(255,255,255,0.08)"}>
-            <Icon d={icons.refresh} size={14} color="white" />
+            <Icon d={icons.refresh} size={16} color="white" />
             <span className="adm-btn-text">Refresh</span>
           </button>
           <button onClick={exportExcel}
             style={{
-              display: "flex", alignItems: "center", gap: 8, padding: "8px 16px",
-              borderRadius: 12, border: "none", background: T.accent,
-              color: "white", cursor: "pointer", fontSize: 13, fontWeight: 700,
-              transition: "all 0.2s", boxShadow: `0 4px 12px ${T.accent}40`
-            }} onMouseOver={e => e.currentTarget.style.transform = "translateY(-1px)"} onMouseOut={e => e.currentTarget.style.transform = "none"}>
-            <Icon d={icons.save} size={14} color="white" />
+              display: "flex", alignItems: "center", gap: 10, padding: "10px 20px",
+              borderRadius: 14, border: "none", background: T.accent,
+              color: "white", cursor: "pointer", fontSize: 13, fontWeight: 800,
+              transition: "all 0.2s", boxShadow: `0 8px 20px ${T.accent}40`, fontFamily: "'Outfit', sans-serif"
+            }} onMouseOver={e => e.currentTarget.style.transform = "translateY(-2px)"} onMouseOut={e => e.currentTarget.style.transform = "none"}>
+            <Icon d={icons.save} size={16} color="white" />
             <span className="adm-btn-text">Export</span>
           </button>
           <button onClick={() => setTab("employees")} style={{
-            position: "relative", width: 38, height: 38, borderRadius: 10, 
+            position: "relative", width: 44, height: 44, borderRadius: 14, 
             background: activeTab === 'employees' ? T.purple : "rgba(255,255,255,0.08)", 
             color: "white", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-            border: `1.5px solid ${activeTab === 'employees' ? T.purple : "rgba(255,255,255,0.15)"}`,
+            border: `1px solid ${activeTab === 'employees' ? T.purple : "rgba(255,255,255,0.15)"}`,
             transition: "all 0.2s"
           }} title="View Messages">
-            <Icon d={icons.message} size={18} color="white" />
+            <Icon d={icons.message} size={20} color="white" />
             {(Object.values(unreadMap).reduce((a, b) => a + b, 0) + Object.values(groupUnreadMapAdmin).reduce((a, b) => a + b, 0)) > 0 && (
               <span style={{
-                position: "absolute", top: -5, right: -5, width: 18, height: 18, borderRadius: "50%",
+                position: "absolute", top: -8, right: -8, width: 22, height: 22, borderRadius: "50%",
                 background: T.red, color: "white", fontSize: 10, fontWeight: 800,
                 display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #0b1f35",
                 animation: "pulse 2s infinite"
@@ -4105,14 +4355,15 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
       {/* ── Details Modal ── */}
       {selectedRecord && (
         <div style={{
-          position: "fixed", inset: 0, zIndex: 1000,
+          position: "fixed", inset: 0, zIndex: 2000,
           background: "rgba(11,31,53,0.6)", backdropFilter: "blur(4px)",
-          display: "flex", alignItems: "center", justifyContent: "center", padding: 20
+          display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px",
+          overflowY: "auto"
         }} onClick={() => setSelectedRecord(null)}>
           <div style={{
             background: "white", borderRadius: 24, width: "100%", maxWidth: 550,
             boxShadow: "0 20px 50px rgba(0,0,0,0.3)", animation: "fadeInUp 0.3s ease",
-            overflow: "hidden"
+            overflow: "hidden", margin: "auto"
           }} onClick={e => e.stopPropagation()}>
             <div style={{
               background: T.ink, padding: "24px 30px", color: "white",
@@ -4243,14 +4494,14 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
           <div style={{
             position: "fixed", inset: 0, zIndex: 1000,
             background: "rgba(11,31,53,0.6)", backdropFilter: "blur(4px)",
-            display: "flex", alignItems: "center", justifyContent: "center", padding: 20
+            display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px",
+            overflowY: "auto"
           }} onClick={() => setSelectedEmployeeProfile(null)}>
             <div style={{
               background: "white", borderRadius: 24, width: "100%", maxWidth: 680,
               boxShadow: "0 20px 50px rgba(0,0,0,0.3)", animation: "fadeInUp 0.3s ease",
-              overflow: "hidden"
-            }} onClick={e => e.stopPropagation()}>
-              
+              overflow: "hidden", margin: "auto"
+            }} onClick={e => e.stopPropagation()}>              
               {/* Modal Header */}
               <div style={{
                 background: "linear-gradient(135deg, #0b1f35 0%, #1e3a5f 100%)", padding: "24px 30px", color: "white",
@@ -4567,13 +4818,14 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
         <div style={{
           position: "fixed", inset: 0, zIndex: 1001,
           background: "rgba(11,31,53,0.6)", backdropFilter: "blur(4px)",
-          display: "flex", alignItems: "center", justifyContent: "center", padding: 20
+          display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px",
+          overflowY: "auto"
         }} onClick={() => setChatWith(null)}>
           <div style={{
             width: "100%", maxWidth: 450, height: "80vh",
             boxShadow: "0 20px 50px rgba(0,0,0,0.3)", animation: "fadeInUp 0.3s ease",
-          }} onClick={e => e.stopPropagation()}>
-            <ChatPanel
+            margin: "auto"
+          }} onClick={e => e.stopPropagation()}>            <ChatPanel
               currentUser={{ id: "admin", name: "Admin" }}
               targetUser={chatWith}
               onBack={() => setChatWith(null)}
@@ -4590,13 +4842,13 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
 
                 <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px" }}>
         {/* Stat cards */}
-        <div className="adm-stat-grid stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 14, marginBottom: 24 }}>
-          <StatCard label="Total Employees" value={String(registeredCount)} sub="Registered" icon={icons.user} color={T.accent} bg="#e8f0fc" />
-          <StatCard label="Today Present" value={String(todayRecs.length)} sub={today} icon={icons.check} color={T.green} bg={T.greenBg} isLive={true} />
-          <StatCard label="Full Day Today" value={String(fullDayToday)} sub="≥ 8 hours" icon={icons.clock} color={T.green} bg={T.greenBg} />
-          <StatCard label="IWD Today" value={String(iwdToday)} sub="4.5 - 8 hrs" icon={icons.chart} color={T.orange} bg={T.orangeBg} />
-          <StatCard label="Half Day Today" value={String(halfDayToday)} sub="< 4.5 hours" icon={icons.clock} color={T.amber} bg={T.amberBg} />
-          <StatCard label="Total Records" value={String(records.length)} sub="All time" icon={icons.calendar} color={T.purple} bg={T.purpleBg} />
+        <div className="adm-stat-grid stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 18, marginBottom: 32 }}>
+          <StatCard index={0} label="Total Employees" value={String(registeredCount)} sub="Registered" icon={icons.user} color={T.accent} bg="rgba(37, 99, 235, 0.1)" />
+          <StatCard index={1} label="Today Present" value={String(todayRecs.length)} sub={today} icon={icons.check} color={T.green} bg="rgba(16, 185, 129, 0.1)" isLive={true} />
+          <StatCard index={2} label="Full Day Today" value={String(fullDayToday)} sub="≥ 8 hours" icon={icons.clock} color={T.green} bg="rgba(16, 185, 129, 0.1)" />
+          <StatCard index={3} label="IWD Today" value={String(iwdToday)} sub="4.5 - 8 hrs" icon={icons.chart} color={T.orange} bg="rgba(249, 115, 22, 0.1)" />
+          <StatCard index={4} label="Half Day Today" value={String(halfDayToday)} sub="< 4.5 hours" icon={icons.clock} color={T.amber} bg="rgba(245, 158, 11, 0.1)" />
+          <StatCard index={5} label="Total Records" value={String(records.length)} sub="All time" icon={icons.calendar} color={T.purple} bg="rgba(139, 92, 246, 0.1)" />
         </div>
 
         {/* Tabs */}
@@ -4815,7 +5067,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
         {/* Attendance Records Table */}
         {activeTab === "attendance" && (
           <div className="premium-card">
-            <div style={{ overflowX: "auto" }}>
+            <div style={{ overflowX: "auto", maxHeight: 600, overflowY: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: T.surface }}>
@@ -4934,9 +5186,8 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                 <div style={{ fontSize: 12, color: T.muted }}>Real-time activity from your team</div>
               </div>
             </div>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                <thead>
+            <div style={{ overflowX: "auto", maxHeight: 600, overflowY: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>                <thead>
                   <tr style={{ background: T.surface }}>
                     {["Assigned At", "Employee", "Task Title", "Status", "Tracking"].map(h => (
                       <th key={h} style={colStyle}>{h}</th>
@@ -4944,9 +5195,8 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {[...taskFeed].reverse().map((t, i) => (
-                    <tr key={i} className="adm-row">
-                      <td style={cellStyle}>{new Date(t.assigned_at).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
+                 {[...taskFeed].sort((a, b) => new Date(b.assigned_at).getTime() - new Date(a.assigned_at).getTime()).map((t, i) => (
+                   <tr key={i} className="adm-row">                      <td style={cellStyle}>{new Date(t.assigned_at).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
                       <td style={cellStyle}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <Avatar name={allEmployees.find(e => e.id === t.employee_id)?.name || "?"} src={profiles.find(p => String(p.employee_id).toLowerCase() === String(t.employee_id).toLowerCase())?.photo} size={28} />
@@ -4987,9 +5237,8 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                 <div style={{ fontSize: 12, color: T.muted }}>Manage and approve employee requests (Leave & Work From Home)</div>
               </div>
             </div>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                <thead>
+            <div style={{ overflowX: "auto", maxHeight: 600, overflowY: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>                <thead>
                   <tr style={{ background: T.surface }}>
                     {["Applied On", "Employee", "Type", "Duration", "Reason", "Status", "Actions"].map(h => (
                       <th key={h} style={colStyle}>{h}</th>
@@ -5000,7 +5249,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                   {leaveRequests.length === 0 ? (
                     <tr><td colSpan="7" style={{ padding: 40, textAlign: "center", color: T.muted }}>No requests found</td></tr>
                   ) : (
-                    [...leaveRequests].reverse().map((l, i) => (
+                    [...leaveRequests].sort((a, b) => new Date(b.applied_at).getTime() - new Date(a.applied_at).getTime()).map((l, i) => (
                       <tr key={i} className="adm-row">
                         <td style={cellStyle}>{new Date(l.applied_at).toLocaleDateString()}</td>
                         <td style={cellStyle}>
