@@ -1041,6 +1041,23 @@ function Dashboard({ employee, onSignOut, showToast }) {
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const latestStateRef = useRef({});
+  useEffect(() => {
+    latestStateRef.current = {
+      employee,
+      status,
+      loginTime,
+      logoutTime,
+      sessionStartTime,
+      breakStartTime,
+      totalWorkSeconds,
+      totalBreakSeconds,
+      breakLogs,
+      taskInput
+    };
+  });
+
+  const lastLocalStatusChangeTimeRef = useRef(0);
 
   // Leave Management State
   const [profile, setProfile] = useState({ total_leaves: 16 });
@@ -1131,6 +1148,10 @@ function Dashboard({ employee, onSignOut, showToast }) {
     let pollInterval;
 
     const checkTodayStatus = async (isInitial = false) => {
+      // Prevent race conditions: ignore polling updates for 10 seconds after clicking a status button
+      if (!isInitial && Date.now() - lastLocalStatusChangeTimeRef.current < 10000) {
+        return;
+      }
       try {
         const resp = await fetch(BACKEND_URL);
         if (resp.ok) {
@@ -1165,7 +1186,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
             const nowTime = new Date().getTime();
             const lastActive = todayRec.last_active ? new Date(todayRec.last_active).getTime() : 0;
-            const isStale = lastActive > 0 && (nowTime - lastActive) > 90000; // 90 seconds threshold (3 heartbeats)
+            const isStale = lastActive > 0 && (nowTime - lastActive) > 600000; // 10 minutes threshold (20 heartbeats)
 
             if (isStale && (todayRec.status === "Active" || todayRec.status === "On Break")) {
               console.log("Gap detected! Resuming from stale session. Correcting hours to exclude offline gap...");
@@ -1487,6 +1508,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
   const liveBreakHrs = secondsToHMS(currentTotalBreakSeconds);
 
   const handleLogin = () => {
+    lastLocalStatusChangeTimeRef.current = Date.now();
     const t = new Date();
     if (!loginTime) setLT(t);
     setSessionStartTime(t);
@@ -1496,6 +1518,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
   };
 
   const handleBreak = () => {
+    lastLocalStatusChangeTimeRef.current = Date.now();
     const t = new Date();
     if (status === "working" && sessionStartTime) {
       const addedWork = Math.floor((t - sessionStartTime) / 1000);
@@ -1528,19 +1551,27 @@ function Dashboard({ employee, onSignOut, showToast }) {
   };
 
   const triggerAutoSync = (lt, lot, curStatus, startTimeOverride, workOverride, breakOverride, logsOverride) => {
+    const state = latestStateRef.current;
+    
+    // Resolve effective values with safe fallbacks to prevent stale closures
+    const effectiveLt = lt || state.loginTime;
+    const effectiveLot = lot || state.logoutTime;
+    const effectiveStatus = curStatus !== undefined ? curStatus : state.status;
+    const effectiveEmployee = state.employee || employee;
+
     const syncTime = new Date();
-    const sTime = startTimeOverride || (curStatus === "working" ? sessionStartTime : (curStatus === "break" ? breakStartTime : null));
+    const sTime = startTimeOverride || (effectiveStatus === "working" ? state.sessionStartTime : (effectiveStatus === "break" ? state.breakStartTime : null));
 
     const tWork = workOverride !== undefined ? workOverride : (
-      curStatus === "working" && sTime
-        ? totalWorkSeconds + Math.floor((syncTime - sTime) / 1000)
-        : totalWorkSeconds
+      effectiveStatus === "working" && sTime
+        ? state.totalWorkSeconds + Math.floor((syncTime - sTime) / 1000)
+        : state.totalWorkSeconds
     );
 
     const tBreak = breakOverride !== undefined ? breakOverride : (
-      curStatus === "break" && sTime
-        ? totalBreakSeconds + Math.floor((syncTime - sTime) / 1000)
-        : totalBreakSeconds
+      effectiveStatus === "break" && sTime
+        ? state.totalBreakSeconds + Math.floor((syncTime - sTime) / 1000)
+        : state.totalBreakSeconds
     );
 
     const hrs = secondsToHMS(tWork);
@@ -1555,19 +1586,19 @@ function Dashboard({ employee, onSignOut, showToast }) {
     }
 
     const payload = {
-      date: fmtDate(lt),
-      id: employee.id,
-      name: employee.name,
-      dept: employee.dept,
-      loginT: fmtTime(lt),
-      logoutT: (lot && curStatus !== "working" && curStatus !== "break") ? fmtTime(lot) : "—",
+      date: fmtDate(effectiveLt),
+      id: effectiveEmployee.id,
+      name: effectiveEmployee.name,
+      dept: effectiveEmployee.dept,
+      loginT: fmtTime(effectiveLt),
+      logoutT: (effectiveLot && effectiveStatus !== "working" && effectiveStatus !== "break") ? fmtTime(effectiveLot) : "—",
       hours: hmsStr(hrs),
       breakTime: hmsStr(brk),
       extraHours: "—",
-      tasks: taskInput || "—",
-      breakLogs: JSON.stringify(logsOverride || breakLogs),
-      status: curStatus === "working" ? "Active" : curStatus === "break" ? "On Break" : dayStatus,
-      lastStatusChange: (curStatus === "working" || curStatus === "break") ? syncTime.toISOString() : (sTime ? sTime.toISOString() : null)
+      tasks: state.taskInput || "—",
+      breakLogs: JSON.stringify(logsOverride || state.breakLogs || []),
+      status: effectiveStatus === "working" ? "Active" : effectiveStatus === "break" ? "On Break" : dayStatus,
+      lastStatusChange: (effectiveStatus === "working" || effectiveStatus === "break") ? syncTime.toISOString() : (sTime ? sTime.toISOString() : null)
     };
 
     // Fast sync to local backend
@@ -1578,10 +1609,10 @@ function Dashboard({ employee, onSignOut, showToast }) {
     }).then(resp => {
       if (resp.ok) {
         // Update local state to match what was synced
-        if (curStatus === "working") {
+        if (effectiveStatus === "working") {
           setTotalWorkSeconds(tWork);
           setSessionStartTime(syncTime);
-        } else if (curStatus === "break") {
+        } else if (effectiveStatus === "break") {
           setTotalBreakSeconds(tBreak);
           setBreakStartTime(syncTime);
         }
@@ -1589,6 +1620,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
     }).catch(e => console.warn("Auto-sync failed", e));
   };
   const handleLogout = () => {
+    lastLocalStatusChangeTimeRef.current = Date.now();
     if (status !== "working" && status !== "break") return;
     const t = new Date();
 
@@ -1711,35 +1743,86 @@ function Dashboard({ employee, onSignOut, showToast }) {
   // ── Heartbeat & Periodic Sync ──
   // Heartbeat only keeps last_active fresh for admin visibility.
   // It NEVER forces a re-login — session is always restored from DB on page load.
+  // Uses a Web Worker to manage timers to prevent background tab throttling.
   useEffect(() => {
     if (!employee?.id || (status !== "working" && status !== "break")) return;
 
     const runHeartbeat = async () => {
+      const state = latestStateRef.current;
       try {
         await fetch(HEARTBEAT_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            employee_id: employee.id,
-            date: fmtDate(loginTime || new Date())
+            employee_id: state.employee?.id || employee.id,
+            date: fmtDate(state.loginTime || loginTime || new Date())
           })
         });
       } catch (e) { console.warn("Heartbeat failed", e); }
     };
 
     const runBackgroundSync = () => {
-      if (status === "working" || status === "break") {
-        triggerAutoSync(loginTime, logoutTime, status);
+      const state = latestStateRef.current;
+      const currentStatus = state.status || status;
+      if (currentStatus === "working" || currentStatus === "break") {
+        triggerAutoSync(state.loginTime || loginTime, state.logoutTime || logoutTime, currentStatus);
       }
     };
 
-    const heartbeatIv = setInterval(runHeartbeat, 30000); // 30 seconds
-    runHeartbeat(); // Run immediately on mount or status change
-    const syncIv = setInterval(runBackgroundSync, 300000); // 5 mins
+    let worker;
+    let fallbackHeartbeatIv;
+    let fallbackSyncIv;
+
+    try {
+      const workerCode = `
+        let heartbeatTimer = null;
+        let syncTimer = null;
+        self.onmessage = function(e) {
+          if (e.data === 'start') {
+            if (heartbeatTimer) clearInterval(heartbeatTimer);
+            if (syncTimer) clearInterval(syncTimer);
+            
+            heartbeatTimer = setInterval(() => {
+              self.postMessage('heartbeat');
+            }, 30000);
+            
+            syncTimer = setInterval(() => {
+              self.postMessage('sync');
+            }, 300000);
+          } else if (e.data === 'stop') {
+            if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+            if (syncTimer) { clearInterval(syncTimer); syncTimer = null; }
+          }
+        };
+      `;
+      const blob = new Blob([workerCode], { type: 'application/javascript' });
+      const workerUrl = URL.createObjectURL(blob);
+      worker = new Worker(workerUrl);
+      
+      worker.onmessage = (e) => {
+        if (e.data === 'heartbeat') {
+          runHeartbeat();
+        } else if (e.data === 'sync') {
+          runBackgroundSync();
+        }
+      };
+      
+      runHeartbeat(); // Run immediately on mount or status change
+      worker.postMessage('start');
+    } catch (err) {
+      console.warn("Failed to initialize heartbeat Web Worker, falling back to standard setInterval", err);
+      runHeartbeat();
+      fallbackHeartbeatIv = setInterval(runHeartbeat, 30000);
+      fallbackSyncIv = setInterval(runBackgroundSync, 300000);
+    }
 
     return () => {
-      clearInterval(heartbeatIv);
-      clearInterval(syncIv);
+      if (worker) {
+        worker.postMessage('stop');
+        worker.terminate();
+      }
+      if (fallbackHeartbeatIv) clearInterval(fallbackHeartbeatIv);
+      if (fallbackSyncIv) clearInterval(fallbackSyncIv);
     };
   }, [employee?.id, status, loginTime, logoutTime]);
 

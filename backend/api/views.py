@@ -147,22 +147,10 @@ def attendance_list(request):
             instance = Attendance.objects.filter(employee_id=employee_id, date=date).first()
             
             if instance:
-                # Intelligent task accumulation/appending logic:
-                current_tasks = instance.tasks.strip() if instance.tasks else ""
-                incoming_tasks = request.data.get('tasks', '').strip()
-                
-                if incoming_tasks and incoming_tasks != "—":
-                    if not current_tasks or current_tasks == "—":
-                        instance.tasks = incoming_tasks
-                    elif incoming_tasks in current_tasks:
-                        # Incoming is already completely contained in DB. Do nothing.
-                        pass
-                    elif current_tasks in incoming_tasks:
-                        # Incoming is an expanded version of what we have. Overwrite.
-                        instance.tasks = incoming_tasks
-                    else:
-                        # Both are distinct. Append them with a new line.
-                        instance.tasks = f"{current_tasks}\n{incoming_tasks}"
+                # Directly overwrite tasks from incoming request to allow full editing, deleting, and updating
+                incoming_tasks = request.data.get('tasks')
+                if incoming_tasks is not None:
+                    instance.tasks = incoming_tasks.strip()
 
                 # Safeguard: If the existing record is already in a completed state,
                 # do not let a stale/late client request set it back to an active state
@@ -873,11 +861,11 @@ def heartbeat(request):
         record = Attendance.objects.filter(employee_id=employee_id).order_by('-date', '-timestamp').first()
 
     if record:
-        # Check for offline gaps (e.g., if last_active was more than 300s ago)
-        # Threshold 300s = 10 missed heartbeats (30s each)
+        # Check for offline gaps (e.g., if last_active was more than 600s ago)
+        # Threshold 600s = 20 missed heartbeats (30s each)
         if record.last_active:
             gap = (now - record.last_active).total_seconds()
-            if gap > 300:
+            if gap > 600:
                 try:
                     logs = json.loads(record.offline_logs or "[]")
                     logs.append({
