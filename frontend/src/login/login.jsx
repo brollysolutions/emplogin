@@ -1153,7 +1153,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
         return;
       }
       try {
-        const resp = await fetch(BACKEND_URL);
+        const resp = await fetch(BACKEND_URL, { cache: "no-store" });
         if (resp.ok) {
           const data = await resp.json();
           const myHistory = data.filter(r => (r.id === employee.id || r.employeeid === employee.id));
@@ -1395,6 +1395,16 @@ function Dashboard({ employee, onSignOut, showToast }) {
   const [activeTab, setTab] = useState("today");
   const fileRef = useRef(null);
 
+  // Periodic Auto-Refresh: Reload the site every hour (3,600,000 ms) to keep everything fresh
+  // Session is maintained via localStorage (wt_session)
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      console.log("Hourly auto-refresh triggered.");
+      window.location.reload();
+    }, 3600000);
+    return () => clearInterval(refreshInterval);
+  }, []);
+
   // Persist session
   useEffect(() => {
     if (status === "idle" && !loginTime) {
@@ -1417,71 +1427,74 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
 
-  // Midnight rollover check: if active session belongs to a previous day, auto-logout at midnight
+  // Midnight rollover check: if active session belongs to a previous day, auto-reset at midnight
   useEffect(() => {
-    if (!loginTime || (status !== "working" && status !== "break")) return;
+    if (!loginTime) return;
 
     const todayStr = fmtDate(now);
     const loginStr = fmtDate(loginTime);
 
     if (todayStr !== loginStr) {
-      console.log("Midnight rollover detected! Auto-saving previous day's session...");
+      console.log("Midnight rollover detected! Resetting dashboard...");
       
       const endOfPrevDay = new Date(loginTime);
       endOfPrevDay.setHours(23, 59, 59, 999);
 
-      let finalWork = totalWorkSeconds;
-      let finalBreak = totalBreakSeconds;
+      if (status === "working" || status === "break") {
+        console.log("Auto-saving previous day's active session...");
+        let finalWork = totalWorkSeconds;
+        let finalBreak = totalBreakSeconds;
 
-      if (status === "working" && sessionStartTime) {
-        const timeToMidnight = Math.max(0, Math.floor((endOfPrevDay - sessionStartTime) / 1000));
-        finalWork += timeToMidnight;
-      } else if (status === "break" && breakStartTime) {
-        const timeToMidnight = Math.max(0, Math.floor((endOfPrevDay - breakStartTime) / 1000));
-        finalBreak += timeToMidnight;
-      }
+        if (status === "working" && sessionStartTime) {
+          const timeToMidnight = Math.max(0, Math.floor((endOfPrevDay - sessionStartTime) / 1000));
+          finalWork += timeToMidnight;
+        } else if (status === "break" && breakStartTime) {
+          const timeToMidnight = Math.max(0, Math.floor((endOfPrevDay - breakStartTime) / 1000));
+          finalBreak += timeToMidnight;
+        }
 
-      const hrs = secondsToHMS(finalWork);
-      const brk = secondsToHMS(finalBreak);
-      
-      const WORK_GOAL = 8;
-      const HALF_DAY_THRESHOLD = 4.5;
-      let dayStatus = "Half Day";
-      if (hrs.total >= WORK_GOAL) dayStatus = "Full Day";
-      else if (hrs.total >= HALF_DAY_THRESHOLD) dayStatus = "Incomplete Workday(IWD)";
+        const hrs = secondsToHMS(finalWork);
+        const brk = secondsToHMS(finalBreak);
+        
+        const WORK_GOAL = 8;
+        const HALF_DAY_THRESHOLD = 4.5;
+        let dayStatus = "Half Day";
+        if (hrs.total >= WORK_GOAL) dayStatus = "Full Day";
+        else if (hrs.total >= HALF_DAY_THRESHOLD) dayStatus = "Incomplete Workday(IWD)";
 
-      const syncPayload = {
-        date: loginStr,
-        id: employee.id,
-        name: employee.name,
-        dept: employee.dept,
-        loginT: fmtTime(loginTime),
-        logoutT: "11:59:59 PM",
-        hours: hmsStr(hrs),
-        breakTime: hmsStr(brk),
-        extraHours: hrs.total > 8 ? hmsStr(secondsToHMS(Math.floor((hrs.total - 8) * 3600))) : "—",
-        tasks: taskInput || "—",
-        status: dayStatus,
-        lastStatusChange: endOfPrevDay.toISOString()
-      };
+        const syncPayload = {
+          date: loginStr,
+          id: employee.id,
+          name: employee.name,
+          dept: employee.dept,
+          loginT: fmtTime(loginTime),
+          logoutT: "11:59:59 PM",
+          hours: hmsStr(hrs),
+          breakTime: hmsStr(brk),
+          extraHours: hrs.total > 8 ? hmsStr(secondsToHMS(Math.floor((hrs.total - 8) * 3600))) : "—",
+          tasks: taskInput || "—",
+          status: dayStatus,
+          lastStatusChange: endOfPrevDay.toISOString()
+        };
 
-      // 1. Sync to local backend
-      fetch(BACKEND_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(syncPayload)
-      }).catch(e => console.warn("Rollover sync failed", e));
-
-      // 2. Sync to Google Sheets if configured
-      if (SCRIPT_URL && !SCRIPT_URL.includes("YOUR_SCRIPT_URL_HERE")) {
-        fetch(SCRIPT_URL, {
+        // 1. Sync to local backend
+        fetch(BACKEND_URL, {
           method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(syncPayload)
-        }).catch(e => console.warn("Sheets rollover sync failed", e));
+        }).catch(e => console.warn("Rollover sync failed", e));
+
+        // 2. Sync to Google Sheets if configured
+        if (SCRIPT_URL && !SCRIPT_URL.includes("YOUR_SCRIPT_URL_HERE")) {
+          fetch(SCRIPT_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(syncPayload)
+          }).catch(e => console.warn("Sheets rollover sync failed", e));
+        }
       }
 
-      // 3. Clear local states and reset session to idle
+      // 3. Clear local states and reset session to idle (common for all states)
       setTotalWorkSeconds(0);
       setTotalBreakSeconds(0);
       setSessionStartTime(null);
@@ -1489,8 +1502,10 @@ function Dashboard({ employee, onSignOut, showToast }) {
       setLT(null);
       setLOT(null);
       setStatus("idle");
+      setTask("");
+      setBreakLogs([]);
       localStorage.removeItem("wt_session");
-      _showToast("Rollover: Session closed at midnight", "info");
+      _showToast("Rollover: Dashboard reset for the new day", "info");
     }
   }, [now, loginTime, status, totalWorkSeconds, totalBreakSeconds, sessionStartTime, breakStartTime, taskInput, employee]);
 
@@ -2100,7 +2115,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
           color: ${T.ink};
           background: rgba(255, 255, 255, 0.5);
           transition: all 0.3s;
-          min-height: 120px;
+          min-height: 240px;
           box-sizing: border-box;
         }
 
