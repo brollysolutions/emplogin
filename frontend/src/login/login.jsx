@@ -1153,7 +1153,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
         return;
       }
       try {
-        const resp = await fetch(BACKEND_URL, { cache: "no-store" });
+        const resp = await fetch(BACKEND_URL);
         if (resp.ok) {
           const data = await resp.json();
           const myHistory = data.filter(r => (r.id === employee.id || r.employeeid === employee.id));
