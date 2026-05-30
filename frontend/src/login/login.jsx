@@ -1179,9 +1179,13 @@ function Dashboard({ employee, onSignOut, showToast }) {
           const todayRec = myHistory.find(r => r.date === today);
 
           if (todayRec) {
-            // Restore tasks if available on the server and different (only on initial load or if local input is empty)
-            if (todayRec.tasks && todayRec.tasks !== "—" && (isInitial || !taskInput) && todayRec.tasks !== taskInput) {
-              setTask(todayRec.tasks);
+            // Sync tasks: Keep whichever text is longer to prevent background overwrites
+            const serverTasks = todayRec.tasks || "";
+            if (serverTasks !== "—" && serverTasks !== taskInput) {
+              if (serverTasks.length > (taskInput || "").length) {
+                // Server has more information (e.g. from another device), update locally
+                setTask(serverTasks);
+              }
             }
 
             const nowTime = new Date().getTime();
@@ -2585,6 +2589,12 @@ function Dashboard({ employee, onSignOut, showToast }) {
                 </div>
                 <textarea className="task-area" value={taskInput}
                   onChange={e => setTask(e.target.value)}
+                  onBlur={() => {
+                    if (loginTime) {
+                      console.log("Auto-saving tasks on blur...");
+                      triggerAutoSync(loginTime, logoutTime, status);
+                    }
+                  }}
                   placeholder="• Example: Completed API integration&#10;• Example: Resolved UI bugs in dashboard&#10;• Example: Attended weekly sync" />
                 
                 <div style={{ marginTop: 24 }}>
