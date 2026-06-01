@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Attendance, Task, Profile, LeaveRequest, ChatMessage, EmployeeGroup
+from .models import Attendance, Task, Profile, LeaveRequest, ChatMessage, EmployeeGroup, Holiday
 from django.contrib.auth.models import User
 
 class EmployeeGroupSerializer(serializers.ModelSerializer):
@@ -71,4 +71,9 @@ class ChatMessageSerializer(serializers.ModelSerializer):
             pass
         # Last resort: return the raw sender ID
         return obj.sender_id
+
+class HolidaySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Holiday
+        fields = '__all__'
 

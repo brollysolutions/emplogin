@@ -23,4 +23,6 @@ urlpatterns = [
     path('heartbeat/', views.heartbeat, name='heartbeat'),
     path('chat-summaries/', views.chat_summaries, name='chat_summaries'),
     path('test-reminder/', views.send_test_reminder, name='test_reminder'),
+    path('holidays/', views.holiday_list, name='holiday_list'),
+    path('holidays/<int:pk>/', views.holiday_detail, name='holiday_detail'),
 ]

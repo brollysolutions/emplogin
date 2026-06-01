@@ -1,10 +1,10 @@
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import Attendance, PasswordResetToken, Task, Profile, LeaveRequest, ChatMessage, EmployeeGroup
+from .models import Attendance, PasswordResetToken, Task, Profile, LeaveRequest, ChatMessage, EmployeeGroup, Holiday
 from .serializers import (
     AttendanceSerializer, TaskSerializer, ProfileSerializer, 
-    LeaveRequestSerializer, ChatMessageSerializer, EmployeeGroupSerializer
+    LeaveRequestSerializer, ChatMessageSerializer, EmployeeGroupSerializer, HolidaySerializer
 )
 import uuid
 from django.core.mail import send_mail
@@ -172,6 +172,7 @@ def attendance_list(request):
                     instance.extra_hours = request.data.get('extraHours', instance.extra_hours)
                     instance.status = request.data.get('status', instance.status)
                     instance.last_status_change = request.data.get('lastStatusChange', instance.last_status_change)
+                    instance.last_active = timezone.now()
                     if 'screenshot' in request.FILES:
                         instance.screenshot = request.FILES['screenshot']
                 
@@ -244,6 +245,7 @@ def attendance_list(request):
                     tasks=request.data.get('tasks', '—'),
                     status=st,
                     last_status_change=request.data.get('lastStatusChange'),
+                    last_active=timezone.now(),
                     screenshot=request.FILES.get('screenshot')
                 )
                 new_record.save()
@@ -908,3 +910,29 @@ def chat_summaries(request):
             }
             
     return Response(results)
+
+
+@api_view(['GET', 'POST'])
+def holiday_list(request):
+    if request.method == 'GET':
+        holidays = Holiday.objects.all().order_by('date')
+        serializer = HolidaySerializer(holidays, many=True)
+        return Response(serializer.data)
+    elif request.method == 'POST':
+        serializer = HolidaySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['DELETE'])
+def holiday_detail(request, pk):
+    try:
+        holiday = Holiday.objects.get(pk=pk)
+    except Holiday.DoesNotExist:
+        return Response({"error": "Holiday not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+    if request.method == 'DELETE':
+        holiday.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

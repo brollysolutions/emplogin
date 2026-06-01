@@ -242,6 +242,7 @@ const GROUPS_URL = API_BASE + "groups/";
 const HEARTBEAT_URL = API_BASE + "heartbeat/";
 const CHAT_SUMMARIES_URL = API_BASE + "chat-summaries/";
 const HEALTH_CHECK_URL = API_BASE + "health/";
+const HOLIDAYS_URL = API_BASE + "holidays/";
 
 
 /* ── Avatar ────────────────────────────────────────────────── */
@@ -997,6 +998,140 @@ function Badge({ status }) {
   );
 }
 
+/* ── Confetti Blaster Canvas component for clock-in pop ───── */
+function ConfettiBlaster({ active, onComplete }) {
+  const canvasRef = useRef(null);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
+  useEffect(() => {
+    if (!active) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    let animationFrameId;
+
+    const resizeCanvas = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+
+    class ConfettiParticle {
+      constructor(side) {
+        this.x = side === "left" ? 0 : canvas.width;
+        this.y = canvas.height * 0.9; // Pop from bottom corners
+        
+        const angle = side === "left" 
+          ? (Math.PI / 4) + Math.random() * (Math.PI / 6) // up-right
+          : (3 * Math.PI / 4) - Math.random() * (Math.PI / 6); // up-left
+          
+        const speed = 18 + Math.random() * 22; // Good powerful blaster speed
+        
+        this.vx = Math.cos(angle) * speed;
+        this.vy = -Math.sin(angle) * speed;
+        
+        this.gravity = 0.35 + Math.random() * 0.25;
+        this.drag = 0.985;
+        
+        const colors = [
+          "#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", 
+          "#ec4899", "#06b6d4", "#f97316", "#a855f7", "#14b8a6"
+        ];
+        this.color = colors[Math.floor(Math.random() * colors.length)];
+        
+        this.size = 8 + Math.random() * 10;
+        this.rotation = Math.random() * Math.PI * 2;
+        this.rotationSpeed = -0.15 + Math.random() * 0.3;
+        
+        this.opacity = 1.0;
+        this.fadeOutStart = 50 + Math.random() * 30;
+        this.life = 0;
+      }
+
+      update() {
+        this.vx *= this.drag;
+        this.vy *= this.drag;
+        this.vy += this.gravity;
+        
+        this.x += this.vx;
+        this.y += this.vy;
+        
+        this.rotation += this.rotationSpeed;
+        this.life++;
+        
+        if (this.life > this.fadeOutStart) {
+          this.opacity -= 0.025;
+        }
+      }
+
+      draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        ctx.globalAlpha = Math.max(0, this.opacity);
+        ctx.fillStyle = this.color;
+        ctx.fillRect(-this.size / 2, -this.size / 4, this.size, this.size / 2);
+        ctx.restore();
+      }
+    }
+
+    const particles = [];
+    const particleCount = 70; // 70 particles per side
+    
+    for (let i = 0; i < particleCount; i++) {
+      particles.push(new ConfettiParticle("left"));
+      particles.push(new ConfettiParticle("right"));
+    }
+
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      let activeParticles = 0;
+      
+      particles.forEach(p => {
+        if (p.opacity > 0 && p.y < canvas.height + 50 && p.x > -50 && p.x < canvas.width + 50) {
+          p.update();
+          p.draw();
+          activeParticles++;
+        }
+      });
+
+      if (activeParticles > 0) {
+        animationFrameId = requestAnimationFrame(animate);
+      } else {
+        onCompleteRef.current?.();
+      }
+    };
+
+    animate();
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      window.removeEventListener("resize", resizeCanvas);
+    };
+  }, [active]);
+
+  if (!active) return null;
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: "fixed",
+        inset: 0,
+        pointerEvents: "none",
+        zIndex: 99999,
+        width: "100%",
+        height: "100%"
+      }}
+    />
+  );
+}
+
 
 /* ══════════════════════════════════════════════════════════════
    DASHBOARD
@@ -1035,10 +1170,40 @@ function Dashboard({ employee, onSignOut, showToast }) {
   const [taskScreenshot, setTaskScreenshot] = useState(null);
   const [assignedTasks, setAssignedTasks] = useState([]);
   const [showTasksModal, setShowTasksModal] = useState(false);
+  const [showStartWorkingModal, setShowStartWorkingModal] = useState(false);
   const [toast, setToast] = useState(null);
+  const [holidays, setHolidays] = useState([]);
+  const [activeTab, setTab] = useState("today");
+  const [triggerConfetti, setTriggerConfetti] = useState(false);
+  const newHolidaysCount = useMemo(() => {
+    try {
+      const seen = JSON.parse(localStorage.getItem(`wt_seen_holidays_${employee?.id}`) || "[]");
+      return holidays.filter(h => !seen.includes(h.id)).length;
+    } catch { return 0; }
+  }, [holidays, employee?.id]);
   // _showToast: uses the prop version if available (from App), else updates local toast state
   const _showToast = showToast || ((msg, type = "success") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3500); });
   const [history, setHistory] = useState([]);
+  const currentMonthRecsCount = useMemo(() => {
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const now = new Date();
+    const currentMonthName = months[now.getMonth()];
+    const currentYearStr = String(now.getFullYear());
+    const matchStr = `${currentMonthName} ${currentYearStr}`;
+
+    return history.filter(r => {
+      if (!r.date) return false;
+      const cleanStr = String(r.date).trim();
+      if (cleanStr.endsWith(matchStr)) return true;
+      try {
+        const d = new Date(r.date);
+        if (!isNaN(d.getTime())) {
+          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        }
+      } catch (e) {}
+      return false;
+    }).length;
+  }, [history]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const latestStateRef = useRef({});
@@ -1316,12 +1481,40 @@ function Dashboard({ employee, onSignOut, showToast }) {
     } catch (e) { console.warn("Leaves fetch failed", e); }
   };
 
+  const fetchHolidays = async (showNotification = false) => {
+    try {
+      const resp = await fetch(HOLIDAYS_URL);
+      if (resp.ok) {
+        const data = await resp.json();
+        setHolidays(data);
+
+        if (showNotification) {
+          const seen = JSON.parse(localStorage.getItem(`wt_seen_holidays_${employee?.id}`) || "[]");
+          const unseen = data.filter(h => !seen.includes(h.id));
+          if (unseen.length > 0) {
+            playNotifySound?.();
+            const latest = unseen[unseen.length - 1];
+            _showToast(`New Holiday Declared: ${latest.name}! 🎉`, "success");
+          }
+        }
+      }
+    } catch (e) { console.warn("Holidays fetch failed", e); }
+  };
+
   useEffect(() => {
     fetchProfile();
     fetchLeaves();
-    const t = setInterval(() => { fetchProfile(); fetchLeaves(); }, 30000);
+    fetchHolidays(false);
+    const t = setInterval(() => { fetchProfile(); fetchLeaves(); fetchHolidays(true); }, 30000);
     return () => clearInterval(t);
   }, [employee.id]);
+
+  useEffect(() => {
+    if (activeTab === "holidays" && holidays.length > 0) {
+      const seenIds = holidays.map(h => h.id);
+      localStorage.setItem(`wt_seen_holidays_${employee.id}`, JSON.stringify(seenIds));
+    }
+  }, [activeTab, holidays, employee.id]);
 
   const handleLeaveRequest = async () => {
     if (!leaveData.start || !leaveData.end || !leaveData.reason) {
@@ -1396,7 +1589,6 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
   const [xlWb, setXlWb] = useState(null);
   const [xlName, setXlName] = useState(null);
-  const [activeTab, setTab] = useState("today");
   const fileRef = useRef(null);
 
   // Periodic Auto-Refresh: Reload the site every hour (3,600,000 ms) to keep everything fresh
@@ -1533,6 +1725,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
     setSessionStartTime(t);
     setStatus("working");
     _showToast("Session started", "success");
+    setTriggerConfetti(true);
     triggerAutoSync(loginTime || t, null, "working", t);
   };
 
@@ -1698,6 +1891,108 @@ function Dashboard({ employee, onSignOut, showToast }) {
     if (liveHrs.total < 8) eightHourSyncedRef.current = false;
   }, [liveHrs.total, status]);
 
+  // ── Silent Audio Keep-Alive to Prevent Browser Throttling ──
+  const startSilentAudio = () => {
+    try {
+      if (window.silentAudioCtx) {
+        if (window.silentAudioCtx.state === "suspended") {
+          window.silentAudioCtx.resume().catch(e => console.warn("Failed to resume silent audio:", e));
+        }
+        return;
+      }
+      
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      
+      const ctx = new AudioContext();
+      window.silentAudioCtx = ctx;
+
+      // Create oscillator and gain node for silence
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      gain.gain.value = 0.0001; // extremely quiet / near-silent frequency
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(0);
+      window.silentAudioOsc = osc;
+      console.log("Silent audio started to prevent background throttling.");
+
+      // Handle autoplay policy suspension by attaching interaction listeners
+      if (ctx.state === "suspended") {
+        const resumeOnInteraction = () => {
+          if (ctx.state === "suspended") {
+            ctx.resume().then(() => {
+              console.log("Silent audio resumed after user interaction.");
+              removeListeners();
+            }).catch(e => console.warn("Interaction resume failed:", e));
+          } else {
+            removeListeners();
+          }
+        };
+
+        const removeListeners = () => {
+          document.removeEventListener("click", resumeOnInteraction);
+          document.removeEventListener("keydown", resumeOnInteraction);
+          document.removeEventListener("touchstart", resumeOnInteraction);
+          document.removeEventListener("mousedown", resumeOnInteraction);
+        };
+
+        document.addEventListener("click", resumeOnInteraction);
+        document.addEventListener("keydown", resumeOnInteraction);
+        document.addEventListener("touchstart", resumeOnInteraction);
+        document.addEventListener("mousedown", resumeOnInteraction);
+      }
+    } catch (e) {
+      console.warn("Failed to start silent audio:", e);
+    }
+  };
+
+  const stopSilentAudio = () => {
+    try {
+      if (window.silentAudioOsc) {
+        try {
+          window.silentAudioOsc.stop();
+        } catch (e) {}
+        window.silentAudioOsc = null;
+      }
+      if (window.silentAudioCtx) {
+        window.silentAudioCtx.close().catch(e => {});
+        window.silentAudioCtx = null;
+      }
+      console.log("Silent audio stopped.");
+    } catch (e) {
+      console.warn("Failed to stop silent audio:", e);
+    }
+  };
+
+  // Toggle silent audio based on user clock status
+  useEffect(() => {
+    if (status === "working" || status === "break") {
+      startSilentAudio();
+    } else {
+      stopSilentAudio();
+    }
+    return () => {
+      stopSilentAudio();
+    };
+  }, [status]);
+
+  const runHeartbeat = async () => {
+    const state = latestStateRef.current;
+    if (!state.employee?.id || (state.status !== "working" && state.status !== "break")) return;
+    try {
+      await fetch(HEARTBEAT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          employee_id: state.employee?.id || employee.id,
+          date: fmtDate(state.loginTime || loginTime || new Date())
+        })
+      });
+    } catch (e) { console.warn("Heartbeat failed", e); }
+  };
+
   // ── Tab-close / Page-hide instant sync ──
   // Uses navigator.sendBeacon so the request survives even when the tab is being closed.
   // Also syncs on visibilitychange (tab switch / minimise) so admin always sees fresh hours.
@@ -1748,7 +2043,12 @@ function Dashboard({ employee, onSignOut, showToast }) {
     };
 
     const onVisibilityChange = () => {
-      if (document.visibilityState === "hidden") onPageHide();
+      if (document.visibilityState === "hidden") {
+        onPageHide();
+      } else if (document.visibilityState === "visible") {
+        // Immediate recovery heartbeat when tab becomes visible again
+        runHeartbeat();
+      }
     };
 
     window.addEventListener("pagehide", onPageHide);
@@ -1765,20 +2065,6 @@ function Dashboard({ employee, onSignOut, showToast }) {
   // Uses a Web Worker to manage timers to prevent background tab throttling.
   useEffect(() => {
     if (!employee?.id || (status !== "working" && status !== "break")) return;
-
-    const runHeartbeat = async () => {
-      const state = latestStateRef.current;
-      try {
-        await fetch(HEARTBEAT_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            employee_id: state.employee?.id || employee.id,
-            date: fmtDate(state.loginTime || loginTime || new Date())
-          })
-        });
-      } catch (e) { console.warn("Heartbeat failed", e); }
-    };
 
     const runBackgroundSync = () => {
       const state = latestStateRef.current;
@@ -2163,6 +2449,66 @@ function Dashboard({ employee, onSignOut, showToast }) {
         </div>
       )}
 
+      {/* ── Start Working Confirmation Modal ── */}
+      {showStartWorkingModal && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 1050,
+          background: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(8px)",
+          display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px",
+          animation: "fadeIn 0.3s ease"
+        }} onClick={() => setShowStartWorkingModal(false)}>
+          <div style={{
+            background: "white", borderRadius: 32, width: "100%", maxWidth: 440,
+            boxShadow: "0 30px 70px rgba(0,0,0,0.2)", animation: "slideUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)",
+            overflow: "hidden", border: `1px solid ${T.border}`, margin: "auto"
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ background: T.ink, padding: "28px 32px", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div className="h-font" style={{ fontSize: 20, fontWeight: 800 }}>Start Working Session</div>
+                <div style={{ fontSize: 13, color: T.faint, marginTop: 4 }}>Attendance Tracker</div>
+              </div>
+              <button onClick={() => setShowStartWorkingModal(false)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "white", cursor: "pointer", width: 40, height: 40, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Icon d="M18 6L6 18M6 6l12 12" size={20} color="white" />
+              </button>
+            </div>
+            <div style={{ padding: "32px", textAlign: "center" }}>
+              <div style={{ fontSize: "52px", marginBottom: "18px", animation: "pulseSoft 2s infinite" }}>🚀</div>
+              <h3 className="h-font" style={{ margin: "0 0 10px 0", fontSize: "18px", color: T.ink, fontWeight: 800 }}>Ready to Clock In?</h3>
+              <p style={{ margin: 0, fontSize: "14px", color: T.muted, lineHeight: "1.5", fontWeight: 500 }}>
+                Clicking confirm will start tracking your active hours for today. Please make sure you are ready to begin your work session.
+              </p>
+              
+              <div style={{ display: "flex", gap: "12px", marginTop: "28px" }}>
+                <button 
+                  onClick={() => setShowStartWorkingModal(false)}
+                  style={{
+                    flex: 1, padding: "14px", borderRadius: "18px", border: `1px solid ${T.border}`,
+                    background: "rgba(0,0,0,0.02)", color: T.ink, fontWeight: 700, cursor: "pointer",
+                    fontSize: "14px", transition: "all 0.2s"
+                  }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => {
+                    handleLogin();
+                    setShowStartWorkingModal(false);
+                  }}
+                  style={{
+                    flex: 1, padding: "14px", borderRadius: "18px", border: "none",
+                    background: `linear-gradient(135deg, ${T.green} 0%, #059669 100%)`, color: "white", 
+                    fontWeight: 700, cursor: "pointer", fontSize: "14px",
+                    boxShadow: "0 8px 20px rgba(16, 185, 129, 0.25)", transition: "all 0.2s"
+                  }}
+                >
+                  Yes, Start Working
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Assigned Tasks Modal (Employee View) ── */}
       {showTasksModal && (
         <div style={{
@@ -2425,7 +2771,18 @@ function Dashboard({ employee, onSignOut, showToast }) {
               }} />
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, fontSize: 12, color: T.muted, fontWeight: 700 }}>
-              <span>{hmsStr(liveHrs)} clocked today</span>
+              <span>
+                {hmsStr(liveHrs)} clocked today
+                {28800 - currentTotalWorkSeconds > 0 ? (
+                  <span style={{ color: T.accent2, marginLeft: 6 }}>
+                    (left {hmsStr(secondsToHMS(Math.max(0, 28800 - currentTotalWorkSeconds)))})
+                  </span>
+                ) : (
+                  <span style={{ color: T.green, marginLeft: 6 }}>
+                    (Goal achieved! 🎉)
+                  </span>
+                )}
+              </span>
               <span>Goal: 8h 00m</span>
             </div>
           </div>
@@ -2441,6 +2798,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
             { k: "history", label: "Logs & History" }, 
             { k: "leaves", label: "Requests" }, 
             { k: "profile", label: "Profile Details" }, 
+            { k: "holidays", label: "Holidays", badge: newHolidaysCount },
             { k: "messages", label: "Support Chat", badge: unreadCount }
           ].map(t => (
             <button key={t.k} className={`tab${activeTab === t.k ? " active" : ""}`}
@@ -2459,7 +2817,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
         {/* Stat cards */}
         {activeTab !== "messages" && activeTab !== "profile" && (
-          <div className="stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 20, marginBottom: 32 }}>
+          <div className="stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 20, marginBottom: 32 }}>
             <StatCard index={0} label="Active Work" value={hmsStr(liveHrs)}
               sub={`${pct}% of daily goal`}
               icon={icons.clock} color={T.green} bg={T.greenBg} isLive={status === "working"} />
@@ -2472,9 +2830,12 @@ function Dashboard({ employee, onSignOut, showToast }) {
             <StatCard index={3} label="Extra Time" value={extraStr || "—"}
               sub="Beyond 8h goal"
               icon={icons.chart} color={T.purple} bg={T.purpleBg} />
-            <StatCard index={4} label="Total Records" value={String(history.length)}
-              sub="Entries this month"
+            <StatCard index={4} label="Month Records" value={String(currentMonthRecsCount)}
+              sub="This month"
               icon={icons.calendar} color={T.orange} bg={T.orangeBg} />
+            <StatCard index={5} label="Total Records" value={String(history.length)}
+              sub="All time"
+              icon={icons.calendar} color={T.purple} bg={T.purpleBg} />
           </div>
         )}
 
@@ -2508,7 +2869,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
                     <span style={{ marginLeft: 12, fontSize: 14, color: T.muted, fontWeight: 800, letterSpacing: 0.5 }}>SYNCHRONIZING...</span>
                   </div>
                 ) : (status === "idle" || status === "loggedOut") ? (
-                  <button className="act-btn" onClick={handleLogin}
+                  <button className="act-btn" onClick={() => setShowStartWorkingModal(true)}
                     style={{ flex: 1, background: `linear-gradient(135deg, ${T.green} 0%, #059669 100%)`, color: "white", justifyContent: "center" }}>
                     <Icon d={icons.check} size={18} color="white" />
                     Start Working
@@ -3150,6 +3511,73 @@ function Dashboard({ employee, onSignOut, showToast }) {
           </div>
         )}
 
+        {activeTab === "holidays" && (
+          <div className="premium-card" style={{ padding: "32px 36px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28, borderBottom: `1px solid ${T.border}`, paddingBottom: 16 }}>
+              <div>
+                <h2 className="h-font" style={{ margin: 0, fontSize: 22, fontWeight: 800, color: T.ink }}>Holidays List</h2>
+                <div style={{ fontSize: 13, color: T.muted, marginTop: 4 }}>Official calendar holidays declared by your company</div>
+              </div>
+              <div style={{ fontSize: 32 }}>📅</div>
+            </div>
+            
+            {holidays.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "60px 0", color: T.muted }}>
+                <div style={{ fontSize: 48, marginBottom: 16 }}>✨</div>
+                <div className="h-font" style={{ fontWeight: 700, fontSize: 18 }}>No holidays declared yet</div>
+                <div style={{ fontSize: 14, marginTop: 4 }}>Enjoy your workspace and check back later!</div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {holidays.map((h, idx) => {
+                  const hDate = new Date(h.date);
+                  const isUpcoming = hDate >= new Date().setHours(0,0,0,0);
+                  return (
+                    <div key={h.id} style={{
+                      display: "flex", gap: 20, alignItems: "center", padding: "20px 24px",
+                      borderRadius: 20, background: isUpcoming ? "rgba(99, 102, 241, 0.03)" : "rgba(0,0,0,0.01)",
+                      border: `1px solid ${isUpcoming ? T.border : "rgba(0,0,0,0.05)"}`,
+                      transition: "all 0.3s ease", position: "relative", overflow: "hidden"
+                    }}>
+                      {isUpcoming && (
+                        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: T.accent }} />
+                      )}
+                      <div style={{
+                        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                        minWidth: 70, height: 70, borderRadius: 16, background: isUpcoming ? T.accent : "rgba(0,0,0,0.05)",
+                        color: isUpcoming ? "white" : T.muted, textAlign: "center", fontWeight: 700
+                      }}>
+                        <div style={{ fontSize: 12, textTransform: "uppercase", opacity: 0.8 }}>
+                          {hDate.toLocaleDateString("en-IN", { month: "short" })}
+                        </div>
+                        <div style={{ fontSize: 24, fontWeight: 900, marginTop: 2 }}>
+                          {hDate.getDate()}
+                        </div>
+                      </div>
+                      
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <h4 className="h-font" style={{ margin: 0, fontSize: 16, fontWeight: 800, color: T.ink }}>{h.name}</h4>
+                          {isUpcoming && (
+                            <span style={{ fontSize: 10, background: T.greenBg, color: T.green, padding: "2px 8px", borderRadius: 10, fontWeight: 700, textTransform: "uppercase" }}>Upcoming</span>
+                          )}
+                        </div>
+                        <p style={{ margin: "6px 0 0 0", fontSize: 13, color: T.muted, lineHeight: 1.5 }}>
+                          {h.description || "No description provided."}
+                        </p>
+                      </div>
+                      
+                      <div style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>
+                        {hDate.toLocaleDateString("en-IN", { weekday: "long" })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
 
         {/* Employee profile footer */}
         <div className="profile-footer" style={{
@@ -3178,6 +3606,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
           </div>
         </div>
       </div>
+      <ConfettiBlaster active={triggerConfetti} onComplete={() => setTriggerConfetti(false)} />
     </div>
   );
 }
@@ -3559,6 +3988,11 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
   const [assignTaskTo, setAssignTaskTo] = useState(null);
   const [taskFeed, setTaskFeed] = useState([]);
   const [leaveRequests, setLeaveRequests] = useState([]);
+  const [holidays, setHolidays] = useState([]);
+  const [newHolidayName, setNewHolidayName] = useState("");
+  const [newHolidayDate, setNewHolidayDate] = useState("");
+  const [newHolidayDesc, setNewHolidayDesc] = useState("");
+  const [savingHoliday, setSavingHoliday] = useState(false);
   const [adminComment, setAdminComment] = useState("");
   const [profiles, setProfiles] = useState([]);
   const [selectedEmployeeProfile, setSelectedEmployeeProfile] = useState(null); // { employee: e, profile: p }
@@ -3813,6 +4247,67 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
     } catch (e) { console.error("Failed to fetch groups", e); }
   };
 
+  const fetchHolidays = async () => {
+    try {
+      const resp = await fetch(HOLIDAYS_URL);
+      if (resp.ok) {
+        const data = await resp.json();
+        setHolidays(data);
+      }
+    } catch (e) { console.warn("Failed to fetch holidays:", e); }
+  };
+
+  const handleAddHoliday = async (e) => {
+    e.preventDefault();
+    if (!newHolidayName || !newHolidayDate) {
+      showToast?.("Please enter Holiday Name and Date", "amber");
+      return;
+    }
+    setSavingHoliday(true);
+    try {
+      const resp = await fetch(HOLIDAYS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newHolidayName,
+          date: newHolidayDate,
+          description: newHolidayDesc
+        })
+      });
+      if (resp.ok) {
+        showToast?.("Holiday declared successfully!", "success");
+        setNewHolidayName("");
+        setNewHolidayDate("");
+        setNewHolidayDesc("");
+        fetchHolidays();
+      } else {
+        const err = await resp.json().catch(() => ({}));
+        showToast?.(err.date?.[0] || err.error || "Failed to declare holiday", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast?.("Server error. Could not declare holiday.", "error");
+    } finally {
+      setSavingHoliday(false);
+    }
+  };
+
+  const handleDeleteHoliday = async (id) => {
+    if (!confirm("Are you sure you want to delete this holiday?")) return;
+    try {
+      const resp = await fetch(`${HOLIDAYS_URL}${id}/`, { method: "DELETE" });
+      if (resp.ok) {
+        showToast?.("Holiday deleted", "success");
+        fetchHolidays();
+      } else {
+        showToast?.("Failed to delete holiday", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast?.("Network error", "error");
+    }
+  };
+
   const handleStatusChange = async (record, newStatus) => {
     try {
       const payload = {
@@ -3880,7 +4375,8 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
 
   useEffect(() => {
     fetchAttendance();
-    const t = setInterval(fetchAttendance, 10000); // auto-refresh every 10s
+    fetchHolidays();
+    const t = setInterval(() => { fetchAttendance(); fetchHolidays(); }, 10000); // auto-refresh every 10s
     return () => clearInterval(t);
   }, []);
 
@@ -4008,9 +4504,22 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
            logs = processedRec ? processedRec.break_logs_parsed : [];
         }
         
+        // Calculate status dynamically based on work hours to prevent "Active" or stale values
+        const hrs = work / 3600;
+        let dayStatus = "Half Day";
+        if (r.status === "Work From Home" || r.status === "Leave") {
+          dayStatus = r.status;
+        } else if (hrs >= 8) {
+          dayStatus = "Full Day";
+        } else if (hrs >= 4.5) {
+          dayStatus = "Incomplete Workday(IWD)";
+        } else {
+          dayStatus = "Half Day";
+        }
+
         // Use the latest record for each date in the week
         if (!dateMap[r.date] || parseHMS(r.hours || r.workinghours) > dateMap[r.date].work) {
-          dateMap[r.date] = { work, brk, hasLog: r.logint && r.logint !== "—", task: r.tasks || r.workstatus, breakLogs: logs };
+          dateMap[r.date] = { work, brk, hasLog: r.logint && r.logint !== "—", status: dayStatus, task: r.tasks || r.workstatus, breakLogs: logs };
         }
       });
 
@@ -4048,6 +4557,27 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
   const fullDayToday = todayRecs.filter(r => r.live_status === "Full Day" || r.status === "Full Day").length;
   const iwdToday = todayRecs.filter(r => r.live_status === "Incomplete Workday(IWD)" || r.status === "Incomplete Workday(IWD)").length;
   const halfDayToday = todayRecs.filter(r => r.live_status === "Half Day" || r.status === "Half Day").length;
+
+  const currentMonthRecsCount = useMemo(() => {
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const now = new Date();
+    const currentMonthName = months[now.getMonth()];
+    const currentYearStr = String(now.getFullYear());
+    const matchStr = `${currentMonthName} ${currentYearStr}`;
+
+    return records.filter(r => {
+      if (!r.date) return false;
+      const cleanStr = String(r.date).trim();
+      if (cleanStr.endsWith(matchStr)) return true;
+      try {
+        const d = new Date(r.date);
+        if (!isNaN(d.getTime())) {
+          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        }
+      } catch (e) {}
+      return false;
+    }).length;
+  }, [records]);
 
   // Filtered records
   const filtered = (() => {
@@ -4950,13 +5480,14 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
 
                 <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px" }}>
         {/* Stat cards */}
-        <div className="adm-stat-grid stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 18, marginBottom: 32 }}>
+        <div className="adm-stat-grid stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 18, marginBottom: 32 }}>
           <StatCard index={0} label="Total Employees" value={String(registeredCount)} sub="Registered" icon={icons.user} color={T.accent} bg="rgba(37, 99, 235, 0.1)" />
           <StatCard index={1} label="Today Present" value={String(todayRecs.length)} sub={today} icon={icons.check} color={T.green} bg="rgba(16, 185, 129, 0.1)" isLive={true} />
           <StatCard index={2} label="Full Day Today" value={String(fullDayToday)} sub="≥ 8 hours" icon={icons.clock} color={T.green} bg="rgba(16, 185, 129, 0.1)" />
           <StatCard index={3} label="IWD Today" value={String(iwdToday)} sub="4.5 - 8 hrs" icon={icons.chart} color={T.orange} bg="rgba(249, 115, 22, 0.1)" />
           <StatCard index={4} label="Half Day Today" value={String(halfDayToday)} sub="< 4.5 hours" icon={icons.clock} color={T.amber} bg="rgba(245, 158, 11, 0.1)" />
-          <StatCard index={5} label="Total Records" value={String(records.length)} sub="All time" icon={icons.calendar} color={T.purple} bg="rgba(139, 92, 246, 0.1)" />
+          <StatCard index={5} label="Month Records" value={String(currentMonthRecsCount)} sub="This month" icon={icons.calendar} color={T.orange} bg="rgba(249, 115, 22, 0.1)" />
+          <StatCard index={6} label="Total Records" value={String(records.length)} sub="All time" icon={icons.calendar} color={T.purple} bg="rgba(139, 92, 246, 0.1)" />
         </div>
 
         {/* Tabs */}
@@ -4971,6 +5502,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
             { k: "leaves", label: "Requests" },
             { k: "groups", label: "Manage Groups", badge: Object.values(groupUnreadMapAdmin).reduce((a, b) => a + b, 0) },
             { k: "employees", label: "Employee List", badge: Object.values(unreadMap).reduce((a, b) => a + b, 0) },
+            { k: "holidays", label: "Holidays" },
           ].map(t => (
             <button key={t.k} className={`adm-tab${activeTab === t.k ? " active" : ""}`}
               onClick={() => setTab(t.k)} style={{ position: "relative" }}>
@@ -5144,7 +5676,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
                                               )}
                                             </td>
                                             <td style={{ padding: "10px 16px" }}>
-                                              <Badge status={day.hasLog ? "Full Day" : "Absent"} />
+                                              <Badge status={day.hasLog ? day.status : "Absent"} />
                                             </td>
                                             <td style={{ padding: "10px 16px", fontSize: 12, color: T.ink2, maxWidth: 280, whiteSpace: "pre-wrap" }}>
                                               {day.task || <span style={{ color: T.faint, fontStyle: "italic" }}>No notes</span>}
@@ -5673,6 +6205,124 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
               </div>
                 );
               })}
+            </div>
+          </div>
+        )}
+
+        {activeTab === "holidays" && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 24, animation: "slideUp 0.4s ease" }}>
+            {/* Create Holiday Card */}
+            <div className="premium-card" style={{ padding: "28px 32px", height: "fit-content" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+                <div style={{ fontSize: 24 }}>📢</div>
+                <h3 className="h-font" style={{ margin: 0, fontSize: 18, fontWeight: 800, color: T.ink }}>Declare Holiday</h3>
+              </div>
+              
+              <form onSubmit={handleAddHoliday} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: T.muted, marginBottom: 6, textTransform: "uppercase" }}>Holiday Name</label>
+                  <input 
+                    className="adm-inp" 
+                    style={{ width: "100%", padding: "10px 14px", boxSizing: "border-box" }}
+                    placeholder="e.g. Independence Day" 
+                    value={newHolidayName}
+                    onChange={e => setNewHolidayName(e.target.value)}
+                  />
+                </div>
+                
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: T.muted, marginBottom: 6, textTransform: "uppercase" }}>Date</label>
+                  <input 
+                    type="date"
+                    className="adm-inp" 
+                    style={{ width: "100%", padding: "10px 14px", boxSizing: "border-box" }}
+                    value={newHolidayDate}
+                    onChange={e => setNewHolidayDate(e.target.value)}
+                  />
+                </div>
+                
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: T.muted, marginBottom: 6, textTransform: "uppercase" }}>Description (Optional)</label>
+                  <textarea 
+                    className="adm-inp" 
+                    style={{ width: "100%", padding: "10px 14px", height: 100, resize: "none", boxSizing: "border-box" }}
+                    placeholder="Brief holiday details..." 
+                    value={newHolidayDesc}
+                    onChange={e => setNewHolidayDesc(e.target.value)}
+                  />
+                </div>
+                
+                <button 
+                  type="submit" 
+                  disabled={savingHoliday}
+                  style={{
+                    width: "100%", padding: "14px", borderRadius: 16, border: "none",
+                    background: `linear-gradient(135deg, ${T.accent} 0%, ${T.accent2} 100%)`, 
+                    color: "white", cursor: "pointer", fontSize: 14, fontWeight: 800,
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                    boxShadow: `0 8px 20px ${T.accent}20`, transition: "all 0.2s"
+                  }}
+                >
+                  {savingHoliday ? "Declaring..." : "Declare Holiday"}
+                </button>
+              </form>
+            </div>
+            
+            {/* Holiday List Card */}
+            <div className="premium-card" style={{ padding: "28px 32px" }}>
+              <h3 className="h-font" style={{ margin: "0 0 20px 0", fontSize: 18, fontWeight: 800, color: T.ink }}>Declared Holidays</h3>
+              
+              {holidays.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "60px 0", color: T.muted }}>
+                  <div style={{ fontSize: 40, marginBottom: 16 }}>✨</div>
+                  <div className="h-font" style={{ fontWeight: 700, fontSize: 16 }}>No holidays declared yet</div>
+                  <div style={{ fontSize: 13, marginTop: 4 }}>Declare a holiday using the form on the left.</div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {holidays.map(h => {
+                    const hDate = new Date(h.date);
+                    return (
+                      <div key={h.id} style={{
+                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                        padding: "16px 20px", borderRadius: 16, background: "rgba(0,0,0,0.01)",
+                        border: `1px solid ${T.border}`, transition: "all 0.2s"
+                      }}>
+                        <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+                          <div style={{
+                            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                            width: 50, height: 50, borderRadius: 12, background: T.surface,
+                            color: T.accent, fontWeight: 700, textAlign: "center"
+                          }}>
+                            <div style={{ fontSize: 10, textTransform: "uppercase" }}>{hDate.toLocaleDateString("en-IN", { month: "short" })}</div>
+                            <div style={{ fontSize: 16, fontWeight: 900, marginTop: 1 }}>{hDate.getDate()}</div>
+                          </div>
+                          <div>
+                            <div className="h-font" style={{ fontWeight: 800, color: T.ink, fontSize: 15 }}>{h.name}</div>
+                            <div style={{ fontSize: 12, color: T.muted, marginTop: 4 }}>{h.description || "No description"}</div>
+                          </div>
+                        </div>
+                        
+                        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                          <div style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>{hDate.toLocaleDateString("en-IN", { weekday: "long", year: "numeric" })}</div>
+                          <button 
+                            onClick={() => handleDeleteHoliday(h.id)} 
+                            style={{
+                              background: T.redBg, border: "none", color: T.red, cursor: "pointer",
+                              width: 32, height: 32, borderRadius: "50%", display: "flex",
+                              alignItems: "center", justifyContent: "center", transition: "all 0.2s"
+                            }}
+                            onMouseOver={btn => btn.currentTarget.style.background = T.red}
+                            onMouseOut={btn => btn.currentTarget.style.background = T.redBg}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         )}

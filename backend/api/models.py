@@ -107,3 +107,12 @@ class EmployeeGroup(models.Model):
 
     def __str__(self):
         return self.name
+
+class Holiday(models.Model):
+    date = models.DateField(unique=True)
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} - {self.date}"
