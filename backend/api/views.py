@@ -109,11 +109,47 @@ def _trigger_auto_logout_if_needed():
         run_async(run_command_bg)
 
 
+def _trigger_morning_reminders_if_needed():
+    """
+    Checks if reminders have been triggered today.
+    If not, runs the send_reminders command asynchronously.
+    """
+    now = timezone.localtime(timezone.now())
+    if now.weekday() == 6:  # Sunday
+        return
+        
+    current_time_str = now.strftime('%H:%M')
+    if current_time_str < "09:25":
+        return
+
+    today_str = now.strftime('%Y-%m-%d')
+    trigger_lock = os.path.join(settings.BASE_DIR, f'.reminders_triggered_{today_str}')
+    
+    if not os.path.exists(trigger_lock):
+        try:
+            with open(trigger_lock, 'w') as f:
+                f.write(timezone.now().isoformat())
+        except Exception as e:
+            logger.error(f"Failed to write reminders trigger lock file: {e}")
+            return
+            
+        def run_command_bg():
+            try:
+                logger.info("Starting background send_reminders task.")
+                call_command('send_reminders')
+                logger.info("Background send_reminders task completed.")
+            except Exception as e:
+                logger.error(f"Background send_reminders task failed: {e}", exc_info=True)
+                
+        run_async(run_command_bg)
+
+
 @api_view(['GET', 'POST'])
 def attendance_list(request):
     try:
         if request.method == 'GET':
             _trigger_auto_logout_if_needed()
+            _trigger_morning_reminders_if_needed()
             attendances = Attendance.objects.all().order_by('-date', '-timestamp')
             data = []
             for r in attendances:

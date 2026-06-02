@@ -1344,12 +1344,13 @@ function Dashboard({ employee, onSignOut, showToast }) {
           const todayRec = myHistory.find(r => r.date === today);
 
           if (todayRec) {
-            // Sync tasks: Keep whichever text is longer to prevent background overwrites
-            const serverTasks = todayRec.tasks || "";
-            if (serverTasks !== "—" && serverTasks !== taskInput) {
-              if (serverTasks.length > (taskInput || "").length) {
-                // Server has more information (e.g. from another device), update locally
-                setTask(serverTasks);
+            // Sync tasks: pull from server only on initial load to prevent background overwrites while typing/editing
+            if (isInitial) {
+              const serverTasks = todayRec.tasks || "";
+              if (serverTasks !== "—" && serverTasks !== taskInput) {
+                if (serverTasks.length > (taskInput || "").length) {
+                  setTask(serverTasks);
+                }
               }
             }
 
@@ -1726,7 +1727,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
     setStatus("working");
     _showToast("Session started", "success");
     setTriggerConfetti(true);
-    triggerAutoSync(loginTime || t, null, "working", t);
+    triggerAutoSync(loginTime || t, null, "working", t, undefined, undefined, undefined, taskInput);
   };
 
   const handleBreak = () => {
@@ -1740,7 +1741,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
       setBreakStartTime(t);
       setStatus("break");
       _showToast("Break started", "amber");
-      triggerAutoSync(loginTime, null, "break", t, newTotalWork, undefined, breakLogs);
+      triggerAutoSync(loginTime, null, "break", t, newTotalWork, undefined, breakLogs, taskInput);
     } else if (status === "break" && breakStartTime) {
       const addedBreak = Math.floor((t - breakStartTime) / 1000);
       const newTotalBreak = totalBreakSeconds + addedBreak;
@@ -1758,11 +1759,11 @@ function Dashboard({ employee, onSignOut, showToast }) {
       setSessionStartTime(t);
       setStatus("working");
       _showToast("Work resumed", "success");
-      triggerAutoSync(loginTime, null, "working", t, totalWorkSeconds, newTotalBreak, newBreakLogs);
+      triggerAutoSync(loginTime, null, "working", t, totalWorkSeconds, newTotalBreak, newBreakLogs, taskInput);
     }
   };
 
-  const triggerAutoSync = (lt, lot, curStatus, startTimeOverride, workOverride, breakOverride, logsOverride) => {
+  const triggerAutoSync = (lt, lot, curStatus, startTimeOverride, workOverride, breakOverride, logsOverride, tasksOverride) => {
     const state = latestStateRef.current;
     
     // Resolve effective values with safe fallbacks to prevent stale closures
@@ -1807,7 +1808,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
       hours: hmsStr(hrs),
       breakTime: hmsStr(brk),
       extraHours: "—",
-      tasks: state.taskInput || "—",
+      tasks: tasksOverride !== undefined ? tasksOverride : (state.taskInput || "—"),
       breakLogs: JSON.stringify(logsOverride || state.breakLogs || []),
       status: effectiveStatus === "working" ? "Active" : effectiveStatus === "break" ? "On Break" : dayStatus,
       lastStatusChange: (effectiveStatus === "working" || effectiveStatus === "break") ? syncTime.toISOString() : (sTime ? sTime.toISOString() : null)
@@ -1852,7 +1853,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
     setLOT(t);
     setStatus("loggedOut");
     _showToast("Session paused. Click Sync to save!", "info");
-    triggerAutoSync(loginTime, t, "loggedOut", null, finalWork, finalBreak);
+    triggerAutoSync(loginTime, t, "loggedOut", null, finalWork, finalBreak, undefined, taskInput);
   };
 
   const handleLoadXl = (e) => {
@@ -2953,7 +2954,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
                   onBlur={() => {
                     if (loginTime) {
                       console.log("Auto-saving tasks on blur...");
-                      triggerAutoSync(loginTime, logoutTime, status);
+                      triggerAutoSync(loginTime, logoutTime, status, undefined, undefined, undefined, undefined, taskInput);
                     }
                   }}
                   placeholder="• Example: Completed API integration&#10;• Example: Resolved UI bugs in dashboard&#10;• Example: Attended weekly sync" />
