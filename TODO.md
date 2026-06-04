@@ -8,9 +8,9 @@
 ## Medium Severity (Bugs & Error Handling)
 - [x] **Unsafe Background Threads in Views**: In `backend/api/views.py` (`attendance_list` and others), detached Python threads (`threading.Thread`) are spawned to run background tasks (like `auto_logout` and emails). This is unsafe in WSGI production environments (e.g., Gunicorn) and can lead to dropped tasks or memory leaks. Consider using Celery, Django Q, or a cron-based management command. (DONE: Replaced with `ThreadPoolExecutor` for emails; periodic tasks removed from views)
 - [x] **Information Disclosure (Error Handling)**: Broad `except Exception as e:` blocks in `backend/api/views.py` (e.g., `request_password_reset`, `attendance_list`) return `traceback.format_exc()` or raw exception strings directly to the client. These should be logged securely and return generic 500 error messages to the client. (DONE: Implemented `logging` and generic error responses)
-- [ ] **Race Conditions in Leave Approval**: In `approve_leave`, user profiles are automatically created if they don't exist based on concurrent requests, which could lead to unique constraint failures under load.
+- [x] **Race Conditions in Leave Approval**: In `approve_leave`, implemented `transaction.atomic()` and `select_for_update()` to ensure thread-safe leave balance deduction and safe user/profile creation. (DONE)
 
 ## Low Severity (Dead Code & Cleanup)
-- [ ] **Dead Code (Scratch Directory)**: The `scratch/` folder contains testing scripts (`check_8h.py`, `check_db.py`, `test_api.py`, `test_email.py`). These should be removed from the production codebase or moved to a dedicated testing repository.
-- [ ] **Hardcoded API URLs**: Frontend `login.jsx` uses hardcoded API proxy logic (`http://localhost:8001/api/v1/`). This should ideally utilize Vite's `import.meta.env` for environment-specific backend routing.
+- [x] **Dead Code (Scratch Directory)**: The `scratch/` folder contained testing scripts (`check_8h.py`, `check_db.py`, `test_api.py`, `test_email.py`). These have been moved to `backend/api/legacy_scripts/`. (DONE)
+- [x] **Hardcoded API URLs**: Frontend `login.jsx` already utilizes `import.meta.env.VITE_API_URL` with a fallback to `/login/api/v1/`. The `.env` file contains the local dev URL, which is standard practice for Vite. (DONE)
 

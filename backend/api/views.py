@@ -13,6 +13,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Q
+from django.db import transaction
 import os
 import requests
 import json
@@ -589,9 +590,11 @@ def leave_request_detail(request, pk):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 @api_view(['PATCH'])
+@transaction.atomic
 def approve_leave(request, pk):
     try:
-        leave = LeaveRequest.objects.get(pk=pk)
+        # Use select_for_update to lock the leave request record
+        leave = LeaveRequest.objects.select_for_update().get(pk=pk)
     except LeaveRequest.DoesNotExist:
         return Response({"error": "Leave request not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -605,7 +608,8 @@ def approve_leave(request, pk):
         # Decrement leave count only if it is not a WFH request
         if leave.leave_type != 'Work From Home':
             try:
-                profile = Profile.objects.filter(employee_id__iexact=leave.employee_id).first()
+                # Lock the profile record if it exists
+                profile = Profile.objects.select_for_update().filter(employee_id__iexact=leave.employee_id).first()
 
                 if not profile:
                     # Fallback 1: find user by employee_id as username or email
@@ -618,27 +622,31 @@ def approve_leave(request, pk):
                         user = User.objects.filter(username__iexact=leave.employee_name).first()
 
                     if user:
-                        # User exists but profile is missing — creaete profile
+                        # User exists but profile is missing — create profile safely
                         profile, _ = Profile.objects.get_or_create(user=user)
                         profile.employee_id = leave.employee_id
                         profile.save()
-                        print(f"INFO: Auto-linked profile for {leave.employee_id} to user {user.username}")
                     else:
-                        # No User at all — auto-create User + Profile from leave data
-                        # This handles employees who exist only in Google Sheets
-                        print(f"INFO: Auto-creating User + Profile for {leave.employee_id} ({leave.employee_name})")
-                        new_user = User.objects.create_user(
+                        # No User at all — auto-create User + Profile safely
+                        # We use get_or_create for User to avoid race conditions if two threads reach here
+                        user, created = User.objects.get_or_create(
                             username=leave.employee_id,
-                            password=leave.employee_id,  # Temporary password = employee_id
-                            first_name=leave.employee_name.split()[0] if leave.employee_name else "",
-                            last_name=" ".join(leave.employee_name.split()[1:]) if leave.employee_name else "",
+                            defaults={
+                                'first_name': leave.employee_name.split()[0] if leave.employee_name else "",
+                                'last_name': " ".join(leave.employee_name.split()[1:]) if leave.employee_name else "",
+                            }
                         )
-                        profile = Profile.objects.create(
-                            user=new_user,
-                            employee_id=leave.employee_id,
-                            total_leaves=16  # Default leave balance
+                        if created:
+                            user.set_password(leave.employee_id)
+                            user.save()
+                        
+                        profile, _ = Profile.objects.get_or_create(
+                            user=user,
+                            defaults={
+                                'employee_id': leave.employee_id,
+                                'total_leaves': 16
+                            }
                         )
-                        print(f"INFO: Created User '{leave.employee_id}' and Profile with 16 default leaves.")
 
                 # Deduct leave days from balance (EXCLUDING SUNDAYS)
                 leave_days = sum(

@@ -621,7 +621,7 @@ function LoginPage({ onLogin, error, isSyncing, onForgot }) {
   };
 
   return (
-    <div className="relative z-10 w-full min-h-screen flex items-center justify-center px-4 py-8 mx-auto">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 relative overflow-hidden">
       {/* Branding - Top Left (Desktop) / Top Center (Mobile) */}
       <div className="fixed top-4 left-4 sm:top-8 sm:left-8 flex items-center gap-2 sm:gap-4 z-50 animate-in fade-in slide-in-from-left-4 duration-700">
         <div className="w-10 h-10 sm:w-14 sm:h-14 flex items-center justify-center overflow-hidden">
@@ -646,11 +646,13 @@ function LoginPage({ onLogin, error, isSyncing, onForgot }) {
           <div className="w-[15rem] h-[15rem] bg-gold/20 absolute z-1 rounded-full -bottom-20 -left-20 blur-3xl animate-pulse"></div>
 
           <div className="relative z-10 space-y-6">
-            <h1 className="text-xl md:text-3xl font-bold leading-[1.1] tracking-tighter" style={{ fontFamily: "'Times New Roman', Times, serif", textShadow: '0.5px 0 0 currentColor' }}>
+            <h1 className="text-3xl md:text-7xl font-black leading-[1.1] tracking-tighter" style={{ fontFamily: "'Times New Roman', Times, serif", textShadow: '2px
+0 0 currentColor' }}>
               Brolly Software Solutions <br/>
-              <span className="text-gold" style={{ textShadow: '0.5px 0 0 #D4AF37' }}>Attendance Portal.</span>
+              <span className="text-gold" style={{ textShadow: '2px 0 0 #D4AF37' }}>Attendance Portal.</span>
             </h1>
-            <p className="text-slate-300 text-sm md:text-base max-w-md font-bold italic" style={{ fontFamily: "'Times New Roman', Times, serif", textShadow: "0.3px 0 0 currentColor" }}>
+            <p className="text-slate-300 text-xl md:text-2xl max-w-md font-black italic" style={{ fontFamily: "'Times New Roman', Times, serif", textShadow: "1.2px
+0 0 currentColor" }}>
               Empowering your team with seamless time tracking and management.
             </p>
           </div>
@@ -751,8 +753,6 @@ function LoginPage({ onLogin, error, isSyncing, onForgot }) {
         </div>
       </div>
     </div>
-  );
-}
 
 /* -- Stat Card ------------------------------------------- */
 function StatCard({ label, value, sub, icon, color, bg, isLive, index = 0 }) {
@@ -2305,19 +2305,19 @@ function Dashboard({ employee, onSignOut, showToast }) {
             boxShadow: "0 30px 70px rgba(0,0,0,0.2)", animation: "slideUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)",
             overflow: "hidden", border: `1px solid ${T.border}`, margin: "auto"
           }} onClick={e => e.stopPropagation()}>
-            <div style={{ background: "#1e1b4b", padding: "28px 32px", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ background: T.ink, padding: "28px 32px", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <div className="h-font" style={{ fontSize: 20, fontWeight: 800 }}>Start Working Session</div>
-                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", marginTop: 4 }}>Attendance Tracker</div>
+                <div style={{ fontSize: 13, color: T.faint, marginTop: 4 }}>Attendance Tracker</div>
               </div>
               <button onClick={() => setShowStartWorkingModal(false)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "white", cursor: "pointer", width: 40, height: 40, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Icon d="M18 6L6 18M6 6l12 12" size={20} color="white" />
               </button>
             </div>
             <div style={{ padding: "32px", textAlign: "center" }}>
-              <div style={{ fontSize: "52px", marginBottom: "18px", animation: "pulseSoft 2s infinite" }}>🚀</div>
-              <h3 className="h-font" style={{ margin: "0 0 10px 0", fontSize: "18px", color: "#1e1b4b", fontWeight: 800 }}>Ready to Clock In?</h3>
-              <p style={{ margin: 0, fontSize: "14px", color: "#6366f1", lineHeight: "1.5", fontWeight: 800 }}>
+              <div style={{ fontSize: "52px", marginBottom: "18px", animation: "pulseSoft 2s infinite" }}>??</div>
+              <h3 className="h-font" style={{ margin: "0 0 10px 0", fontSize: "18px", color: T.ink, fontWeight: 800 }}>Ready to Clock In?</h3>
+              <p style={{ margin: 0, fontSize: "14px", color: T.muted, lineHeight: "1.5", fontWeight: 800 }}>
                 Clicking confirm will start tracking your active hours for today. Please make sure you are ready to begin your work session.
               </p>
 
@@ -2568,10 +2568,10 @@ function Dashboard({ employee, onSignOut, showToast }) {
         {/* Greeting row */}
         <div className="greeting-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 36 }}>
           <div>
-            <h1 className="h-font" style={{ margin: "0 0 6px", fontSize: 30, fontWeight: 800, color: "#1e1b4b", letterSpacing: "-0.5px", textShadow: "0.5px 0 0 currentColor" }}>
-              {greeting}, {employee.name.split(" ")[0]} 👋
+            <h1 className="h-font" style={{ margin: "0 0 6px", fontSize: 30, fontWeight: 800, color: T.ink, letterSpacing: "-0.5px", textShadow: "0.5px 0 0 currentColor" }}>
+              {greeting}, {employee.name.split(" ")[0]} ??
             </h1>
-            <p style={{ margin: 0, fontSize: 14, color: "#6366f1", fontWeight: 800 }}>
+            <p style={{ margin: 0, fontSize: 14, color: T.muted, fontWeight: 800 }}>
               {now.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
             </p>
           </div>
@@ -2962,7 +2962,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
                     fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em'
                   }}
                 >
-                  🌴 Casual Leave
+                  ?? Casual Leave
                 </button>
                 <button 
                   onClick={() => setRequestType("Work From Home")} 
@@ -2975,7 +2975,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
                     fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em'
                   }}
                 >
-                  🏠 Work From Home
+                  ?? Work From Home
                 </button>
               </div>
 
@@ -3086,7 +3086,9 @@ function Dashboard({ employee, onSignOut, showToast }) {
                             <Badge status={l.status} />
                           </div>
                         </div>
-                        <div style={{ fontSize: 14, color: T.ink2, lineHeight: 1.6, fontWeight: 800, marginBottom: (l.admin_comment || l.status === "Pending") ? 20 : 0 }}>{l.reason}</div>
+: 0 }}>{l.reason}</div>
+                        <div style={{ fontSize: 14, color: T.ink2, lineHeight: 1.6, fontWeight: 800, marginBottom: (l.admin_comment || l.status === "Pending") ? 20
+: 0 }}>{l.reason}</div>
 
                         {l.admin_comment && (
                           <div style={{
@@ -3098,7 +3100,6 @@ function Dashboard({ employee, onSignOut, showToast }) {
                             {l.admin_comment}
                           </div>
                         )}
-                        {l.status === "Pending" && (
                           <div style={{ display: "flex", gap: 10, borderTop: `1.5px solid ${T.border}`, paddingTop: 16, marginTop: 4 }}>
                             <button onClick={() => handleEditLeave(l)} style={{
                               flex: 1, padding: "10px", borderRadius: 12, border: `1.5px solid ${T.accent}30`,
@@ -3176,7 +3177,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
                 <div style={{ position: "absolute", top: "-50%", right: "-30%", width: 200, height: 200, borderRadius: "50%", background: "rgba(21,96,189,0.25)", filter: "blur(40px)" }} />
 
                 <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ fontSize: 18 }}>🔒</span> Security & Verification
+                  <span style={{ fontSize: 18 }}>???</span> Security & Verification
                 </div>
                 <p style={{ fontSize: 12.5, lineHeight: 1.6, color: "rgba(255,255,255,0.75)", margin: 0, fontWeight: 800 }}>
                   Please ensure your Aadhar Card and PAN Card details match your official documents. Updates will be locked for verification once saved.
@@ -3252,7 +3253,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
               <div style={{ borderTop: `1.5px solid ${T.border}`, paddingTop: 28 }}>
                 <h4 style={{ margin: "0 0 20px", fontSize: 15, fontWeight: 800, color: T.ink, display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 18 }}>🆔</span> Official Identity Verification
+                  <span style={{ fontSize: 18 }}>??</span> Official Identity Verification
                 </h4>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28 }}>
@@ -4780,7 +4781,6 @@ Software Solutions</div>
               SYNC: {lastSync.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
             </div>
           )}
-          <button onClick={fetchAttendance}
             style={{
               display: "flex", alignItems: "center", gap: 10, padding: "10px 20px",
               borderRadius: 14, border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.08)",
@@ -4870,8 +4870,10 @@ Software Solutions</div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24, background: T.surface, padding: 18, borderRadius: 14 }}>   
                 <div style={{ borderRight: `1px solid ${T.border}` }}>
+selectedRecord.outtime || ""}</div>
                   <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, marginBottom: 4, textTransform: "uppercase" }}>Work Session</div>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: T.ink }}>{selectedRecord.logint || selectedRecord.intime || ""} → {selectedRecord.logoutt || selectedRecord.outtime || ""}</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: T.ink }}>{selectedRecord.logint || selectedRecord.intime || ""} ? {selectedRecord.logoutt ||
+selectedRecord.outtime || ""}</div>
                 </div>
                 <div style={{ paddingLeft: 10 }}>
                   <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, marginBottom: 4, textTransform: "uppercase" }}>Hours (Work / Break)</div>
@@ -4881,8 +4883,6 @@ Software Solutions</div>
                       <div style={{ fontWeight: 800, marginBottom: 2 }}>Break Logs:</div>
                       {selectedRecord.break_logs_parsed.map((log, lIdx) => (
                         <div key={lIdx}> {log.in} - {log.out} ({log.duration})</div>
-                      ))}
-                    </div>
                   )}
                   {selectedRecord.offline_logs_parsed && selectedRecord.offline_logs_parsed.length > 0 && (
                     <div style={{ marginTop: 12, fontSize: 11, color: T.red }}>
@@ -5769,12 +5769,15 @@ Software Solutions</div>
                               <input className="adm-inp" placeholder="Add comment..." style={{ fontSize: 11, padding: "6px 10px" }}
                                 value={adminComment} onChange={e => setAdminComment(e.target.value)} />
                               <div style={{ display: "flex", gap: 6 }}>
-                                <button onClick={() => handleApproveLeave(l.id, "Approved")} style={{ flex: 1, padding: "8px", background: T.green, color: "white", borderRadius: 8, border: "none", fontSize: 11, fontWeight: 800, cursor: "pointer", transition: "all 0.2s" }} onMouseOver={e => e.currentTarget.style.opacity = 0.8} onMouseOut={e => e.currentTarget.style.opacity = 1}>Approve</button>
+borderRadius: 8, border: "none", fontSize: 11, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }} onMouseOver={e => e.currentTarget.style.opacity = 0.8}
+onMouseOut={e => e.currentTarget.style.opacity = 1}>Approve</button>
+                                <button onClick={() => handleApproveLeave(l.id, "Approved")} style={{ flex: 1, padding: "8px", background: T.green, color: "white",
+borderRadius: 8, border: "none", fontSize: 11, fontWeight: 800, cursor: "pointer", transition: "all 0.2s" }} onMouseOver={e => e.currentTarget.style.opacity = 0.8}
+onMouseOut={e => e.currentTarget.style.opacity = 1}>Approve</button>
                                 <button onClick={() => handleApproveLeave(l.id, "Rejected")} style={{ flex: 1, padding: "8px", background: T.red, color: "white", borderRadius: 8, border: "none", fontSize: 11, fontWeight: 800, cursor: "pointer", transition: "all 0.2s" }} onMouseOver={e => e.currentTarget.style.opacity = 0.8} onMouseOut={e => e.currentTarget.style.opacity = 1}>Reject</button>
                               </div>
                             </div>
                           ) : (
-                            <div style={{ fontSize: 11, color: T.muted, fontWeight: 700 }}>{l.admin_comment || "No comment"}</div>
                           )}
                         </td>
                       </tr>
@@ -5800,7 +5803,9 @@ Software Solutions</div>
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ name, description: "New group" })
                   }).then(fetchAttendance);
-                }} style={{ width: "100%", padding: 10, background: T.accent, color: "white", border: "none", borderRadius: 10, fontWeight: 800, cursor: "pointer", fontSize: 12 }}>
+fontSize: 12 }}>
+                }} style={{ width: "100%", padding: 10, background: T.accent, color: "white", border: "none", borderRadius: 10, fontWeight: 800, cursor: "pointer",
+fontSize: 12 }}>
                   + Create New Group
                 </button>
               </div>
@@ -5817,11 +5822,12 @@ Software Solutions</div>
                       <div style={{ fontWeight: 800, fontSize: 14, color: selGroup?.id === g.id ? T.purple : T.ink }}>{g.name}</div>
                       <div style={{ fontSize: 11, color: T.muted }}>{g.member_usernames?.length || 0} Members</div>
                       {unread > 0 && (
-                        <span style={{ position: "absolute", top: 12, right: 12, background: T.red, color: "white", fontSize: 10, padding: "2px 6px", borderRadius: 10, border: "2px solid white", fontWeight: 800 }}>{unread}</span>
-                      )}
+                        <span style={{ position: "absolute", top: 12, right: 12, background: T.red, color: "white", fontSize: 10, padding: "2px 6px", borderRadius:
+10, border: "2px solid white", fontWeight: 800 }}>{unread}</span>
                     </div>
                    );
                  })}
+              </div>
             </div>
 
             {/* Right: Group Detail */}
@@ -5927,7 +5933,7 @@ Software Solutions</div>
                   }
                 }
               }} style={{ padding: "10px 20px", background: T.surface, color: T.accent, border: `1.5px solid ${T.accent}40`, borderRadius: 10, fontWeight: 800, cursor: "pointer", fontSize: 13 }}>
-                🔄 Sync All Accounts
+                ?? Sync All Accounts
               </button>
             </div>
             
@@ -6008,7 +6014,7 @@ Software Solutions</div>
                   >
                     <div style={{ fontSize: 18, fontWeight: 800, color: T.purple, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4 }}>    
                       {profiles.find(p => String(p.employee_id).toLowerCase() === String(e.id).toLowerCase())?.total_leaves ?? 16}
-                      <span style={{ fontSize: 10, opacity: 0.6 }}>📄</span>
+                      <span style={{ fontSize: 10, opacity: 0.6 }}>??</span>
                     </div>
                     <div style={{ fontSize: 9, fontWeight: 800, color: T.muted, textTransform: "uppercase", letterSpacing: 0.5 }}>Leaves Left</div>
                   </div>

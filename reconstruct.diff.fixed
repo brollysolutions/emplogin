@@ -1,0 +1,2788 @@
+diff --git a/frontend/src/login/login.jsx b/frontend/src/login/login.jsx
+index 8b8b43e..3caa563 100644
+--- a/frontend/src/login/login.jsx
++++ b/frontend/src/login/login.jsx
+@@ -1,19 +1,25 @@
+ import { useState, useEffect, useRef, useMemo } from "react";
++import { BackgroundPaths } from "@/components/ui/background-paths";
++import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
++import { Input } from "@/components/ui/input";
++import { Label } from "@/components/ui/label";
++import { Button } from "@/components/ui/button";
++import { GlowCard } from "@/components/ui/spotlight-card";
+ import * as XLSX from "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
+-import logo from "../assets/brolly_logo.png";
++import logo from '../assets/brolly_logo_new.jpeg';
+ 
+ /* -- Design tokens ------------------------------------------- */
+ const T = {
+-  ink: "#1e1b4b",
+-  ink2: "#312e81",
+-  muted: "#6366f1",
+-  faint: "#c7d2fe",
+-  border: "rgba(99, 102, 241, 0.15)",
+-  surface: "rgba(248, 250, 252, 0.9)",
+-  white: "rgba(255, 255, 255, 0.95)",
+-  glass: "rgba(255, 255, 255, 0.8)",
+-  accent: "#4f46e5",
+-  accent2: "#818cf8",
++  ink: "#000000",
++  ink2: "#111111",
++  muted: "#444444",
++  faint: "#eeeeee",
++  border: "#dddddd",
++  surface: "#ffffff",
++  white: "#ffffff",
++  glass: "#ffffff",
++  accent: "#D4AF37",
++  accent2: "#F9E2AF",
+   green: "#10b981",
+   greenBg: "rgba(16, 185, 129, 0.1)",
+   red: "#ef4444",
+@@ -24,6 +30,8 @@ const T = {
+   purpleBg: "rgba(99, 102, 241, 0.1)",
+   orange: "#f97316",
+   orangeBg: "rgba(249, 115, 22, 0.1)",
++  gold: "#D4AF37",
++  goldBg: "rgba(212, 175, 55, 0.1)",
+ };
+ 
+ /* -- Helpers ------------------------------------------------- */
+@@ -224,13 +232,7 @@ const FALLBACK_CREDS = [
+ ];
+ 
+ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxNHIX32g4_K2FlxAJO6g0XpEdUW7ennEEnwH-0XK_SoecTAzZ66hcRIhGh2HxCYsGj/exec";
+-// Use relative path in production to work behind the /login/ proxy
+-// const API_BASE = window.location.hostname === "localhost"
+-//   ? "http://localhost:8003/api/v1/"
+-//   : "/test_login/api/v1/";
+-const API_BASE = window.location.hostname === "localhost"
+-  ? "http://localhost:8001/api/v1/"
+-  : "/login/api/v1/";
++const API_BASE = import.meta.env.VITE_API_URL || "/login/api/v1/";
+ const BACKEND_URL = API_BASE + "attendance/";
+ const TASKS_URL = API_BASE + "tasks/";
+ const LEAVES_URL = API_BASE + "leaves/";
+@@ -271,7 +273,7 @@ function Avatar({ name, src, size = 40, accent = T.accent }) {
+     <div style={{
+       width: size, height: size, borderRadius: "50%", background: bg,
+       display: "flex", alignItems: "center", justifyContent: "center",
+-      fontWeight: 700, fontSize: size * 0.36, color: fg, flexShrink: 0, letterSpacing: 0.5
++      fontWeight: 800, fontSize: size * 0.36, color: fg, flexShrink: 0, letterSpacing: 0.5
+     }}>
+       {ini}
+     </div>
+@@ -313,7 +315,7 @@ function PremiumInput({ label, icon, placeholder, value, onChange, type = "text"
+             background: "transparent",
+             padding: "11px 12px",
+             fontSize: "13.5px",
+-            fontWeight: 700,
++            fontWeight: 800,
+             color: T.ink,
+             fontFamily: "inherit"
+           }}
+@@ -393,7 +395,7 @@ function PremiumFileUpload({ id, label, fileName, isUploaded, onFileSelect, view
+             <div style={{ fontSize: 12, fontWeight: 800, color: T.ink }}>
+               {fileName ? fileName : "Upload Document"}
+             </div>
+-            <div style={{ fontSize: 9, color: T.muted, fontWeight: 700, marginTop: 4, letterSpacing: 0.3 }}>
++            <div style={{ fontSize: 9, color: T.muted, fontWeight: 800, marginTop: 4, letterSpacing: 0.3 }}>
+               JPEG, PNG or JPG supported
+             </div>
+           </div>
+@@ -461,8 +463,6 @@ const icons = {
+    LOGIN PAGE – Premium Animated Redesign
+ -------------------------------------------------------------- */
+ const LOGIN_STYLES = `
+-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Roboto+Slab:wght@100..900&family=Playfair+Display:ital,wght@1,600&display=swap');
+-
+   @keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }
+   @keyframes spin { to { transform: rotate(360deg) } }
+   @keyframes fadeInUp { from { opacity:0; transform:translateY(24px) } to { opacity:1; transform:translateY(0) } }
+@@ -497,8 +497,8 @@ const LOGIN_STYLES = `
+   }
+ 
+   .login-inp {
+-    width:100%; padding:13px 16px; border-radius:12px;
+-    border:2px solid #e2ebf6; font-size:14px; font-family:'Inter',sans-serif;
++    width:100%; padding:13px 16px; border-radius: 12px;
++    border:2px solid #e2ebf6; font-size:14px; font-family:'Times New Roman', Times, serif; letter-spacing: 0.01em;
+     outline:none; box-sizing:border-box; color:#0b1f35; background:#fafcff;
+     transition:all 0.25s cubic-bezier(0.4,0,0.2,1);
+     box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+@@ -515,18 +515,18 @@ const LOGIN_STYLES = `
+ 
+   .notif-toast {
+     position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+-    background: #0b1f35; color: white; padding: 16px 24px;
+-    border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
++    background: white; color: #000000; padding: 16px 24px;
++    border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+     display: flex; alignItems: center; gap: 12px;
+     animation: fadeInUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+-    border: 1px solid rgba(255,255,255,0.1);
++    border: 1px solid rgba(0,0,0,0.08);
+   }
+ 
+   .login-btn {
+-    width:100%; padding:14px; border-radius:12px; border:none;
++    width:100%; padding:14px; border-radius: 12px; border:none;
+     background: linear-gradient(135deg, #1560bd 0%, #0ea5e9 100%);
+-    color:white; font-weight:700; font-size:15px; font-family:'Inter',sans-serif;
+-    cursor:pointer; letter-spacing:0.3px; position:relative; overflow:hidden;
++    color:white; font-weight: 800; font-size:15px; font-family:'Times New Roman', Times, serif; letter-spacing: 0.01em;
++    cursor:pointer; letter-spacing:1px; position:relative; overflow:hidden;
+     transition: transform 0.15s, box-shadow 0.2s;
+     box-shadow: 0 4px 15px rgba(21,96,189,0.4);
+   }
+@@ -541,7 +541,7 @@ const LOGIN_STYLES = `
+ 
+   .forgot-btn {
+     background:none; border:none; color:#1560bd; font-size:13px;
+-    cursor:pointer; font-weight:600; font-family:'Inter',sans-serif;
++    cursor:pointer; font-weight: 800; font-family:'Times New Roman', Times, serif; letter-spacing: 0.01em;
+     padding:2px 0; position:relative;
+     transition: color 0.2s;
+   }
+@@ -572,7 +572,7 @@ const LOGIN_STYLES = `
+   @media (max-width: 900px) {
+     .login-left-panel { display: none !important; }
+     .login-right-panel { padding: 24px 16px !important; }
+-    .login-card { padding: 32px 24px !important; border-radius: 20px !important; }
++    .login-card { padding: 32px 24px !important; border-radius: 16px !important; width: 100% !important; max-width: 400px !important; }
+     .login-title { font-size: 22px !important; }
+   }
+ 
+@@ -595,6 +595,9 @@ const LOGIN_STYLES = `
+   @media (max-width: 480px) {
+     .stat-grid { grid-template-columns: 1fr !important; }
+     .profile-footer-stats { grid-template-columns: 1fr !important; }
++    .fixed.top-8.left-8 { top: 1rem !important; left: 1rem !important; }
++    .w-14.h-14 { width: 3rem !important; height: 3rem !important; }
++    .text-3xl { font-size: 1.5rem !important; }
+   }
+ `;
+ 
+@@ -602,306 +605,149 @@ function LoginPage({ onLogin, error, isSyncing, onForgot }) {
+   const [u, setU] = useState("");
+   const [p, setP] = useState("");
+   const [show, setShow] = useState(false);
+-  const [shake, setShake] = useState(false);
+   const [loading, setLoading] = useState(false);
+-  const [uFocus, setUFocus] = useState(false);
+-  const [pFocus, setPFocus] = useState(false);
+ 
+   useEffect(() => {
+     if (error) {
+-      setShake(true);
+       setLoading(false);
+-      setTimeout(() => setShake(false), 500);
+     }
+   }, [error]);
+ 
+-  const submit = async () => {
++  const submit = async (e) => {
++    if (e) e.preventDefault();
+     if (!u || !p) return;
+     setLoading(true);
+     onLogin(u, p);
+   };
+ 
+-  const orbs = [
+-    { w: 280, h: 280, top: -80, left: -80, bg: "rgba(21,96,189,0.2)", anim: "float1 8s ease-in-out infinite" },
+-    { w: 220, h: 220, bottom: -60, right: -60, bg: "rgba(14,165,233,0.15)", anim: "float2 10s ease-in-out infinite" },
+-    { w: 160, h: 160, top: "38%", right: -40, bg: "rgba(21,96,189,0.12)", anim: "float3 7s ease-in-out infinite" },
+-    { w: 100, h: 100, top: "20%", left: "55%", bg: "rgba(109,40,217,0.08)", anim: "float1 12s ease-in-out infinite 2s" },
+-  ];
+-
+   return (
+-    <div style={{
+-      minHeight: "100vh", display: "flex",
+-      fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+-      background: "linear-gradient(135deg, #f0f4fa 0%, #e8f0fe 100%)"
+-    }}>
+-      <style>{LOGIN_STYLES}</style>
+-
+-      {/* -- Left Panel -- */}
+-      <div className="login-left-panel" style={{
+-        flex: "0 0 440px",
+-        background: "linear-gradient(160deg, #0b1f35 0%, #0d2b4e 50%, #0f3460 100%)",
+-        display: "flex", flexDirection: "column", justifyContent: "space-between",
+-        padding: "52px 44px", position: "relative", overflow: "hidden"
+-      }}>
+-
+-        {/* Animated Orbs */}
+-        {orbs.map((o, i) => (
+-          <div key={i} style={{
+-            position: "absolute", borderRadius: "50%", background: o.bg,
+-            width: o.w, height: o.h,
+-            top: o.top, bottom: o.bottom, left: o.left, right: o.right,
+-            animation: o.anim
+-          }} />
+-        ))}
+-
+-        {/* Grid overlay */}
+-        <div style={{
+-          position: "absolute", inset: 0, opacity: 0.04,
+-          backgroundImage: "linear-gradient(rgba(255,255,255,0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.8) 1px, transparent 1px)",      
+-          backgroundSize: "40px 40px"
+-        }} />
+-
+-        {/* Logo */}
+-        <div style={{ position: "relative", zIndex: 1, animation: "fadeInLeft 0.7s ease both" }}>
+-          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 60 }}>
+-            <div style={{
+-              width: 50, height: 50, borderRadius: 14, background: "white",
+-              display: "flex", alignItems: "center", justifyContent: "center",
+-              overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.2)"
+-            }}>
+-              <img src={logo} alt="Brolly Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+-            </div>
+-            <div>
+-              <div style={{ color: "white", fontWeight: 800, fontSize: 16, letterSpacing: 0.2 }}>Brolly Software Solutions</div>
+-              <div style={{ color: "rgba(168,188,212,0.8)", fontSize: 10, letterSpacing: 1.5, marginTop: 2 }}>ATTENDANCE MANAGEMENT</div>
+-            </div>
+-          </div>
+-
+-          <h1 style={{
+-            color: "white", fontSize: 26, fontWeight: 700, lineHeight: 1.3,
+-            margin: "0 0 18px", letterSpacing: -0.3,
+-            animation: "sloganSlideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both"
+-          }}>
+-            Track time.<br />
+-            <span style={{ color: "#38bdf8" }}>Manage work.</span><br />
+-            Stay ahead.
+-          </h1>
+-          <p style={{ color: "rgba(168,188,212,0.85)", fontSize: 13.5, lineHeight: 1.75, margin: 0 }}>
+-            A complete employee attendance and task management platform — login, track hours, and export to Excel seamlessly.
+-          </p>
++    <div className="min-h-screen w-full flex items-center justify-center p-4 relative overflow-hidden">
++      {/* Branding - Top Left (Desktop) / Top Center (Mobile) */}
++      <div className="fixed top-4 left-4 sm:top-8 sm:left-8 flex items-center gap-2 sm:gap-4 z-50 animate-in fade-in slide-in-from-left-4 duration-700">
++        <div className="w-10 h-10 sm:w-14 sm:h-14 flex items-center justify-center overflow-hidden">
++          <img src={logo} alt="Brolly Logo" className="w-full h-full object-contain" />
+         </div>
+-
+-        {/* Feature Pills */}
+-        <div style={{ position: "relative", zIndex: 1 }}>
+-          {[
+-            { icon: icons.clock, text: "Real-time clock-in / clock-out", color: "#38bdf8" },
+-            { icon: icons.chart, text: "Auto working hours calculation", color: "#34d399" },
+-            { icon: icons.save, text: "One-click Excel export", color: "#a78bfa" },
+-            { icon: icons.tasks, text: "Daily task logging", color: "#fb923c" },
+-          ].map((f, i) => (
+-            <div key={i} className="feature-pill">
+-              <div style={{
+-                width: 36, height: 36, borderRadius: 10,
+-                background: `${f.color}20`, border: `1px solid ${f.color}30`,
+-                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
+-              }}>
+-                <Icon d={f.icon} size={16} color={f.color} />
+-              </div>
+-              <span style={{ color: "rgba(255,255,255,0.78)", fontSize: 13.5, fontWeight: 500 }}>{f.text}</span>
+-            </div>
+-          ))}
+-        </div>
+-
+-        <div style={{ position: "relative", zIndex: 1, color: "rgba(168,188,212,0.5)", fontSize: 11, letterSpacing: 0.3 }}>
+-          © 2026 Brolly Software Solutions. All rights reserved.
++        <div>
++          <h2 className="text-sm sm:text-2xl font-black text-slate-900 leading-none tracking-tight" style={{ textShadow: '0.5px 0 0 currentColor' }}>Brolly Software Solutions</h2>
++          <p className="text-[8px] sm:text-[12px] font-black text-gold tracking-[0.2em] mt-1 sm:mt-1.5 uppercase">Attendance System</p>
+         </div>
+       </div>
+ 
+-      {/* -- Right Panel -- */}
+-      <div className="login-right-panel" style={{
+-        flex: 1, display: "flex", alignItems: "center",
+-        justifyContent: "center", padding: "40px 24px"
+-      }}>
+-        <div style={{
+-          width: "100%", maxWidth: 420,
+-          animation: shake ? "shake 0.42s ease" : "fadeInUp 0.6s cubic-bezier(0.4,0,0.2,1) both"
+-        }}>
++      <div className="w-full relative max-w-5xl overflow-hidden flex flex-col md:flex-row shadow-2xl rounded-3xl z-10 bg-white/10 backdrop-blur-sm border border-white/20">
++        {/* Left Panel - Visual Branding */}
++        <div className="bg-black text-white p-8 md:p-12 md:w-1/2 relative flex flex-col justify-center overflow-hidden min-h-[300px]">
++          {/* Abstract Effects from FullScreenSignup */}
++          <div className="w-full h-full z-2 absolute inset-0 bg-gradient-to-t from-transparent to-black opacity-50"></div>
++          <div className="flex absolute inset-0 z-2 overflow-hidden backdrop-blur-3xl opacity-20 pointer-events-none">
++            {[...Array(6)].map((_, i) => (
++              <div key={i} className="h-full w-[4rem] bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
++            ))}
++          </div>
++          <div className="w-[15rem] h-[15rem] bg-gold/20 absolute z-1 rounded-full -bottom-20 -left-20 blur-3xl animate-pulse"></div>
++
++          <div className="relative z-10 space-y-6">
++            <h1 className="text-3xl md:text-7xl font-black leading-[1.1] tracking-tighter" style={{ fontFamily: "'Times New Roman', Times, serif", textShadow: '2px
+ 0 0 currentColor' }}>
++              Brolly Software Solutions <br/>
++              <span className="text-gold" style={{ textShadow: '2px 0 0 #D4AF37' }}>Attendance Portal.</span>
++            </h1>
++            <p className="text-slate-300 text-xl md:text-2xl max-w-md font-black italic" style={{ fontFamily: "'Times New Roman', Times, serif", textShadow: "1.2px
+ 0 0 currentColor" }}>
++              Empowering your team with seamless time tracking and management.
++            </p>
++          </div>
++        </div>
+ 
+-          {/* Card */}
+-          <div className="login-card" style={{
+-            background: "white", borderRadius: 24,
+-            border: "1px solid rgba(220,232,244,0.8)",
+-            padding: "44px 40px",
+-            boxShadow: "0 20px 60px rgba(11,31,53,0.1), 0 4px 20px rgba(11,31,53,0.06)"
+-          }}>
++        {/* Right Panel - Login Form */}
++        <div className="p-8 md:p-12 md:w-1/2 flex flex-col bg-white z-10 text-slate-900 justify-center">
++          <div className="mb-8">
++            <h2 className="text-4xl font-black mb-3 tracking-tight text-slate-900">
++              Welcome back
++            </h2>
++            <p className="text-slate-500 font-black">
++              Sign in to your Brolly employee account
++            </p>
++          </div>
+ 
+-            {/* Header */}
+-            <div style={{ marginBottom: 36 }}>
+-              <div style={{
+-                width: 56, height: 56, borderRadius: 16,
+-                background: "linear-gradient(135deg, #e8f0fe, #dbeafe)",
+-                border: "2px solid #bfdbfe",
+-                display: "flex", alignItems: "center", justifyContent: "center",
+-                marginBottom: 22, position: "relative"
+-              }}>
+-                <Icon d={icons.user} size={24} color="#1560bd" />
+-                {/* Pulse ring */}
+-                <div style={{
+-                  position: "absolute", inset: -4, borderRadius: 20,
+-                  border: "2px solid rgba(21,96,189,0.3)",
+-                  animation: "pulse-ring 2s ease-out infinite"
+-                }} />
++          <form className="flex flex-col gap-5" onSubmit={submit} noValidate>
++            {error && (
++              <div className="p-4 rounded-xl text-sm flex gap-3 bg-red-50 text-red-700 border border-red-100 animate-in fade-in slide-in-from-top-2 duration-300"> 
++                <Icon d={icons.info} size={18} className="shrink-0 mt-0.5" />
++                <span className="font-black">{error}</span>
+               </div>
+-              <h2 className="login-title" style={{
+-                margin: "0 0 8px", fontSize: 26, fontWeight: 800,
+-                color: "#0b1f35", letterSpacing: -0.5
+-              }}>
+-                Welcome back ??
+-              </h2>
+-              <p style={{ margin: 0, fontSize: 14, color: "#6b82a0", lineHeight: 1.5 }}>
+-                Sign in using your <strong style={{ color: "#1560bd" }}>username or email</strong> to access the portal
+-              </p>
+-            </div>
++            )}
+ 
+-            {/* Username / Email Input */}
+-            <div style={{ marginBottom: 18, animation: "fadeInUp 0.5s ease 0.1s both" }}>
+-              <label style={{
+-                display: "block", fontSize: 11.5, fontWeight: 700,
+-                color: uFocus ? "#1560bd" : "#2c4a6e",
+-                marginBottom: 8, letterSpacing: 0.8, textTransform: "uppercase",
+-                transition: "color 0.2s"
+-              }}>
+-                Username or Email
++            <div className="space-y-2">
++              <label htmlFor="username" className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">
++                Username
+               </label>
+-              <div style={{ position: "relative" }}>
+-                <div style={{
+-                  position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)",
+-                  transition: "color 0.2s"
+-                }}>
+-                  <Icon d={icons.user} size={16} color={uFocus ? "#1560bd" : "#a8bcd4"} />
++              <div className="relative group">
++                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-gold transition-colors">
++                  <Icon d={icons.user} size={18} />
+                 </div>
+                 <input
+-                  className={`login-inp${error ? " error" : ""}`}
+-                  placeholder="your.username or email@company.com"
++                  type="text"
++                  id="username"
++                  placeholder="Enter your username"
++                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-3.5 pl-12 pr-4 text-sm font-black focus:bg-white focus:border-gold focus:outline-none transition-all placeholder:text-slate-300"
+                   value={u}
+-                  onChange={e => setU(e.target.value)}
+-                  onFocus={() => setUFocus(true)}
+-                  onBlur={() => setUFocus(false)}
+-                  onKeyDown={e => e.key === "Enter" && submit()}
+-                  style={{ paddingLeft: 44 }}
++                  onChange={(e) => setU(e.target.value)}
+                 />
+               </div>
+             </div>
+ 
+-            {/* Password Input */}
+-            <div style={{ marginBottom: 12, animation: "fadeInUp 0.5s ease 0.15s both" }}>
+-              <label style={{
+-                display: "block", fontSize: 11.5, fontWeight: 700,
+-                color: pFocus ? "#1560bd" : "#2c4a6e",
+-                marginBottom: 8, letterSpacing: 0.8, textTransform: "uppercase",
+-                transition: "color 0.2s"
+-              }}>
+-                Password
+-              </label>
+-              <div style={{ position: "relative" }}>
+-                <div style={{
+-                  position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)"
+-                }}>
+-                  <Icon d={icons.lock} size={16} color={pFocus ? "#1560bd" : "#a8bcd4"} />
++            <div className="space-y-2">
++              <div className="flex justify-between items-center ml-1">
++                <label htmlFor="password" className="text-xs font-black text-slate-500 uppercase tracking-widest">
++                  Password
++                </label>
++                <button 
++                  type="button"
++                  onClick={onForgot}
++                  className="text-xs font-black text-gold hover:text-amber-600 transition-colors uppercase tracking-widest"
++                >
++                  Forgot?
++                </button>
++              </div>
++              <div className="relative group">
++                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-gold transition-colors">
++                  <Icon d={icons.lock} size={18} />
+                 </div>
+                 <input
+-                  className={`login-inp${error ? " error" : ""}`}
+                   type={show ? "text" : "password"}
+-                  placeholder="Enter your password"
++                  id="password"
++                  placeholder="••••••••"
++                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-3.5 pl-12 pr-12 text-sm font-black focus:bg-white focus:border-gold focus:outline-none transition-all placeholder:text-slate-300"
+                   value={p}
+-                  onChange={e => setP(e.target.value)}
+-                  onFocus={() => setPFocus(true)}
+-                  onBlur={() => setPFocus(false)}
+-                  onKeyDown={e => e.key === "Enter" && submit()}
+-                  style={{ paddingLeft: 44, paddingRight: 48 }}
++                  onChange={(e) => setP(e.target.value)}
+                 />
+-                <button className="eye-btn" onClick={() => setShow(v => !v)}>
+-                  <Icon d={show ? icons.eyeOff : icons.eye} size={16} color="currentColor" />
++                <button
++                  type="button"
++                  onClick={() => setShow(!show)}
++                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-gold transition-colors p-1"
++                >
++                  <Icon d={show ? icons.eyeOff : icons.eye} size={18} />
+                 </button>
+               </div>
+             </div>
+ 
+-            {/* Forgot Password */}
+-            <div style={{ textAlign: "right", marginBottom: 22, animation: "fadeInUp 0.5s ease 0.2s both" }}>
+-              <button className="forgot-btn" onClick={onForgot}>Forgot Password?</button>
+-            </div>
+-
+-            {/* Error */}
+-            {error && (
+-              <div style={{
+-                display: "flex", alignItems: "center", gap: 10, padding: "12px 16px",
+-                borderRadius: 12, background: "#fff1f1",
+-                border: "1.5px solid #fca5a5",
+-                marginBottom: 20, fontSize: 13, color: "#d93b3b",
+-                animation: "fadeInUp 0.3s ease both"
+-              }}>
+-                <Icon d={icons.info} size={16} color="#d93b3b" />
+-                <span>{error}</span>
+-              </div>
+-            )}
+-
+-            {/* Submit Button */}
+-            <div style={{ animation: "fadeInUp 0.5s ease 0.25s both" }}>
+-              <button className="login-btn" onClick={submit} disabled={loading}>
+-                {loading ? (
+-                  <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+-                    <span style={{
+-                      width: 16, height: 16, border: "2.5px solid rgba(255,255,255,0.4)",
+-                      borderTopColor: "white", borderRadius: "50%",
+-                      display: "inline-block", animation: "spin 0.8s linear infinite"
+-                    }} />
+-                    Signing in...
+-                  </span>
+-                ) : "Sign in to Brolly Portal"}
+-              </button>
+-            </div>
+-
+-            {/* Divider */}
+-            <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "24px 0 14px" }}>
+-              <div style={{ flex: 1, height: 1, background: "#e2ebf6" }} />
+-              <span style={{ fontSize: 11, color: "#a8bcd4", fontWeight: 500 }}>STATUS</span>
+-              <div style={{ flex: 1, height: 1, background: "#e2ebf6" }} />
+-            </div>
+-
+-            {/* Sync Status */}
+-            <div style={{
+-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+-              padding: "10px 16px", borderRadius: 10,
+-              background: isSyncing ? "#eff6ff" : "#f0fdf4",
+-              border: `1px solid ${isSyncing ? "#bfdbfe" : "#bbf7d0"}`
+-            }}>
+-              {isSyncing ? (
+-                <>
+-                  <span style={{
+-                    width: 10, height: 10, border: "2px solid #93c5fd",
+-                    borderTopColor: "#1560bd", borderRadius: "50%",
+-                    display: "inline-block", animation: "spin 0.9s linear infinite"
+-                  }} />
+-                  <span style={{ fontSize: 12, color: "#1560bd", fontWeight: 600 }}>Syncing with Google Sheets...</span>
+-                </>
++            <button
++              type="submit"
++              disabled={loading || isSyncing}
++              className="mt-4 w-full bg-gradient-to-r from-gold to-amber-600 hover:from-amber-600 hover:to-gold text-white font-black py-4 px-6 rounded-2xl transition-all shadow-xl shadow-gold/20 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-3 text-base uppercase tracking-widest"
++            >
++              {loading ? (
++                <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+               ) : (
+                 <>
+-                  <span style={{
+-                    width: 8, height: 8, borderRadius: "50%", background: "#22c55e",
+-                    animation: "glowPulse 2s ease infinite"
+-                  }} />
+-                  <span style={{ fontSize: 12, color: "#15803d", fontWeight: 600 }}>Cloud connection active</span>
++                  Sign In
++                  <Icon d="M5 12h14M12 5l7 7-7 7" size={18} />
+                 </>
+               )}
+-            </div>
+-          </div>
+-
+-          {/* Below card hint */}
+-          <p style={{
+-            textAlign: "center", marginTop: 20, fontSize: 12, color: "#6b82a0", lineHeight: 1.6
+-          }}>
+-            Having issues? Contact your administrator.
+-          </p>
++            </button>
++
++            <p className="text-center text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-2">
++              Brolly Attendance Portal v2.0
++            </p>
++          </form>
+         </div>
+       </div>
+     </div>
+@@ -910,52 +756,49 @@ function LoginPage({ onLogin, error, isSyncing, onForgot }) {
+ 
+ /* -- Stat Card ------------------------------------------- */
+ function StatCard({ label, value, sub, icon, color, bg, isLive, index = 0 }) {
++  const finalBg = label.toLowerCase().includes('active') || label.toLowerCase().includes('total') ? T.goldBg : bg;
++  const finalColor = label.toLowerCase().includes('active') || label.toLowerCase().includes('total') ? T.gold : color;
++
+   return (
+-    <div className="stat-card" style={{
+-      background: "rgba(255, 255, 255, 0.85)",
+-      backdropFilter: "blur(10px)",
+-      WebkitBackdropFilter: "blur(10px)",
+-      padding: "24px",
+-      borderRadius: 24,
+-      border: `1px solid ${T.border}`,
+-      display: "flex",
+-      flexDirection: "column",
+-      gap: 16,
+-      position: "relative",
+-      overflow: "hidden",
+-      transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+-      boxShadow: "0 10px 30px -5px rgba(0, 0, 0, 0.04)",
+-      animation: `slideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) ${index * 0.1}s backwards`
+-    }}
+-    onMouseOver={e => {
+-      e.currentTarget.style.transform = "translateY(-6px)";
+-      e.currentTarget.style.boxShadow = "0 20px 40px -10px rgba(0, 0, 0, 0.08)";
+-    }}
+-    onMouseOut={e => {
+-      e.currentTarget.style.transform = "translateY(0)";
+-      e.currentTarget.style.boxShadow = "0 10px 30px -5px rgba(0, 0, 0, 0.04)";
+-    }}>
+-      {isLive && (
+-        <div style={{ position: "absolute", top: 16, right: 16, display: "flex", alignItems: "center", gap: 6 }}>
+-          <div className="pulse-soft" style={{ width: 8, height: 8, borderRadius: "50%", background: T.green, boxShadow: `0 0 12px ${T.green}40` }} />
+-          <span style={{ fontSize: 10, fontWeight: 900, color: T.green, textTransform: "uppercase", letterSpacing: "1px", fontFamily: "'Outfit', sans-serif" }}>Live</span>
++    <GlowCard 
++      glowColor="gold" 
++      customSize={true} 
++      className="stat-card-wrapper"
++      style={{ animation: `slideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) ${index * 0.1}s backwards` }}
++    >
++      <div className="stat-card" style={{
++        background: "transparent",
++        padding: "20px",
++        display: "flex",
++        flexDirection: "column",
++        gap: 16,
++        position: "relative",
++        overflow: "hidden",
++        width: "100%",
++        height: "100%"
++      }}>
++        {isLive && (
++          <div style={{ position: "absolute", top: 16, right: 16, display: "flex", alignItems: "center", gap: 6 }}>
++            <div className="pulse-soft" style={{ width: 8, height: 8, borderRadius: "50%", background: T.green, boxShadow: `0 0 12px ${T.green}40` }} />
++            <span style={{ fontSize: 11, fontWeight: 800, color: T.green, textTransform: "uppercase", letterSpacing: "1px", fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em' }}>Live</span>
++          </div>
++        )}
++        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
++          <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, color: T.ink, textTransform: "uppercase", fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em', textShadow: '0.4px 0 0 currentColor' }}>{label}</span>
++          <div style={{
++            width: 44, height: 44, borderRadius: 14, background: finalBg,
++            display: "flex", alignItems: "center", justifyContent: "center",
++            boxShadow: `0 8px 16px ${finalColor}10`
++          }}>
++            <Icon d={icon} size={20} color={finalColor} />
++          </div>
+         </div>
+-      )}
+-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+-        <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: T.muted, textTransform: "uppercase", fontFamily: "'Outfit', sans-serif" }}>{label}</span>
+-        <div style={{
+-          width: 44, height: 44, borderRadius: 14, background: bg,
+-          display: "flex", alignItems: "center", justifyContent: "center",
+-          boxShadow: `0 8px 16px ${color}10`
+-        }}>
+-          <Icon d={icon} size={20} color={color} />
++        <div>
++          <div className="stat-value" style={{ fontSize: 30, fontWeight: 800, color: T.ink, marginBottom: 4, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.5px", fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em', textShadow: '0.6px 0 0 currentColor' }}>{value}</div>
++          {sub && <div style={{ fontSize: 13, color: T.ink, fontWeight: 800, opacity: 0.7 }}>{sub}</div>}
+         </div>
+       </div>
+-      <div>
+-        <div className="stat-value" style={{ fontSize: 28, fontWeight: 800, color: T.ink, marginBottom: 4, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.5px", fontFamily: "'Outfit', sans-serif" }}>{value}</div>
+-        {sub && <div style={{ fontSize: 12, color: T.muted, fontWeight: 600, opacity: 0.8 }}>{sub}</div>}
+-      </div>
+-    </div>
++    </GlowCard>
+   );
+ }
+ 
+@@ -985,7 +828,7 @@ function Badge({ status }) {
+   return (
+     <span style={{
+       display: "inline-flex", alignItems: "center", gap: 6,
+-      padding: "4px 12px", borderRadius: 20, fontSize: 11, fontWeight: 700,
++      padding: "4px 12px", borderRadius: 20, fontSize: 11, fontWeight: 800,
+       background: s.bg, color: s.color, border: `1px solid ${s.dot}20`,
+       whiteSpace: "nowrap"
+     }}>
+@@ -2319,16 +2162,15 @@ function Dashboard({ employee, onSignOut, showToast }) {
+   return (
+     <div style={{
+       minHeight: "100vh",
+-      background: "linear-gradient(-45deg, #c7d2fe, #fbcfe8, #ddd6fe, #bae6fd, #fce7f3, #d1fae5)",
+-      backgroundSize: "400% 400%",
+-      animation: "gradientFlow 20s ease infinite",
+-      backgroundAttachment: "fixed",
+-      fontFamily: "'Inter', sans-serif",
++      background: "#ffffff",
++      position: "relative",
++      overflow: "hidden",
++      fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em',
+       color: T.ink,
+     }}>
+       <style>{`
+         body { margin: 0; padding: 0; }
+-        .h-font { font-family: 'Outfit', sans-serif; }
++        .h-font { font-family: 'Times New Roman', Times, serif; }
+ 
+         @keyframes gradientFlow {
+           0% { background-position: 0% 50%; }
+@@ -2337,58 +2179,58 @@ function Dashboard({ employee, onSignOut, showToast }) {
+         }
+ 
+         .premium-card {
+-          background: rgba(255, 255, 255, 0.8);
+-          backdrop-filter: blur(12px);
+-          -webkit-backdrop-filter: blur(12px);
++          background: #ffffff;
+           border: 1px solid ${T.border};
+           border-radius: 28px;
+-          box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.03);
++          box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.05);
+           transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+           animation: slideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+         }
+ 
+         .tab {
+           padding: 10px 24px;
+-          border-radius: 14px;
++          border-radius: 12px;
+           border: 1px solid transparent;
+           cursor: pointer;
+           font-size: 14px;
+-          font-weight: 600;
+-          font-family: 'Outfit', sans-serif;
++          font-weight: 800;
++          font-family: 'Times New Roman', Times, serif;
+           transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+-          background: transparent;
++          background: #f8fafc;
+           color: ${T.muted};
+         }
+ 
+         .tab.active {
+-          background: white;
++          background: #ffffff;
+           color: ${T.accent};
++          border: 1px solid ${T.border};
+           box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+           transform: scale(1.05);
+         }
+ 
+         .tab:hover:not(.active) {
+-          background: rgba(255, 255, 255, 0.4);
++          background: #ffffff;
+           color: ${T.ink};
++          border: 1px solid ${T.border};
+         }
+ 
+         .act-btn {
+           padding: 14px 28px;
+-          border-radius: 18px;
++          border-radius: 16px;
+           border: none;
+-          font-weight: 700;
+-          font-family: 'Outfit', sans-serif;
++          font-weight: 800;
++          font-family: 'Times New Roman', Times, serif;
+           cursor: pointer;
+           display: flex;
+           align-items: center;
+           gap: 12px;
+           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+-          box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1);
++          box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.3);
+         }
+ 
+         .act-btn:hover {
+           transform: translateY(-3px);
+-          box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.15);
++          box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.4);
+         }
+ 
+         .act-btn:active { transform: translateY(0) scale(0.98); }
+@@ -2396,24 +2238,24 @@ function Dashboard({ employee, onSignOut, showToast }) {
+         .task-area {
+           width: 100%;
+           padding: 20px;
+-          border-radius: 20px;
++          border-radius: 16px;
+           border: 1px solid ${T.border};
+           font-size: 15px;
+           line-height: 1.6;
+           resize: vertical;
+           outline: none;
+-          font-family: 'Inter', sans-serif;
++          font-family: 'Times New Roman', Times, serif;
+           color: ${T.ink};
+-          background: rgba(255, 255, 255, 0.5);
++          background: rgba(255, 255, 255, 0.03);
+           transition: all 0.3s;
+           min-height: 240px;
+           box-sizing: border-box;
+         }
+ 
+         .task-area:focus {
+-          background: white;
+-          border-color: ${T.accent}40;
+-          box-shadow: 0 0 0 4px ${T.accent}10;
++          background: rgba(255, 255, 255, 0.05);
++          border-color: ${T.accent}60;
++          box-shadow: 0 0 0 4px ${T.accent}20;
+         }
+ 
+         @keyframes slideUp {
+@@ -2439,8 +2281,8 @@ function Dashboard({ employee, onSignOut, showToast }) {
+       {toast && (
+         <div style={{
+           position: "fixed", top: 24, right: 24, zIndex: 9999,
+-          padding: "16px 24px", borderRadius: 16, fontSize: 14, fontWeight: 700,
+-          fontFamily: "'Outfit', sans-serif",
++          padding: "16px 24px", borderRadius: 16, fontSize: 14, fontWeight: 800,
++          fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em',
+           display: "flex", alignItems: "center", gap: 12, animation: "slideUp 0.4s ease",
+           background: toast.type === "success" ? T.green : toast.type === "error" ? T.red : toast.type === "amber" ? T.amber : T.accent,
+           color: "white", boxShadow: "0 10px 40px rgba(0,0,0,0.1)"
+@@ -2475,7 +2317,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+             <div style={{ padding: "32px", textAlign: "center" }}>
+               <div style={{ fontSize: "52px", marginBottom: "18px", animation: "pulseSoft 2s infinite" }}>??</div>
+               <h3 className="h-font" style={{ margin: "0 0 10px 0", fontSize: "18px", color: T.ink, fontWeight: 800 }}>Ready to Clock In?</h3>
+-              <p style={{ margin: 0, fontSize: "14px", color: T.muted, lineHeight: "1.5", fontWeight: 500 }}>
++              <p style={{ margin: 0, fontSize: "14px", color: T.muted, lineHeight: "1.5", fontWeight: 800 }}>
+                 Clicking confirm will start tracking your active hours for today. Please make sure you are ready to begin your work session.
+               </p>
+ 
+@@ -2484,7 +2326,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                   onClick={() => setShowStartWorkingModal(false)}
+                   style={{
+                     flex: 1, padding: "14px", borderRadius: "18px", border: `1px solid ${T.border}`,
+-                    background: "rgba(0,0,0,0.02)", color: T.ink, fontWeight: 700, cursor: "pointer",
++                    background: "rgba(0,0,0,0.02)", color: T.ink, fontWeight: 800, cursor: "pointer",
+                     fontSize: "14px", transition: "all 0.2s"
+                   }}
+                 >
+@@ -2498,7 +2340,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                   style={{
+                     flex: 1, padding: "14px", borderRadius: "18px", border: "none",
+                     background: `linear-gradient(135deg, ${T.green} 0%, #059669 100%)`, color: "white",
+-                    fontWeight: 700, cursor: "pointer", fontSize: "14px",
++                    fontWeight: 800, cursor: "pointer", fontSize: "14px",
+                     boxShadow: "0 8px 20px rgba(16, 185, 129, 0.25)", transition: "all 0.2s"
+                   }}
+                 >
+@@ -2536,7 +2378,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+               {assignedTasks.length === 0 ? (
+                 <div style={{ textAlign: "center", padding: "60px 0", color: T.muted }}>
+                    <div style={{ fontSize: 40, marginBottom: 16 }}>?</div>
+-                   <div className="h-font" style={{ fontWeight: 700, fontSize: 18 }}>You're all caught up!</div>
++                   <div className="h-font" style={{ fontWeight: 800, fontSize: 18 }}>You're all caught up!</div>
+                    <div style={{ fontSize: 14, marginTop: 4 }}>No pending tasks assigned to you.</div>
+                 </div>
+               ) : (
+@@ -2553,7 +2395,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                       </div>
+                       <p style={{ fontSize: 14, color: T.ink2, margin: "0 0 20px", lineHeight: 1.6 }}>{t.description}</p>
+                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${T.border}`, paddingTop: 16 }}> 
+-                        <div style={{ fontSize: 11, color: T.muted, fontWeight: 600 }}>Assigned {new Date(t.assigned_at).toLocaleDateString()}</div>
++                        <div style={{ fontSize: 11, color: T.muted, fontWeight: 800 }}>Assigned {new Date(t.assigned_at).toLocaleDateString()}</div>
+                         {t.status !== "Completed" && (
+                           <button onClick={() => markTaskCompleted(t.id)} style={{
+                             padding: "10px 20px", borderRadius: 12, border: "none", background: T.green, color: "white",
+@@ -2648,10 +2490,11 @@ function Dashboard({ employee, onSignOut, showToast }) {
+ 
+       {/* -- Topbar -- */}
+       <div className="top-bar" style={{
+-        background: "rgba(255, 255, 255, 0.8)", backdropFilter: "blur(12px)",
+-        borderBottom: `1px solid ${T.border}`,
++        background: "#ffffff",
++        borderBottom: `2px solid ${T.gold}`,
+         padding: "0 32px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 70,
+-        position: "sticky", top: 0, zIndex: 1000
++        position: "sticky", top: 0, zIndex: 1000,
++        boxShadow: "0 1px 10px rgba(0,0,0,0.05)"
+       }}>
+         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+           <div style={{
+@@ -2662,8 +2505,8 @@ function Dashboard({ employee, onSignOut, showToast }) {
+             <img src={logo} alt="Brolly Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+           </div>
+           <div className="top-bar-title">
+-            <div className="h-font" style={{ fontWeight: 800, fontSize: 16, color: T.ink, letterSpacing: "-0.3px" }}>Brolly Software</div>
+-            <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, fontWeight: 700 }}>PORTAL 2.0</div>
++            <div className="h-font" style={{ fontWeight: 800, fontSize: 16, color: T.ink, textShadow: "0.4px 0 0 currentColor", letterSpacing: "-0.3px", textShadow: "0.5px 0 0 currentColor" }}>Brolly Software Solutions</div>
++            <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, fontWeight: 800 }}>ATTENDANCE PORTAL</div>
+           </div>
+         </div>
+ 
+@@ -2675,7 +2518,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+             width: 8, height: 8, borderRadius: "50%",
+             background: status === "working" ? T.green : status === "break" ? T.amber : T.faint,
+           }} />
+-          <span style={{ fontSize: 12, color: T.muted, fontWeight: 700 }}>
++          <span style={{ fontSize: 12, color: T.muted, fontWeight: 800 }}>
+             {status === "working" ? "Working" : status === "break" ? "On Break" : "Paused"}
+           </span>
+         </div>
+@@ -2690,7 +2533,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+             {assignedTasks.filter(t => t.status === "Assigned").length > 0 && (
+               <span style={{
+                 position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%",
+-                background: T.red, color: "white", fontSize: 11, fontWeight: 900,
++                background: T.red, color: "white", fontSize: 11, fontWeight: 800,
+                 display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid white",
+                 boxShadow: "0 4px 10px rgba(239, 68, 68, 0.3)"
+               }}>
+@@ -2704,7 +2547,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+           <Avatar name={employee.name} src={profile.photo} size={38} />
+           <div className="name-label" style={{ marginRight: 8 }}>
+             <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{employee.name}</div>
+-            <div style={{ fontSize: 11, color: T.muted, fontWeight: 600 }}>{employee.role}</div>
++            <div style={{ fontSize: 11, color: T.muted, fontWeight: 800 }}>{employee.role}</div>
+           </div>
+ 
+           <button onClick={onSignOut} style={{
+@@ -2725,22 +2568,22 @@ function Dashboard({ employee, onSignOut, showToast }) {
+         {/* Greeting row */}
+         <div className="greeting-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 36 }}>
+           <div>
+-            <h1 className="h-font" style={{ margin: "0 0 6px", fontSize: 28, fontWeight: 900, color: T.ink, letterSpacing: "-0.5px" }}>
++            <h1 className="h-font" style={{ margin: "0 0 6px", fontSize: 30, fontWeight: 800, color: T.ink, letterSpacing: "-0.5px", textShadow: "0.5px 0 0 currentColor" }}>
+               {greeting}, {employee.name.split(" ")[0]} ??
+             </h1>
+-            <p style={{ margin: 0, fontSize: 14, color: T.muted, fontWeight: 600 }}>
++            <p style={{ margin: 0, fontSize: 14, color: T.muted, fontWeight: 800 }}>
+               {now.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+             </p>
+           </div>
+ 
+-          <div className="time-display" style={{ background: T.ink, borderRadius: 20, padding: "16px 28px", textAlign: "right", boxShadow: "0 15px 35px -10px rgba(15, 23, 42, 0.3)" }}>
++          <div className="time-display" style={{ background: "#ffffff", border: `1px solid ${T.border}`, borderRadius: 20, padding: "16px 28px", textAlign: "right", boxShadow: "0 1px 15px rgba(0, 0, 0, 0.05)" }}>
+             <div className="h-font" style={{
+-              fontSize: 32, fontWeight: 800, color: "white",
++              fontSize: 32, fontWeight: 800, color: T.ink,
+               fontVariantNumeric: "tabular-nums", letterSpacing: 1
+             }}>
+               {now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+             </div>
+-            <div style={{ fontSize: 11, color: T.faint, marginTop: 4, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>
++            <div style={{ fontSize: 11, color: T.muted, marginTop: 4, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase" }}>
+               IST · {now.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+             </div>
+           </div>
+@@ -2761,17 +2604,17 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                     ? +{extraStr} OVERTIME
+                   </span>
+                 )}
+-                <span className="h-font" style={{ fontSize: 18, fontWeight: 900, color: pct >= 100 ? T.green : T.accent }}>{pct}%</span>
++                <span className="h-font" style={{ fontSize: 18, fontWeight: 800, color: pct >= 100 ? T.green : T.accent }}>{pct}%</span>
+               </div>
+             </div>
+             <div style={{ height: 12, background: "rgba(0,0,0,0.05)", borderRadius: 99, overflow: "hidden" }}>
+               <div style={{
+                 height: "100%", width: `${pct}%`, borderRadius: 99,
+-                background: `linear-gradient(90deg, ${T.accent} 0%, ${pct >= 100 ? T.green : T.accent2} 100%)`,
++                background: `linear-gradient(90deg, ${T.gold} 0%, ${T.accent} 100%)`,
+                 transition: "width 1s cubic-bezier(0.34, 1.56, 0.64, 1)"
+               }} />
+             </div>
+-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, fontSize: 12, color: T.muted, fontWeight: 700 }}>
++            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, fontSize: 12, color: T.muted, fontWeight: 800 }}>
+               <span>
+                 {hmsStr(liveHrs)} clocked today
+                 {28800 - currentTotalWorkSeconds > 0 ? (
+@@ -2809,7 +2652,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                 <span style={{
+                   position: "absolute", top: -8, right: -4, background: T.red, color: "white",
+                   fontSize: 10, padding: "2px 8px", borderRadius: 12, border: "2px solid white",
+-                  fontWeight: 900, boxShadow: "0 4px 10px rgba(239, 68, 68, 0.3)"
++                  fontWeight: 800, boxShadow: "0 4px 10px rgba(239, 68, 68, 0.3)" 
+                 }}>{t.badge}</span>
+               )}
+             </button>
+@@ -2855,7 +2698,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                 </div>
+                 <div>
+                   <div className="h-font" style={{ fontSize: 20, fontWeight: 800, color: T.ink, letterSpacing: "-0.3px" }}>Session Control</div>
+-                  <div style={{ fontSize: 13, color: T.muted, fontWeight: 600 }}>Manage your work-life balance</div>
++                  <div style={{ fontSize: 13, color: T.muted, fontWeight: 800 }}>Manage your work-life balance</div>
+                 </div>
+               </div>
+ 
+@@ -2946,7 +2789,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                   </div>
+                   <div>
+                     <div className="h-font" style={{ fontSize: 20, fontWeight: 800, color: T.ink, letterSpacing: "-0.3px" }}>Activity Logging</div>
+-                    <div style={{ fontSize: 13, color: T.muted, fontWeight: 600 }}>Document your daily achievements</div>
++                    <div style={{ fontSize: 13, color: T.muted, fontWeight: 800 }}>Document your daily achievements</div>
+                   </div>
+                 </div>
+                 <textarea className="task-area" value={taskInput}
+@@ -2978,7 +2821,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                       <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: T.green, fontWeight: 800, animation: "fadeIn 0.3s" }}>    
+                         <Icon d={icons.check} size={16} />
+                         Image Attached
+-                        <button onClick={() => setTaskScreenshot(null)} style={{ background: T.redBg, border: "none", color: T.red, cursor: "pointer", width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900 }}>×</button>
++                        <button onClick={() => setTaskScreenshot(null)} style={{ background: T.redBg, border: "none", color: T.red, cursor: "pointer", width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>×</button>
+                       </div>
+                     )}
+                   </div>
+@@ -2990,7 +2833,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                 <button onClick={handleSave}
+                   style={{
+                     width: "100%", padding: "16px", borderRadius: 18, border: "none",
+-                    background: `linear-gradient(135deg, ${T.accent} 0%, ${T.accent2} 100%)`,
++                    background: `linear-gradient(135deg, ${T.gold} 0%, ${T.accent} 100%)`, 
+                     color: "white", cursor: "pointer", fontSize: 15,
+                     fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                     boxShadow: `0 12px 25px ${T.accent}30`, transition: "all 0.3s"
+@@ -2998,7 +2841,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                   <Icon d={icons.refresh} size={18} color="white" />
+                   Final Sync to Database
+                 </button>
+-                <div style={{ marginTop: 14, textAlign: "center", fontSize: 12, color: T.muted, fontWeight: 600, opacity: 0.8 }}>
++                <div style={{ marginTop: 14, textAlign: "center", fontSize: 12, color: T.muted, fontWeight: 800, opacity: 0.8 }}>
+                   Last sync today: {history.find(r => r.date === fmtDate(now))?.logoutT || "Not yet synced"}
+                 </div>
+               </div>
+@@ -3011,11 +2854,11 @@ function Dashboard({ employee, onSignOut, showToast }) {
+         {activeTab === "history" && (
+           <div style={{ background: T.white, borderRadius: 16, border: `1px solid ${T.border}`, overflow: "hidden" }}>
+             <div style={{
+-              padding: "20px 24px", borderBottom: `1px solid ${T.border}`,
++              padding: "20px 24px", borderBottom: `2px solid ${T.gold}`,
+               display: "flex", alignItems: "center", justifyContent: "space-between"
+             }}>
+               <div>
+-                <div style={{ fontSize: 15, fontWeight: 700, color: T.ink }}>Attendance History</div>
++                <div style={{ fontSize: 15, fontWeight: 800, color: T.ink }}>Attendance History</div>
+                 <div style={{ fontSize: 12, color: T.muted }}>{history.length} records for {employee.name}</div>
+               </div>
+               {history.length === 0 && (
+@@ -3035,7 +2878,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                 }}>
+                   <Icon d={icons.calendar} size={24} color={T.faint} />
+                 </div>
+-                <div style={{ fontSize: 14, fontWeight: 600, color: T.muted, marginBottom: 4 }}>No records yet</div>
++                <div style={{ fontSize: 14, fontWeight: 800, color: T.muted, marginBottom: 4 }}>No records yet</div>
+                 <div style={{ fontSize: 12, color: T.faint }}>
+                   Load the Excel file and save your attendance to see records here.
+                 </div>
+@@ -3048,8 +2891,8 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                       {["Date", "Clock In", "Clock Out", "Hours", "Break Time", "Over Time", "Status", "Tasks", ""].map(h => (
+                         <th key={h} style={{
+                           padding: "11px 16px", textAlign: "left",
+-                          fontSize: 11, fontWeight: 700, color: T.muted, letterSpacing: 0.5,
+-                          borderBottom: `1px solid ${T.border}`, textTransform: "uppercase"
++                          fontSize: 11, fontWeight: 800, color: T.muted, letterSpacing: 0.5,
++                          borderBottom: `2px solid ${T.gold}`, textTransform: "uppercase"
+                         }}>{h}</th>
+                       ))}
+                     </tr>
+@@ -3057,14 +2900,14 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                   <tbody>
+                     {[...history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((r, i) => (
+                       <tr key={i} className="hist-row"
+-                        style={{ borderBottom: `1px solid ${T.border}`, transition: "background 0.1s" }}>
+-                        <td style={{ padding: "12px 16px", color: T.ink, fontWeight: 600 }}>{r.date}</td>
+-                        <td style={{ padding: "12px 16px", color: T.green, fontWeight: 600 }}>{r.loginT}</td>
+-                        <td style={{ padding: "12px 16px", color: T.red, fontWeight: 600 }}>{r.logoutT}</td>
+-                        <td style={{ padding: "12px 16px", fontWeight: 700, color: T.ink, fontVariantNumeric: "tabular-nums" }}>{r.hours}</td>
+-                        <td style={{ padding: "12px 16px", fontWeight: 600, color: T.amber, fontVariantNumeric: "tabular-nums" }}>{r.breakTime || r.break_time || "—"}</td>
++                        style={{ borderBottom: `2px solid ${T.gold}`, transition: "background 0.1s" }}>
++                        <td style={{ padding: "12px 16px", color: T.ink, fontWeight: 800 }}>{r.date}</td>
++                        <td style={{ padding: "12px 16px", color: T.green, fontWeight: 800 }}>{r.loginT}</td>
++                        <td style={{ padding: "12px 16px", color: T.red, fontWeight: 800 }}>{r.logoutT}</td>
++                        <td style={{ padding: "12px 16px", fontWeight: 800, color: T.ink, fontVariantNumeric: "tabular-nums" }}>{r.hours}</td>
++                        <td style={{ padding: "12px 16px", fontWeight: 800, color: T.amber, fontVariantNumeric: "tabular-nums" }}>{r.breakTime || r.break_time || "—"}</td>
+                         <td style={{
+-                          padding: "12px 16px", fontWeight: 700,
++                          padding: "12px 16px", fontWeight: 800,
+                           color: r.extraHours && r.extraHours !== "—" ? T.amber : T.faint,
+                           fontVariantNumeric: "tabular-nums"
+                         }}>
+@@ -3081,7 +2924,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                             onClick={() => setSelectedRecord(r)}
+                             style={{
+                               padding: "6px 12px", borderRadius: 8, border: `1.5px solid ${T.border}`,
+-                              background: "white", color: T.ink2, fontSize: 11, fontWeight: 700,
++                              background: "white", color: T.ink2, fontSize: 11, fontWeight: 800,
+                               cursor: "pointer", transition: "all 0.15s", display: "flex", alignItems: "center", gap: 6
+                             }}
+                             onMouseOver={e => e.currentTarget.style.background = T.surface}
+@@ -3116,7 +2959,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                     background: requestType === "Leave" ? "white" : "none",
+                     color: requestType === "Leave" ? T.accent : T.muted,
+                     boxShadow: requestType === "Leave" ? "0 4px 15px rgba(0,0,0,0.05)" : "none",
+-                    fontFamily: "'Outfit', sans-serif"
++                    fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em'
+                   }}
+                 >
+                   ?? Casual Leave
+@@ -3129,7 +2972,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                     background: requestType === "Work From Home" ? "white" : "none",
+                     color: requestType === "Work From Home" ? T.accent : T.muted,
+                     boxShadow: requestType === "Work From Home" ? "0 4px 15px rgba(0,0,0,0.05)" : "none",
+-                    fontFamily: "'Outfit', sans-serif"
++                    fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em'
+                   }}
+                 >
+                   ?? Work From Home
+@@ -3149,9 +2992,9 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                     {editingLeave ? `Edit ${requestType} Request` : `New ${requestType} Request`}
+                   </div>
+                   {requestType === "Leave" ? (
+-                    <div style={{ fontSize: 13, color: T.muted, fontWeight: 600 }}>Balance: <b style={{ color: T.purple }}>{profile.total_leaves}</b> days available</div>
++                    <div style={{ fontSize: 13, color: T.muted, fontWeight: 800 }}>Balance: <b style={{ color: T.purple }}>{profile.total_leaves}</b> days available</div>
+                   ) : (
+-                    <div style={{ fontSize: 13, color: T.muted, fontWeight: 600 }}>Submit for management review</div>
++                    <div style={{ fontSize: 13, color: T.muted, fontWeight: 800 }}>Submit for management review</div>
+                   )}
+                 </div>
+               </div>
+@@ -3176,7 +3019,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                   display: "flex", justifyContent: "space-between", alignItems: "center"
+                 }}>
+                   <div style={{ fontSize: 13, fontWeight: 800, color: T.accent }}>Requested Duration</div>
+-                  <div className="h-font" style={{ fontSize: 18, fontWeight: 900, color: T.accent }}>
++                  <div className="h-font" style={{ fontSize: 18, fontWeight: 800, color: T.accent }}>
+                     {(() => {
+                       if (!leaveData.start || !leaveData.end) return "—";
+                       const s = new Date(leaveData.start);
+@@ -3210,7 +3053,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                 )}
+                 <button className="act-btn" onClick={handleLeaveRequest}
+                   style={{
+-                    flex: 2, background: `linear-gradient(135deg, ${T.accent} 0%, ${T.accent2} 100%)`,
++                    flex: 2, background: `linear-gradient(135deg, ${T.gold} 0%, ${T.accent} 100%)`,
+                     color: "white", justifyContent: "center", boxShadow: `0 12px 25px ${T.accent}30`
+                   }}>
+                   <Icon d={icons.check} size={18} color="white" />
+@@ -3220,7 +3063,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+             </div>
+ 
+             <div className="premium-card" style={{ padding: 32, overflow: "hidden" }}>
+-              <div className="h-font" style={{ fontSize: 20, fontWeight: 900, color: T.ink, marginBottom: 28, letterSpacing: "-0.5px" }}>Request Timeline</div>    
++              <div className="h-font" style={{ fontSize: 20, fontWeight: 800, color: T.ink, marginBottom: 28, letterSpacing: "-0.5px" }}>Request Timeline</div>    
+               <div style={{ overflowY: "auto", maxHeight: 580, paddingRight: 8 }}>
+                 {myLeaves.length === 0 ? (
+                   <div style={{ textAlign: "center", color: T.muted, padding: "100px 0" }}>
+@@ -3243,15 +3086,15 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                             <Badge status={l.status} />
+                           </div>
+                         </div>
+-                        <div style={{ fontSize: 14, color: T.ink2, lineHeight: 1.6, fontWeight: 500, marginBottom: (l.admin_comment || l.status === "Pending") ? 20
+ : 0 }}>{l.reason}</div>
++                        <div style={{ fontSize: 14, color: T.ink2, lineHeight: 1.6, fontWeight: 800, marginBottom: (l.admin_comment || l.status === "Pending") ? 20
+ : 0 }}>{l.reason}</div>
+ 
+                         {l.admin_comment && (
+                           <div style={{
+                             marginTop: 16, fontSize: 13, color: T.accent, background: "white",
+                             padding: "16px 20px", borderRadius: 18, borderLeft: `5px solid ${T.accent}`,
+-                            boxShadow: "0 8px 20px rgba(0,0,0,0.03)", fontWeight: 600
++                            boxShadow: "0 8px 20px rgba(0,0,0,0.03)", fontWeight: 800
+                           }}>
+-                            <div style={{ fontWeight: 900, fontSize: 10, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>OFFICIAL RESPONSE</div>  
++                            <div style={{ fontWeight: 800, fontSize: 10, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>OFFICIAL RESPONSE</div>  
+                             {l.admin_comment}
+                           </div>
+                         )}
+@@ -3274,7 +3117,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                             </button>
+                           </div>
+                         )}
+-                        <div style={{ marginTop: 16, fontSize: 10, color: T.muted, textAlign: "right", fontWeight: 700, opacity: 0.6 }}>Submitted on {new Date(l.applied_at).toLocaleDateString()}</div>
++                        <div style={{ marginTop: 16, fontSize: 10, color: T.muted, textAlign: "right", fontWeight: 800, opacity: 0.6 }}>Submitted on {new Date(l.applied_at).toLocaleDateString()}</div>
+                       </div>
+                     ))}
+                   </div>
+@@ -3312,17 +3155,17 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                   }} />
+                 </div>
+ 
+-                <div style={{ fontWeight: 900, fontSize: 22, color: T.ink, letterSpacing: "-0.5px", marginBottom: 6 }}>{employee.name}</div>
+-                <div style={{ fontSize: 13, color: T.muted, fontWeight: 700, marginBottom: 24, letterSpacing: 0.2 }}>{employee.role} · <span style={{ color: T.accent }}>{employee.dept}</span></div>
++                <div style={{ fontWeight: 800, fontSize: 22, color: T.ink, letterSpacing: "-0.5px", marginBottom: 6 }}>{employee.name}</div>
++                <div style={{ fontSize: 13, color: T.muted, fontWeight: 800, marginBottom: 24, letterSpacing: 0.2 }}>{employee.role} · <span style={{ color: T.accent }}>{employee.dept}</span></div>
+ 
+                 <div style={{ width: "100%", background: T.surface, padding: 18, borderRadius: 20, display: "flex", justifyContent: "space-around", border: `1.5px solid ${T.border}` }}>
+                   <div style={{ textAlign: "center" }}>
+-                    <div style={{ fontSize: 20, fontWeight: 900, color: T.accent }}>{employee.id}</div>
++                    <div style={{ fontSize: 20, fontWeight: 800, color: T.accent }}>{employee.id}</div>
+                     <div style={{ fontSize: 9, fontWeight: 800, color: T.muted, textTransform: "uppercase", letterSpacing: 0.5, marginTop: 2 }}>ID CARD</div>      
+                   </div>
+                   <div style={{ borderRight: `1.5px solid ${T.border}` }} />
+                   <div style={{ textAlign: "center" }}>
+-                    <div style={{ fontSize: 20, fontWeight: 900, color: T.purple }}>{profile.total_leaves ?? 16}</div>
++                    <div style={{ fontSize: 20, fontWeight: 800, color: T.purple }}>{profile.total_leaves ?? 16}</div>
+                     <div style={{ fontSize: 9, fontWeight: 800, color: T.muted, textTransform: "uppercase", letterSpacing: 0.5, marginTop: 2 }}>Leaves Left</div>  
+                   </div>
+                 </div>
+@@ -3333,10 +3176,10 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                 {/* Soft backdrop radial shine */}
+                 <div style={{ position: "absolute", top: "-50%", right: "-30%", width: 200, height: 200, borderRadius: "50%", background: "rgba(21,96,189,0.25)", filter: "blur(40px)" }} />
+ 
+-                <div style={{ fontWeight: 900, fontSize: 15, marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}>
++                <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}>
+                   <span style={{ fontSize: 18 }}>???</span> Security & Verification
+                 </div>
+-                <p style={{ fontSize: 12.5, lineHeight: 1.6, color: "rgba(255,255,255,0.75)", margin: 0, fontWeight: 500 }}>
++                <p style={{ fontSize: 12.5, lineHeight: 1.6, color: "rgba(255,255,255,0.75)", margin: 0, fontWeight: 800 }}>
+                   Please ensure your Aadhar Card and PAN Card details match your official documents. Updates will be locked for verification once saved.
+                 </p>
+               </div>
+@@ -3346,8 +3189,8 @@ function Dashboard({ employee, onSignOut, showToast }) {
+             <div className="premium-card" style={{ padding: 36, display: "flex", flexDirection: "column", gap: 30 }}>
+               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1.5px solid ${T.border}`, paddingBottom: 20 }}> 
+                 <div>
+-                  <h3 style={{ margin: 0, fontSize: 20, fontWeight: 900, color: T.ink, letterSpacing: "-0.5px" }}>Personal & Official Profile</h3>
+-                  <p style={{ margin: "4px 0 0", fontSize: 12, color: T.muted, fontWeight: 600 }}>Update your official details and identity cards</p>
++                  <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: T.ink, letterSpacing: "-0.5px" }}>Personal & Official Profile</h3>
++                  <p style={{ margin: "4px 0 0", fontSize: 12, color: T.muted, fontWeight: 800 }}>Update your official details and identity cards</p>
+                 </div>
+                 <button
+                   onClick={handleSaveProfile}
+@@ -3409,7 +3252,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+               </div>
+ 
+               <div style={{ borderTop: `1.5px solid ${T.border}`, paddingTop: 28 }}>
+-                <h4 style={{ margin: "0 0 20px", fontSize: 15, fontWeight: 900, color: T.ink, display: "flex", alignItems: "center", gap: 8 }}>
++                <h4 style={{ margin: "0 0 20px", fontSize: 15, fontWeight: 800, color: T.ink, display: "flex", alignItems: "center", gap: 8 }}>
+                   <span style={{ fontSize: 18 }}>??</span> Official Identity Verification
+                 </h4>
+ 
+@@ -3470,17 +3313,17 @@ function Dashboard({ employee, onSignOut, showToast }) {
+         {activeTab === "messages" && (
+           <div className="chat-grid" style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: 20, height: "75vh" }}>
+             <div className="chat-sidebar" style={{ background: "white", borderRadius: 20, border: `1px solid ${T.border}`, padding: 10, display: "flex", flexDirection: "column", gap: 4 }}>
+-              <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", padding: "10px 12px" }}>Direct Message</div>
++              <div style={{ fontSize: 11, fontWeight: 800, color: T.muted, textTransform: "uppercase", padding: "10px 12px" }}>Direct Message</div>
+               <button onClick={() => setActiveChat({ type: 'admin', id: 'admin', name: 'Admin Chat' })} style={{
+                 padding: "12px 16px", borderRadius: 12, border: "none", cursor: "pointer", textAlign: "left",
+                 background: activeChat.type === 'admin' ? T.surface : "none", color: activeChat.type === 'admin' ? T.accent : T.ink,
+-                fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 10
++                fontWeight: 800, fontSize: 13, display: "flex", alignItems: "center", gap: 10
+               }}>
+                 <Icon d={icons.user} size={16} />
+                 Admin Chat
+               </button>
+ 
+-              <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", padding: "10px 12px", marginTop: 10 }}>Team Channels</div>  
++              <div style={{ fontSize: 11, fontWeight: 800, color: T.muted, textTransform: "uppercase", padding: "10px 12px", marginTop: 10 }}>Team Channels</div>  
+               {groups.length === 0 && <div style={{ fontSize: 12, color: T.faint, padding: "0 12px" }}>No groups yet</div>}
+               {groups.map(g => {
+                 const gId = `group_${g.id}`;
+@@ -3489,7 +3332,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                   <button key={g.id} onClick={() => setActiveChat({ type: 'group', id: gId, name: g.name })} style={{
+                     padding: "12px 16px", borderRadius: 12, border: "none", cursor: "pointer", textAlign: "left",
+                     background: activeChat.id === gId ? T.surface : "none", color: activeChat.id === gId ? T.accent : T.ink,
+-                    fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 10, position: "relative"
++                    fontWeight: 800, fontSize: 13, display: "flex", alignItems: "center", gap: 10, position: "relative"
+                   }}>
+                     <Icon d={icons.tasks} size={16} />
+                     {g.name}
+@@ -3514,7 +3357,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+ 
+         {activeTab === "holidays" && (
+           <div className="premium-card" style={{ padding: "32px 36px" }}>
+-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28, borderBottom: `1px solid ${T.border}`, paddingBottom: 16 }}>
++            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28, borderBottom: `2px solid ${T.gold}`, paddingBottom: 16 }}>
+               <div>
+                 <h2 className="h-font" style={{ margin: 0, fontSize: 22, fontWeight: 800, color: T.ink }}>Holidays List</h2>
+                 <div style={{ fontSize: 13, color: T.muted, marginTop: 4 }}>Official calendar holidays declared by your company</div>
+@@ -3525,7 +3368,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+             {holidays.length === 0 ? (
+               <div style={{ textAlign: "center", padding: "60px 0", color: T.muted }}>
+                 <div style={{ fontSize: 48, marginBottom: 16 }}>?</div>
+-                <div className="h-font" style={{ fontWeight: 700, fontSize: 18 }}>No holidays declared yet</div>
++                <div className="h-font" style={{ fontWeight: 800, fontSize: 18 }}>No holidays declared yet</div>
+                 <div style={{ fontSize: 14, marginTop: 4 }}>Enjoy your workspace and check back later!</div>
+               </div>
+             ) : (
+@@ -3546,12 +3389,12 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                       <div style={{
+                         display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                         minWidth: 70, height: 70, borderRadius: 16, background: isUpcoming ? T.accent : "rgba(0,0,0,0.05)",
+-                        color: isUpcoming ? "white" : T.muted, textAlign: "center", fontWeight: 700
++                        color: isUpcoming ? "white" : T.muted, textAlign: "center", fontWeight: 800
+                       }}>
+                         <div style={{ fontSize: 12, textTransform: "uppercase", opacity: 0.8 }}>
+                           {hDate.toLocaleDateString("en-IN", { month: "short" })}
+                         </div>
+-                        <div style={{ fontSize: 24, fontWeight: 900, marginTop: 2 }}>
++                        <div style={{ fontSize: 24, fontWeight: 800, marginTop: 2 }}>
+                           {hDate.getDate()}
+                         </div>
+                       </div>
+@@ -3560,7 +3403,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                           <h4 className="h-font" style={{ margin: 0, fontSize: 16, fontWeight: 800, color: T.ink }}>{h.name}</h4>
+                           {isUpcoming && (
+-                            <span style={{ fontSize: 10, background: T.greenBg, color: T.green, padding: "2px 8px", borderRadius: 10, fontWeight: 700, textTransform: "uppercase" }}>Upcoming</span>
++                            <span style={{ fontSize: 10, background: T.greenBg, color: T.green, padding: "2px 8px", borderRadius: 10, fontWeight: 800, textTransform: "uppercase" }}>Upcoming</span>
+                           )}
+                         </div>
+                         <p style={{ margin: "6px 0 0 0", fontSize: 13, color: T.muted, lineHeight: 1.5 }}>
+@@ -3568,7 +3411,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+                         </p>
+                       </div>
+ 
+-                      <div style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>
++                      <div style={{ fontSize: 12, color: T.muted, fontWeight: 800 }}>
+                         {hDate.toLocaleDateString("en-IN", { weekday: "long" })}
+                       </div>
+                     </div>
+@@ -3589,7 +3432,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+             <Avatar name={employee.name} src={profile.photo} size={44} />
+             <div>
+-              <div style={{ fontWeight: 700, fontSize: 15, color: T.ink }}>{employee.name}</div>
++              <div style={{ fontWeight: 800, fontSize: 15, color: T.ink }}>{employee.name}</div>
+               <div style={{ fontSize: 12, color: T.muted }}>{employee.role} · {employee.dept}</div>
+             </div>
+           </div>
+@@ -3601,7 +3444,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
+             ].map(f => (
+               <div key={f.label} style={{ textAlign: "center" }}>
+                 <div style={{ fontSize: 11, color: T.muted, marginBottom: 2, letterSpacing: 0.4 }}>{f.label.toUpperCase()}</div>
+-                <div style={{ fontWeight: 700, fontSize: 13, color: T.ink }}>{f.value}</div>
++                <div style={{ fontWeight: 800, fontSize: 13, color: T.ink }}>{f.value}</div>
+               </div>
+             ))}
+           </div>
+@@ -3671,7 +3514,7 @@ function AssignTaskModal({ employee, onClose, onAssigned }) {
+               </div>
+               <div>
+                 <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.5 }}>Assign Task</div>
+-                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>{employee.name} · {employee.id}</div>
++                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 800 }}>{employee.name} · {employee.id}</div>
+               </div>
+             </div>
+           </div>
+@@ -3681,28 +3524,28 @@ function AssignTaskModal({ employee, onClose, onAssigned }) {
+ 
+         <div style={{ padding: "32px" }}>
+           <div style={{ marginBottom: 20 }}>
+-            <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: T.ink2, marginBottom: 8, marginLeft: 2 }}>Task Title</label>
++            <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: T.ink2, marginBottom: 8, marginLeft: 2 }}>Task Title</label>
+             <input className="premium-inp"
+               placeholder="e.g., Finalize Monthly Report"
+               value={title}
+               onChange={e => setTitle(e.target.value)}
+               style={{
+                 width: "100%", padding: "14px 18px", borderRadius: 14, border: `1.5px solid ${T.border}`,
+-                background: T.surface, fontSize: 14, fontWeight: 500, outline: "none", transition: "all 0.2s",
++                background: T.surface, fontSize: 14, fontWeight: 800, outline: "none", transition: "all 0.2s",
+                 boxSizing: "border-box"
+               }}
+             />
+           </div>
+ 
+           <div style={{ marginBottom: 32 }}>
+-            <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: T.ink2, marginBottom: 8, marginLeft: 2 }}>Task Details</label>
++            <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: T.ink2, marginBottom: 8, marginLeft: 2 }}>Task Details</label>
+             <textarea className="premium-area"
+               placeholder="Provide clear instructions for the employee..."
+               value={desc}
+               onChange={e => setDesc(e.target.value)}
+               style={{
+                 width: "100%", padding: "14px 18px", borderRadius: 14, border: `1.5px solid ${T.border}`,
+-                background: T.surface, fontSize: 14, fontWeight: 500, outline: "none", transition: "all 0.2s",
++                background: T.surface, fontSize: 14, fontWeight: 800, outline: "none", transition: "all 0.2s",
+                 minHeight: 120, resize: "none", lineHeight: 1.6, boxSizing: "border-box"
+               }}
+             />
+@@ -3711,13 +3554,13 @@ function AssignTaskModal({ employee, onClose, onAssigned }) {
+           <div style={{ display: "flex", gap: 14 }}>
+             <button onClick={onClose} style={{
+               flex: 1, padding: "14px", borderRadius: 14, border: `1.5px solid ${T.border}`,
+-              background: "white", color: T.ink2, fontWeight: 700, cursor: "pointer",
++              background: "white", color: T.ink2, fontWeight: 800, cursor: "pointer",
+               transition: "all 0.2s", fontSize: 15
+             }} className="p-btn-sec">Cancel</button>
+             <button onClick={submit} disabled={loading} style={{
+               flex: 1, padding: "14px", borderRadius: 14, border: "none",
+               background: loading ? T.faint : T.accent,
+-              color: "white", fontWeight: 700, cursor: "pointer",
++              color: "white", fontWeight: 800, cursor: "pointer",
+               transition: "all 0.2s", fontSize: 15,
+               boxShadow: `0 8px 20px ${T.accent}30`
+             }} className="p-btn-pri">
+@@ -3859,7 +3702,7 @@ function ChatPanel({ currentUser, targetUser, onBack, groupId = null, subStatus
+         {onBack && <button onClick={onBack} style={{ background: "none", border: "none", color: "white", cursor: "pointer", display: "flex", alignItems: "center" }}><Icon d={icons.chevronLeft} size={18} /></button>}
+         {targetUser && <Avatar name={targetUser.name} size={32} />}
+         <div style={{ flex: 1 }}>
+-          <div style={{ fontWeight: 700, fontSize: 14 }}>{targetUser ? targetUser.name : (groupName || groupId?.replace('group_', 'Team: ') || 'Group Chat')}</div>
++          <div style={{ fontWeight: 800, fontSize: 14 }}>{targetUser ? targetUser.name : (groupName || groupId?.replace('group_', 'Team: ') || 'Group Chat')}</div>
+           <div style={{ fontSize: 10, color: T.faint }}>{subStatus || (targetUser ? (targetUser.id === "admin" ? "System Administrator" : "Employee") : "Group Conversation")}</div>
+         </div>
+       </div>
+@@ -3886,7 +3729,7 @@ function ChatPanel({ currentUser, targetUser, onBack, groupId = null, subStatus
+             }}>
+               {groupId && !isMe && (
+                 <div
+-                  style={{ fontSize: 10, fontWeight: 700, color: T.accent, marginBottom: 3, cursor: onUserClick ? "pointer" : "default" }}
++                  style={{ fontSize: 10, fontWeight: 800, color: T.accent, marginBottom: 3, cursor: onUserClick ? "pointer" : "default" }}
+                   onClick={() => onUserClick && onUserClick(m.sender_id, m.sender_username)}
+                 >
+                   {m.sender_username || m.sender_id}
+@@ -3919,7 +3762,7 @@ function ChatPanel({ currentUser, targetUser, onBack, groupId = null, subStatus
+           <div style={{ display: "flex", alignItems: "center", gap: 8, background: T.surface, padding: "6px 12px", borderRadius: 8, fontSize: 12 }}>
+             <Icon d={icons.camera} size={14} color={T.accent} />
+             <span style={{ flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{file.name}</span>
+-            <button onClick={() => setFile(null)} style={{ background: "none", border: "none", color: T.red, cursor: "pointer", fontWeight: 700 }}>×</button>      
++            <button onClick={() => setFile(null)} style={{ background: "none", border: "none", color: T.red, cursor: "pointer", fontWeight: 800 }}>×</button>      
+           </div>
+         )}
+         <div style={{ display: "flex", gap: 10 }}>
+@@ -4787,26 +4630,25 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+   };
+ 
+   const colStyle = {
+-    padding: "11px 14px", textAlign: "left", fontSize: 11, fontWeight: 700,
+-    color: T.muted, letterSpacing: 0.5, borderBottom: `1px solid ${T.border}`, textTransform: "uppercase", whiteSpace: "nowrap"
++    padding: "11px 14px", textAlign: "left", fontSize: 11, fontWeight: 800,
++    color: T.muted, letterSpacing: 0.5, borderBottom: `2px solid ${T.gold}`, textTransform: "uppercase", whiteSpace: "nowrap"
+   };
+-  const cellStyle = { padding: "11px 14px", fontSize: 13, color: T.ink, borderBottom: `1px solid ${T.border}` };
++  const cellStyle = { padding: "11px 14px", fontSize: 13, color: T.ink, borderBottom: `2px solid ${T.gold}` };
+ 
+ 
+ 
+   return (
+     <div style={{
+       minHeight: "100vh",
+-      background: "linear-gradient(-45deg, #c7d2fe, #fbcfe8, #ddd6fe, #bae6fd, #fce7f3, #d1fae5)",
+-      backgroundSize: "400% 400%",
+-      animation: "gradientFlow 20s ease infinite",
+-      backgroundAttachment: "fixed",
+-      fontFamily: "'Inter', sans-serif",
++      background: "#ffffff",
++      position: "relative",
++      overflow: "hidden",
++      fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em',
+       color: T.ink,
+     }}>
+       <style>{`
+         body { margin: 0; padding: 0; }
+-        .h-font { font-family: 'Outfit', sans-serif; }
++        .h-font { font-family: 'Times New Roman', Times, serif; }
+ 
+         @keyframes gradientFlow {
+           0% { background-position: 0% 50%; }
+@@ -4816,12 +4658,12 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+ 
+         .adm-tab {
+           padding: 10px 24px;
+-          border-radius: 14px;
++          border-radius: 12px;
+           border: 1px solid transparent;
+           cursor: pointer;
+           font-size: 14px;
+-          font-weight: 700;
+-          font-family: 'Outfit', sans-serif;
++          font-weight: 800;
++          font-family: 'Times New Roman', Times, serif;
+           transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+           background: transparent;
+           color: ${T.muted};
+@@ -4856,7 +4698,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+           background: rgba(255, 255, 255, 0.6);
+           backdrop-filter: blur(10px);
+           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+-          font-family: 'Inter', sans-serif;
++          font-family: 'Times New Roman', Times, serif;
+         }
+ 
+         .adm-inp:focus {
+@@ -4904,16 +4746,16 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+ 
+       {/* Topbar */}
+       <div className="adm-topbar" style={{
+-        background: T.ink, padding: "0 32px", display: "flex", alignItems: "center",
+-        justifyContent: "space-between", height: 70, boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
+-        position: "sticky", top: 0, zIndex: 1000
++        background: "#020617", padding: "0 32px", display: "flex", alignItems: "center",
++        justifyContent: "space-between", height: 70, boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
++        position: "sticky", top: 0, zIndex: 1000, borderBottom: `2px solid ${T.gold}`
+       }}>
+         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+           <a href="https://brollysolutions.in" style={{
+             textDecoration: "none", display: "flex", alignItems: "center", gap: 8,
+             padding: "8px 16px", borderRadius: 14, background: "rgba(255,255,255,0.08)",
+-            color: "white", fontWeight: 700, fontSize: 13, border: "1px solid rgba(255,255,255,0.15)",
+-            transition: "all 0.2s", marginRight: 12, fontFamily: "'Outfit', sans-serif"
++            color: "white", fontWeight: 800, fontSize: 13, border: "1px solid rgba(255,255,255,0.15)",
++            transition: "all 0.2s", marginRight: 12, fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em'
+           }} onMouseOver={e => { e.currentTarget.style.background = "rgba(255,255,255,0.15)"; }}
+             onMouseOut={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; }}>
+             <Icon d={icons.chevronLeft} size={14} color="white" />
+@@ -4927,14 +4769,14 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+             <img src={logo} alt="Brolly Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+           </div>
+           <div>
+-            <div className="h-font" style={{ fontWeight: 800, fontSize: 18, color: "white", letterSpacing: "-0.3px" }}>Brolly Admin</div>
+-            <div style={{ fontSize: 10, color: T.faint, letterSpacing: 1, fontWeight: 700 }}>SYSTEM ARCHIVE</div>
++            <div className="h-font" style={{ fontWeight: 800, fontSize: 18, color: "white", letterSpacing: "-0.3px", textShadow: "0.5px 0 0 currentColor" }}>Brolly
+ Software Solutions</div>
++            <div style={{ fontSize: 10, color: T.faint, letterSpacing: 1, fontWeight: 800 }}>ADMIN PORTAL</div>
+           </div>
+         </div>
+ 
+         <div className="adm-topbar-actions" style={{ display: "flex", alignItems: "center", gap: 16 }}>
+           {lastSync && (
+-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontWeight: 700, background: "rgba(255,255,255,0.05)", padding: "6px 14px", borderRadius: 12, fontFamily: "'Outfit', sans-serif" }}>
++            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontWeight: 800, background: "rgba(255,255,255,0.05)", padding: "6px 14px", borderRadius: 12, fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em' }}>
+               SYNC: {lastSync.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+             </div>
+           )}
+@@ -4943,7 +4785,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+               display: "flex", alignItems: "center", gap: 10, padding: "10px 20px",
+               borderRadius: 14, border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.08)",
+               color: "white", cursor: "pointer", fontSize: 13, fontWeight: 800,
+-              transition: "all 0.25s", fontFamily: "'Outfit', sans-serif"
++              transition: "all 0.25s", fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em'
+             }} onMouseOver={e => e.currentTarget.style.background = "rgba(255,255,255,0.15)"} onMouseOut={e => e.currentTarget.style.background = "rgba(255,255,255,0.08)"}>
+             <Icon d={icons.refresh} size={16} color="white" />
+             <span className="adm-btn-text">Refresh</span>
+@@ -4953,7 +4795,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+               display: "flex", alignItems: "center", gap: 10, padding: "10px 20px",
+               borderRadius: 14, border: "none", background: T.accent,
+               color: "white", cursor: "pointer", fontSize: 13, fontWeight: 800,
+-              transition: "all 0.2s", boxShadow: `0 8px 20px ${T.accent}40`, fontFamily: "'Outfit', sans-serif"
++              transition: "all 0.2s", boxShadow: `0 8px 20px ${T.accent}40`, fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em'
+             }} onMouseOver={e => e.currentTarget.style.transform = "translateY(-2px)"} onMouseOut={e => e.currentTarget.style.transform = "none"}>
+             <Icon d={icons.save} size={16} color="white" />
+             <span className="adm-btn-text">Export</span>
+@@ -4982,7 +4824,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+             style={{
+               display: "flex", alignItems: "center", gap: 8, padding: "8px 16px",
+               borderRadius: 12, border: "1.5px solid rgba(255,255,255,0.15)", background: "none",
+-              color: "white", cursor: "pointer", fontSize: 13, fontWeight: 700,
++              color: "white", cursor: "pointer", fontSize: 13, fontWeight: 800,
+               transition: "all 0.25s"
+             }} onMouseOver={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"} onMouseOut={e => e.currentTarget.style.background = "none"}>
+             <Icon d={icons.logout} size={14} color="white" />
+@@ -5011,7 +4853,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+               <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                 <Avatar name={selectedRecord.name || selectedRecord.employeename} size={44} />
+                 <div>
+-                  <div style={{ fontSize: 13, color: T.faint, fontWeight: 600, letterSpacing: 0.5 }}>{selectedRecord.id || selectedRecord.employeeid}</div>        
++                  <div style={{ fontSize: 13, color: T.faint, fontWeight: 800, letterSpacing: 0.5 }}>{selectedRecord.id || selectedRecord.employeeid}</div>        
+                   <div style={{ fontSize: 18, fontWeight: 800 }}>{selectedRecord.name || selectedRecord.employeename}</div>
+                 </div>
+               </div>
+@@ -5021,22 +4863,22 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+             </div>
+ 
+             <div style={{ padding: 30 }}>
+-              <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
++              <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+                 <Icon d={icons.calendar} size={16} color={T.accent} />
+                 Activity for {selectedRecord.date}
+               </div>
+ 
+               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24, background: T.surface, padding: 18, borderRadius: 14 }}>   
+                 <div style={{ borderRight: `1px solid ${T.border}` }}>
+-                  <div style={{ fontSize: 10, color: T.muted, fontWeight: 700, marginBottom: 4, textTransform: "uppercase" }}>Work Session</div>
+-                  <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{selectedRecord.logint || selectedRecord.intime || "—"} ? {selectedRecord.logoutt ||
+ selectedRecord.outtime || "—"}</div>
++                  <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, marginBottom: 4, textTransform: "uppercase" }}>Work Session</div>
++                  <div style={{ fontSize: 13, fontWeight: 800, color: T.ink }}>{selectedRecord.logint || selectedRecord.intime || "—"} ? {selectedRecord.logoutt ||
+ selectedRecord.outtime || "—"}</div>
+                 </div>
+                 <div style={{ paddingLeft: 10 }}>
+-                  <div style={{ fontSize: 10, color: T.muted, fontWeight: 700, marginBottom: 4, textTransform: "uppercase" }}>Hours (Work / Break)</div>
+-                  <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{selectedRecord.live_hours || "—"} / {selectedRecord.live_break_time || "—"}</div>  
++                  <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, marginBottom: 4, textTransform: "uppercase" }}>Hours (Work / Break)</div>
++                  <div style={{ fontSize: 13, fontWeight: 800, color: T.ink }}>{selectedRecord.live_hours || "—"} / {selectedRecord.live_break_time || "—"}</div>  
+                   {selectedRecord.break_logs_parsed && selectedRecord.break_logs_parsed.length > 0 && (
+                     <div style={{ marginTop: 8, fontSize: 11, color: T.muted }}>
+-                      <div style={{ fontWeight: 600, marginBottom: 2 }}>Break Logs:</div>
++                      <div style={{ fontWeight: 800, marginBottom: 2 }}>Break Logs:</div>
+                       {selectedRecord.break_logs_parsed.map((log, lIdx) => (
+                         <div key={lIdx}>• {log.in} - {log.out} ({log.duration})</div>
+                       ))}
+@@ -5044,7 +4886,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                   )}
+                   {selectedRecord.offline_logs_parsed && selectedRecord.offline_logs_parsed.length > 0 && (
+                     <div style={{ marginTop: 12, fontSize: 11, color: T.red }}>
+-                      <div style={{ fontWeight: 600, marginBottom: 2 }}>Offline Gaps:</div>
++                      <div style={{ fontWeight: 800, marginBottom: 2 }}>Offline Gaps:</div>
+                       {selectedRecord.offline_logs_parsed.map((log, lIdx) => (
+                         <div key={lIdx}>• {log.start} - {log.end} ({log.duration})</div>
+                       ))}
+@@ -5058,7 +4900,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                   <div style={{ width: 28, height: 28, borderRadius: 8, background: T.purpleBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                     <Icon d={icons.tasks} size={15} color={T.purple} />
+                   </div>
+-                  <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>Task Report</div>
++                  <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>Task Report</div>
+                   <div style={{ marginLeft: "auto" }}><Badge status={selectedRecord.live_status || selectedRecord.status} /></div>
+                 </div>
+                 <div style={{
+@@ -5089,7 +4931,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                         <Badge status={t.status} />
+                       </div>
+                       <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.4 }}>{t.description}</div>
+-                      {t.completed_at && <div style={{ marginTop: 6, fontSize: 10, color: T.green, fontWeight: 700 }}>? Done at {new Date(t.completed_at).toLocaleTimeString()}</div>}
++                      {t.completed_at && <div style={{ marginTop: 6, fontSize: 10, color: T.green, fontWeight: 800 }}>? Done at {new Date(t.completed_at).toLocaleTimeString()}</div>}
+                     </div>
+                   ))}
+                   {taskFeed.filter(t => (t.employee_id === (selectedRecord.id || selectedRecord.employeeid)) && fmtDate(new Date(t.assigned_at)) === selectedRecord.date).length === 0 && (
+@@ -5103,7 +4945,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+             <div style={{ padding: "0 30px 30px", display: "flex", gap: 12 }}>
+               <button onClick={() => setSelectedRecord(null)} style={{
+                 flex: 1, padding: 14, borderRadius: 12, border: `1.5px solid ${T.border}`,
+-                background: "white", color: T.ink, fontWeight: 700, cursor: "pointer"
++                background: "white", color: T.ink, fontWeight: 800, cursor: "pointer"
+               }}>
+                 Close
+               </button>
+@@ -5113,7 +4955,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                 alert("Report copied to clipboard!");
+               }} style={{
+                 flex: 1, padding: 14, borderRadius: 12, border: "none",
+-                background: T.accent, color: "white", fontWeight: 700, cursor: "pointer",
++                background: T.accent, color: "white", fontWeight: 800, cursor: "pointer",
+                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8
+               }}>
+                 <Icon d={icons.save} size={15} color="white" />
+@@ -5150,8 +4992,8 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                 <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                   <Avatar name={emp.name} src={photoUrl} size={50} />
+                   <div>
+-                    <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: "-0.3px" }}>{emp.name}</div>
+-                    <div style={{ fontSize: 12, color: T.faint, fontWeight: 700 }}>{emp.id} · <span style={{ color: T.accent2 }}>{emp.role}</span></div>
++                    <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.3px" }}>{emp.name}</div>
++                    <div style={{ fontSize: 12, color: T.faint, fontWeight: 800 }}>{emp.id} · <span style={{ color: T.accent2 }}>{emp.role}</span></div>
+                   </div>
+                 </div>
+                 <button onClick={() => setSelectedEmployeeProfile(null)} style={{ background: "none", border: "none", color: "white", cursor: "pointer", opacity: 0.8, display: "flex", alignItems: "center", justifyContent: "center" }}>
+@@ -5182,7 +5024,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                       </div>
+                       <div>
+                         <div style={{ fontWeight: 800, fontSize: 15, color: T.ink }}>Profile Photo</div>
+-                        <div style={{ fontSize: 11, color: T.muted, fontWeight: 700, marginTop: 2 }}>Upload a clear passport-size photo of the employee.</div>     
++                        <div style={{ fontSize: 11, color: T.muted, fontWeight: 800, marginTop: 2 }}>Upload a clear passport-size photo of the employee.</div>     
+                       </div>
+                     </div>
+ 
+@@ -5226,7 +5068,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                     </div>
+ 
+                     <div style={{ borderTop: `1.5px solid ${T.border}`, paddingTop: 20 }}>
+-                      <div style={{ fontWeight: 900, fontSize: 14, color: T.ink, marginBottom: 16 }}>Identity Verification Documents</div>
++                      <div style={{ fontWeight: 800, fontSize: 14, color: T.ink, marginBottom: 16 }}>Identity Verification Documents</div>
+ 
+                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                         {/* Aadhar */}
+@@ -5303,17 +5145,17 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                     <div style={{ background: T.surface, padding: "20px 24px", borderRadius: 20, border: `1.5px solid ${T.border}`, display: "flex", justifyContent: "space-around", alignItems: "center" }}>
+                       <div style={{ textAlign: "center" }}>
+                         <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Leaves Balance</div>
+-                        <div style={{ fontSize: 20, fontWeight: 900, color: T.purple }}>{prof?.total_leaves ?? 16} Leaves</div>
++                        <div style={{ fontSize: 20, fontWeight: 800, color: T.purple }}>{prof?.total_leaves ?? 16} Leaves</div>
+                       </div>
+                       <div style={{ borderRight: `1.5px solid ${T.border}`, height: 40 }} />
+                       <div style={{ textAlign: "center" }}>
+                         <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Role & Dept</div>
+-                        <div style={{ fontSize: 15, fontWeight: 900, color: T.ink }}>{emp.role} · <span style={{ color: T.accent }}>{emp.dept}</span></div>        
++                        <div style={{ fontSize: 15, fontWeight: 800, color: T.ink }}>{emp.role} · <span style={{ color: T.accent }}>{emp.dept}</span></div>        
+                       </div>
+                     </div>
+ 
+                     <div style={{ borderTop: `1.5px solid ${T.border}`, paddingTop: 24 }}>
+-                      <div style={{ fontWeight: 900, fontSize: 15, color: T.ink, marginBottom: 18, display: "flex", alignItems: "center", gap: 8 }}>
++                      <div style={{ fontWeight: 800, fontSize: 15, color: T.ink, marginBottom: 18, display: "flex", alignItems: "center", gap: 8 }}>
+                         <span>??</span> Official Identity Verification
+                       </div>
+ 
+@@ -5332,7 +5174,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                             </span>
+                           </div>
+                           <div>
+-                            <div style={{ fontSize: 10, color: T.muted, marginBottom: 4, fontWeight: 700 }}>Aadhar Number</div>
++                            <div style={{ fontSize: 10, color: T.muted, marginBottom: 4, fontWeight: 800 }}>Aadhar Number</div>
+                             <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{prof?.aadhar_number || "—"}</div>
+                           </div>
+                           {prof?.aadhar_card && (
+@@ -5359,7 +5201,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                             </span>
+                           </div>
+                           <div>
+-                            <div style={{ fontSize: 10, color: T.muted, marginBottom: 4, fontWeight: 700 }}>PAN Number</div>
++                            <div style={{ fontSize: 10, color: T.muted, marginBottom: 4, fontWeight: 800 }}>PAN Number</div>
+                             <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{prof?.pan_number || "—"}</div>
+                           </div>
+                           {prof?.pan_card && (
+@@ -5482,7 +5324,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                 <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px" }}>
+         {/* Stat cards */}
+         <div className="adm-stat-grid stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 18, marginBottom: 32 }}>
+-          <StatCard index={0} label="Total Employees" value={String(registeredCount)} sub="Registered" icon={icons.user} color={T.accent} bg="rgba(37, 99, 235, 0.1)" />
++          <StatCard index={0} label="Total Employees" value={String(registeredCount)} sub="Registered" icon={icons.user} color={T.gold} bg={T.goldBg} />
+           <StatCard index={1} label="Today Present" value={String(todayRecs.length)} sub={today} icon={icons.check} color={T.green} bg="rgba(16, 185, 129, 0.1)" isLive={true} />
+           <StatCard index={2} label="Full Day Today" value={String(fullDayToday)} sub="= 8 hours" icon={icons.clock} color={T.green} bg="rgba(16, 185, 129, 0.1)" />
+           <StatCard index={3} label="IWD Today" value={String(iwdToday)} sub="4.5 - 8 hrs" icon={icons.chart} color={T.orange} bg="rgba(249, 115, 22, 0.1)" />     
+@@ -5527,9 +5369,9 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+           </div>
+           {activeTab === "weekly" ? (
+             <>
+-              <div style={{ fontSize: 12, fontWeight: 700, color: T.muted }}>From:</div>
++              <div style={{ fontSize: 12, fontWeight: 800, color: T.muted }}>From:</div>
+               <input className="adm-inp" type="date" value={weeklyFrom} onChange={e => setWeeklyFrom(e.target.value)} style={{ minWidth: 140 }} />
+-              <div style={{ fontSize: 12, fontWeight: 700, color: T.muted }}>To:</div>
++              <div style={{ fontSize: 12, fontWeight: 800, color: T.muted }}>To:</div>
+               <input className="adm-inp" type="date" value={weeklyTo} onChange={e => setWeeklyTo(e.target.value)} style={{ minWidth: 140 }} />
+             </>
+           ) : (
+@@ -5573,7 +5415,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+         {/* Weekly Report Table */}
+         {activeTab === "weekly" && (
+           <div className="premium-card">
+-            <div style={{ padding: "18px 24px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>  
++            <div style={{ padding: "18px 24px", borderBottom: `2px solid ${T.gold}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>    
+               <div style={{ fontWeight: 800, color: T.ink }}>Performance Summary Report</div>
+               <div style={{ fontSize: 11, color: T.muted, background: T.surface, padding: "4px 10px", borderRadius: 8 }}>Range: {fmtDate(new Date(weeklyFrom))} — {fmtDate(new Date(weeklyTo))}</div>
+             </div>
+@@ -5582,7 +5424,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                 <thead>
+                   <tr style={{ background: T.surface }}>
+                     {["Employee", "Dept", "Days Present", "Total Work", "Total Break", "Avg Hours/Day", "Activity Log", "Actions"].map(h => (
+-                      <th key={h} style={{ padding: "14px 24px", textAlign: "left", fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: 0.6 }}>{h}</th>
++                      <th key={h} style={{ padding: "14px 24px", textAlign: "left", fontSize: 10, fontWeight: 800, color: T.muted, textTransform: "uppercase", letterSpacing: 0.6 }}>{h}</th>
+                     ))}
+                   </tr>
+                 </thead>
+@@ -5599,21 +5441,21 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                               <Avatar name={r.name} size={32} />
+                               <div>
+-                                <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{r.name}</div>
++                                <div style={{ fontSize: 13, fontWeight: 800, color: T.ink }}>{r.name}</div>
+                                 <div style={{ fontSize: 11, color: T.muted }}>{r.id}</div>
+                               </div>
+                             </div>
+                           </td>
+                           <td style={{ padding: "16px 24px", fontSize: 13, color: T.ink2 }}>{r.dept}</td>
+                           <td style={{ padding: "16px 24px" }}>
+-                            <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{r.daysPresent} days</div>
++                            <div style={{ fontSize: 13, fontWeight: 800, color: T.ink }}>{r.daysPresent} days</div>
+                           </td>
+                           <td style={{ padding: "16px 24px" }}>
+-                            <div style={{ fontSize: 13, fontWeight: 700, color: T.green }}>{r.totalWork}</div>
++                            <div style={{ fontSize: 13, fontWeight: 800, color: T.green }}>{r.totalWork}</div>
+                           </td>
+                           <td style={{ padding: "16px 24px", fontSize: 13, color: T.red }}>{r.totalBreak}</td>
+                           <td style={{ padding: "16px 24px" }}>
+-                            <div style={{ fontSize: 13, fontWeight: 700, color: T.accent }}>{r.avgWork}</div>
++                            <div style={{ fontSize: 13, fontWeight: 800, color: T.accent }}>{r.avgWork}</div>
+                           </td>
+                           <td style={{ padding: "16px 24px" }}>
+                             <div style={{
+@@ -5631,7 +5473,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                                 padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer",
+                                 background: isExpanded ? T.accent : T.surface,
+                                 color: isExpanded ? "white" : T.accent,
+-                                fontWeight: 700, fontSize: 11, transition: "all 0.2s"
++                                fontWeight: 800, fontSize: 11, transition: "all 0.2s"
+                               }}
+                             >
+                               {isExpanded ? "? Hide" : "? Daily"}
+@@ -5652,7 +5494,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                                     <thead>
+                                       <tr style={{ background: `${T.accent}15` }}>
+                                         {["Date", "Work Hours", "Break Time", "Status", "Tasks / Notes"].map(h => (
+-                                          <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 10, fontWeight: 700, color: T.accent, textTransform: "uppercase", letterSpacing: 0.5 }}>{h}</th>
++                                          <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 10, fontWeight: 800, color: T.accent, textTransform: "uppercase", letterSpacing: 0.5 }}>{h}</th>
+                                         ))}
+                                       </tr>
+                                     </thead>
+@@ -5662,10 +5504,10 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                                       ) : (
+                                         r.dailyBreakdown.map((day, i) => (
+                                           <tr key={day.date} style={{ borderTop: `1px solid ${T.border}`, background: i % 2 === 0 ? "white" : T.surface }}>        
+-                                            <td style={{ padding: "10px 16px", fontSize: 13, fontWeight: 700, color: T.ink }}>{day.date}</td>
+-                                            <td style={{ padding: "10px 16px", fontSize: 13, fontWeight: 700, color: T.green }}>{formatHMS(day.work)}</td>
++                                            <td style={{ padding: "10px 16px", fontSize: 13, fontWeight: 800, color: T.ink }}>{day.date}</td>
++                                            <td style={{ padding: "10px 16px", fontSize: 13, fontWeight: 800, color: T.green }}>{formatHMS(day.work)}</td>
+                                             <td style={{ padding: "10px 16px", fontSize: 13, color: T.red }}>
+-                                              <div style={{ fontWeight: 700 }}>{formatHMS(day.brk)}</div>
++                                              <div style={{ fontWeight: 800 }}>{formatHMS(day.brk)}</div>
+                                               {day.breakLogs && day.breakLogs.length > 0 && (
+                                                 <div style={{ marginTop: 4, fontSize: 10, color: T.muted }}>
+                                                   {day.breakLogs.map((log, lIdx) => (
+@@ -5751,21 +5593,21 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                           onClick={() => setAssignTaskTo({ id: r.id || r.employeeid, name: r.name || r.employeename })}>
+                           <Avatar name={r.name || r.employeename || "?"} src={profiles.find(p => String(p.employee_id).toLowerCase() === String(r.id || r.employeeid).toLowerCase())?.photo} size={32} />
+                           <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+-                            <span style={{ fontWeight: 700, color: T.accent, fontSize: 13 }}>{r.name || r.employeename}</span>
+-                            <span style={{ fontSize: 10, color: T.muted, fontWeight: 600 }}>Assign Task +</span>
++                            <span style={{ fontWeight: 800, color: T.accent, fontSize: 13 }}>{r.name || r.employeename}</span>
++                            <span style={{ fontSize: 10, color: T.muted, fontWeight: 800 }}>Assign Task +</span>
+                           </div>
+                         </div>
+                       </td>
+                       <td style={cellStyle}>{r.dept || r.department}</td>
+-                      <td style={{ ...cellStyle, color: T.green, fontWeight: 600 }}>{r.logint || r.intime}</td>
+-                      <td style={{ ...cellStyle, color: T.red, fontWeight: 600 }}>{r.logoutt || r.outtime}</td>
++                      <td style={{ ...cellStyle, color: T.green, fontWeight: 800 }}>{r.logint || r.intime}</td>
++                      <td style={{ ...cellStyle, color: T.red, fontWeight: 800 }}>{r.logoutt || r.outtime}</td>
+                       <td style={{ ...cellStyle, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
+                         {r.live_hours}
+                       </td>
+-                      <td style={{ ...cellStyle, color: T.amber, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
++                      <td style={{ ...cellStyle, color: T.amber, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
+                         {r.live_break_time}
+                       </td>
+-                      <td style={{ ...cellStyle, fontWeight: 700, color: r.live_overtime && r.live_overtime !== "—" ? T.amber : T.faint, fontVariantNumeric: "tabular-nums" }}>
++                      <td style={{ ...cellStyle, fontWeight: 800, color: r.live_overtime && r.live_overtime !== "—" ? T.amber : T.faint, fontVariantNumeric: "tabular-nums" }}>
+                         {r.live_overtime}
+                       </td>
+                       <td style={cellStyle}>
+@@ -5786,7 +5628,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                           {taskFeed.filter(t => (t.employee_id === (r.id || r.employeeid)) &&
+                             fmtDate(new Date(t.assigned_at)) === r.date).map(t => (
+                               <div key={t.id} style={{ padding: "4px 8px", background: "white", borderRadius: 6, border: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+-                                <span style={{ fontWeight: 600, fontSize: 11, color: T.accent }}>{t.title}</span>
++                                <span style={{ fontWeight: 800, fontSize: 11, color: T.accent }}>{t.title}</span>
+                                 <Badge status={t.status} />
+                               </div>
+                             ))}
+@@ -5802,7 +5644,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                           onClick={() => setSelectedRecord(r)}
+                           style={{
+                             padding: "8px 12px", borderRadius: 10, border: `1.5px solid ${T.border}`,
+-                            background: "white", color: T.ink2, fontSize: 12, fontWeight: 700,
++                            background: "white", color: T.ink2, fontSize: 12, fontWeight: 800,
+                             cursor: "pointer", transition: "all 0.2s", display: "inline-flex", alignItems: "center", gap: 6
+                           }}
+                         >
+@@ -5821,7 +5663,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+         {/* Live Task Feed */}
+         {activeTab === "tasks" && (
+           <div className="premium-card">
+-            <div style={{ padding: "24px 28px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>  
++            <div style={{ padding: "24px 28px", borderBottom: `2px solid ${T.gold}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>    
+               <div>
+                 <div style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>Individual Tasks Tracking</div>
+                 <div style={{ fontSize: 12, color: T.muted }}>Real-time activity from your team</div>
+@@ -5841,11 +5683,11 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                       <td style={cellStyle}>
+                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                           <Avatar name={allEmployees.find(e => e.id === t.employee_id)?.name || "?"} src={profiles.find(p => String(p.employee_id).toLowerCase() === String(t.employee_id).toLowerCase())?.photo} size={28} />
+-                          <div style={{ fontWeight: 600 }}>{allEmployees.find(e => e.id === t.employee_id)?.name || t.employee_id}</div>
++                          <div style={{ fontWeight: 800 }}>{allEmployees.find(e => e.id === t.employee_id)?.name || t.employee_id}</div>
+                         </div>
+                       </td>
+                       <td style={cellStyle}>
+-                        <div style={{ fontWeight: 700, color: T.ink }}>{t.title}</div>
++                        <div style={{ fontWeight: 800, color: T.ink }}>{t.title}</div>
+                         <div style={{ fontSize: 11, color: T.muted, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis" }}>{t.description}</div>
+                       </td>
+                       <td style={cellStyle}><Badge status={t.status} /></td>
+@@ -5853,11 +5695,11 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                           <div style={{ fontSize: 10, display: "flex", gap: 6 }}>
+                             <span style={{ color: T.muted }}>Viewed:</span>
+-                            <span style={{ fontWeight: 600 }}>{t.viewed_at ? new Date(t.viewed_at).toLocaleTimeString() : "—"}</span>
++                            <span style={{ fontWeight: 800 }}>{t.viewed_at ? new Date(t.viewed_at).toLocaleTimeString() : "—"}</span>
+                           </div>
+                           <div style={{ fontSize: 10, display: "flex", gap: 6 }}>
+                             <span style={{ color: T.muted }}>Done:</span>
+-                            <span style={{ fontWeight: 600, color: T.green }}>{t.completed_at ? new Date(t.completed_at).toLocaleTimeString() : "—"}</span>        
++                            <span style={{ fontWeight: 800, color: T.green }}>{t.completed_at ? new Date(t.completed_at).toLocaleTimeString() : "—"}</span>        
+                           </div>
+                         </div>
+                       </td>
+@@ -5872,7 +5714,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+         {/* Leave Requests Tab */}
+         {activeTab === "leaves" && (
+           <div className="premium-card">
+-            <div style={{ padding: 24, borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
++            <div style={{ padding: 24, borderBottom: `2px solid ${T.gold}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+               <div>
+                 <div style={{ fontWeight: 800, fontSize: 18, color: T.ink }}>Employee Requests</div>
+                 <div style={{ fontSize: 12, color: T.muted }}>Manage and approve employee requests (Leave & Work From Home)</div>
+@@ -5897,7 +5739,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                             <Avatar name={l.employee_name} src={profiles.find(p => String(p.employee_id).toLowerCase() === String(l.employee_id).toLowerCase())?.photo} size={28} />
+                             <div>
+-                              <div style={{ fontWeight: 700 }}>{l.employee_name}</div>
++                              <div style={{ fontWeight: 800 }}>{l.employee_name}</div>
+                               <div style={{ fontSize: 10, color: T.muted }}>
+                                 {l.employee_id}
+                                 {l.leave_type !== "Work From Home" && (
+@@ -5916,7 +5758,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                           <Badge status={l.leave_type === "Work From Home" ? "Work From Home" : "Leave"} />
+                         </td>
+                         <td style={cellStyle}>
+-                          <div style={{ fontWeight: 700 }}>{l.start_date}</div>
++                          <div style={{ fontWeight: 800 }}>{l.start_date}</div>
+                           <div style={{ fontSize: 10, color: T.muted }}>to {l.end_date}</div>
+                         </td>
+                         <td style={{ ...cellStyle, maxWidth: 250, whiteSpace: "normal", fontSize: 12, lineHeight: 1.4 }}>{l.reason}</td>
+@@ -5927,8 +5769,8 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                               <input className="adm-inp" placeholder="Add comment..." style={{ fontSize: 11, padding: "6px 10px" }}
+                                 value={adminComment} onChange={e => setAdminComment(e.target.value)} />
+                               <div style={{ display: "flex", gap: 6 }}>
+-                                <button onClick={() => handleApproveLeave(l.id, "Approved")} style={{ flex: 1, padding: "8px", background: T.green, color: "white",
+ borderRadius: 8, border: "none", fontSize: 11, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }} onMouseOver={e => e.currentTarget.style.opacity = 0.8}
+ onMouseOut={e => e.currentTarget.style.opacity = 1}>Approve</button>
+-                                <button onClick={() => handleApproveLeave(l.id, "Rejected")} style={{ flex: 1, padding: "8px", background: T.red, color: "white", borderRadius: 8, border: "none", fontSize: 11, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }} onMouseOver={e => e.currentTarget.style.opacity = 0.8} onMouseOut={e => e.currentTarget.style.opacity = 1}>Reject</button>
++                                <button onClick={() => handleApproveLeave(l.id, "Approved")} style={{ flex: 1, padding: "8px", background: T.green, color: "white",
+ borderRadius: 8, border: "none", fontSize: 11, fontWeight: 800, cursor: "pointer", transition: "all 0.2s" }} onMouseOver={e => e.currentTarget.style.opacity = 0.8}
+ onMouseOut={e => e.currentTarget.style.opacity = 1}>Approve</button>
++                                <button onClick={() => handleApproveLeave(l.id, "Rejected")} style={{ flex: 1, padding: "8px", background: T.red, color: "white", borderRadius: 8, border: "none", fontSize: 11, fontWeight: 800, cursor: "pointer", transition: "all 0.2s" }} onMouseOver={e => e.currentTarget.style.opacity = 0.8} onMouseOut={e => e.currentTarget.style.opacity = 1}>Reject</button>
+                               </div>
+                             </div>
+                           ) : (
+@@ -5952,7 +5794,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+           <div className="chat-grid" style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 24 }}>
+             {/* Left: Group List */}
+             <div className="chat-sidebar" style={{ background: T.white, borderRadius: 20, border: `1px solid ${T.border}`, overflow: "hidden" }}>
+-              <div style={{ padding: 20, borderBottom: `1px solid ${T.border}`, background: T.surface }}>
++              <div style={{ padding: 20, borderBottom: `2px solid ${T.gold}`, background: T.surface }}>
+                 <div style={{ fontSize: 15, fontWeight: 800, color: T.ink, marginBottom: 14 }}>Organization Groups</div>
+                 <button onClick={() => {
+                   const name = prompt("Enter new group name:");
+@@ -5961,7 +5803,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                     headers: { "Content-Type": "application/json" },
+                     body: JSON.stringify({ name, description: "New group" })
+                   }).then(fetchAttendance);
+-                }} style={{ width: "100%", padding: 10, background: T.accent, color: "white", border: "none", borderRadius: 10, fontWeight: 700, cursor: "pointer",
+ fontSize: 12 }}>
++                }} style={{ width: "100%", padding: 10, background: T.accent, color: "white", border: "none", borderRadius: 10, fontWeight: 800, cursor: "pointer",
+ fontSize: 12 }}>
+                   + Create New Group
+                 </button>
+               </div>
+@@ -5977,7 +5819,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                       border: selGroup?.id === g.id ? `1px solid ${T.purple}30` : "none",
+                       marginBottom: 4, position: "relative"
+                     }}>
+-                      <div style={{ fontWeight: 700, fontSize: 14, color: selGroup?.id === g.id ? T.purple : T.ink }}>{g.name}</div>
++                      <div style={{ fontWeight: 800, fontSize: 14, color: selGroup?.id === g.id ? T.purple : T.ink }}>{g.name}</div>
+                       <div style={{ fontSize: 11, color: T.muted }}>{g.member_usernames?.length || 0} Members</div>
+                       {unread > 0 && (
+                         <span style={{ position: "absolute", top: 12, right: 12, background: T.red, color: "white", fontSize: 10, padding: "2px 6px", borderRadius:
+ 10, border: "2px solid white", fontWeight: 800 }}>{unread}</span>
+@@ -6000,7 +5842,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                     if (confirm(`Delete group "${selGroup.name}"?`)) {
+                       fetch(`${GROUPS_URL}${selGroup.id}/`, { method: "DELETE" }).then(() => { setSelGroup(null); fetchAttendance(); });
+                     }
+-                  }} style={{ padding: "8px 14px", background: "none", color: T.red, border: `1.5px solid ${T.red}30`, borderRadius: 10, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Delete Group</button>
++                  }} style={{ padding: "8px 14px", background: "none", color: T.red, border: `1.5px solid ${T.red}30`, borderRadius: 10, fontSize: 11, fontWeight: 800, cursor: "pointer" }}>Delete Group</button>
+                 </div>
+ 
+                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+@@ -6017,7 +5859,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                         return (
+                           <div key={e.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 8, background: isMember ? T.surface : "none" }}>
+                             <div
+-                              style={{ fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "color 0.2s" }}
++                              style={{ fontSize: 13, fontWeight: 800, cursor: "pointer", transition: "color 0.2s" }}
+                               onClick={() => setChatWith({ id: e.id, name: e.name })}
+                               onMouseEnter={(ev) => ev.currentTarget.style.color = T.accent}
+                               onMouseLeave={(ev) => ev.currentTarget.style.color = T.ink}
+@@ -6039,7 +5881,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                               } catch(err) { alert("Network error"); }
+                             }} style={{
+                               color: isMember ? T.red : T.accent,
+-                              background: "none", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700
++                              background: "none", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 800 
+                             }}>
+                               {isMember ? "Remove" : "+ Add"}
+                             </button>
+@@ -6090,7 +5932,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                     fetchAttendance();
+                   }
+                 }
+-              }} style={{ padding: "10px 20px", background: T.surface, color: T.accent, border: `1.5px solid ${T.accent}40`, borderRadius: 10, fontWeight: 700, cursor: "pointer", fontSize: 13 }}>
++              }} style={{ padding: "10px 20px", background: T.surface, color: T.accent, border: `1.5px solid ${T.accent}40`, borderRadius: 10, fontWeight: 800, cursor: "pointer", fontSize: 13 }}>
+                 ?? Sync All Accounts
+               </button>
+             </div>
+@@ -6134,8 +5976,8 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                   </div>
+                   <div style={{ flex: 1 }}>
+                     <div style={{ fontWeight: 800, color: T.ink, fontSize: 16 }}>{e.name}</div>
+-                    <div style={{ fontSize: 11, color: T.muted, fontWeight: 600 }}>{isOnline ? "Online Now" : (lastActive && !isNaN(lastActive.getTime()) ? `Last seen: ${lastActive.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}` : "Offline")}</div>
+-                    <div style={{ fontSize: 10, color: T.faint, fontWeight: 600 }}>{e.role} · {e.id}</div>
++                    <div style={{ fontSize: 11, color: T.muted, fontWeight: 800 }}>{isOnline ? "Online Now" : (lastActive && !isNaN(lastActive.getTime()) ? `Last seen: ${lastActive.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}` : "Offline")}</div>
++                    <div style={{ fontSize: 10, color: T.faint, fontWeight: 800 }}>{e.role} · {e.id}</div>
+                   </div>
+                   <div
+                     onClick={async () => {
+@@ -6170,11 +6012,11 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                     onMouseOver={el => el.currentTarget.style.opacity = "0.8"}
+                     onMouseOut={el => el.currentTarget.style.opacity = "1"}
+                   >
+-                    <div style={{ fontSize: 18, fontWeight: 900, color: T.purple, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4 }}>    
++                    <div style={{ fontSize: 18, fontWeight: 800, color: T.purple, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4 }}>    
+                       {profiles.find(p => String(p.employee_id).toLowerCase() === String(e.id).toLowerCase())?.total_leaves ?? 16}
+                       <span style={{ fontSize: 10, opacity: 0.6 }}>??</span>
+                     </div>
+-                    <div style={{ fontSize: 9, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: 0.5 }}>Leaves Left</div>
++                    <div style={{ fontSize: 9, fontWeight: 800, color: T.muted, textTransform: "uppercase", letterSpacing: 0.5 }}>Leaves Left</div>
+                   </div>
+                 </div>
+ 
+@@ -6182,7 +6024,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                 <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 20, display: "flex", gap: 10 }}>
+                   <button onClick={() => setAssignTaskTo(e)} style={{
+                     flex: 1, padding: "12px", borderRadius: 14, border: "none",
+-                    background: T.surface, color: T.ink, fontWeight: 700, cursor: "pointer",
++                    background: T.surface, color: T.ink, fontWeight: 800, cursor: "pointer",
+                     display: "flex", alignItems: "center", justifyContent: "center", gap: 10, transition: "all 0.2s"
+                   }} onMouseOver={btn => { btn.currentTarget.style.background = T.accent; btn.currentTarget.style.color = "white"; }}
+                     onMouseOut={btn => { btn.currentTarget.style.background = T.surface; btn.currentTarget.style.color = T.ink; }}>
+@@ -6191,7 +6033,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                   </button>
+                   <button onClick={() => setChatWith(e)} style={{
+                     flex: 1, padding: "12px", borderRadius: 14, border: "none",
+-                    background: T.purpleBg, color: T.purple, fontWeight: 700, cursor: "pointer",
++                    background: T.purpleBg, color: T.purple, fontWeight: 800, cursor: "pointer",
+                     display: "flex", alignItems: "center", justifyContent: "center", gap: 10, transition: "all 0.2s",
+                     position: "relative"
+                   }} onMouseOver={btn => { btn.currentTarget.style.background = T.purple; btn.currentTarget.style.color = "white"; }}
+@@ -6221,7 +6063,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+ 
+               <form onSubmit={handleAddHoliday} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                 <div>
+-                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: T.muted, marginBottom: 6, textTransform: "uppercase" }}>Holiday Name</label>
++                  <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: T.muted, marginBottom: 6, textTransform: "uppercase" }}>Holiday Name</label>
+                   <input
+                     className="adm-inp"
+                     style={{ width: "100%", padding: "10px 14px", boxSizing: "border-box" }}
+@@ -6232,7 +6074,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                 </div>
+ 
+                 <div>
+-                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: T.muted, marginBottom: 6, textTransform: "uppercase" }}>Date</label>     
++                  <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: T.muted, marginBottom: 6, textTransform: "uppercase" }}>Date</label>     
+                   <input
+                     type="date"
+                     className="adm-inp"
+@@ -6243,7 +6085,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                 </div>
+ 
+                 <div>
+-                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: T.muted, marginBottom: 6, textTransform: "uppercase" }}>Description (Optional)</label>
++                  <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: T.muted, marginBottom: 6, textTransform: "uppercase" }}>Description (Optional)</label>
+                   <textarea
+                     className="adm-inp"
+                     style={{ width: "100%", padding: "10px 14px", height: 100, resize: "none", boxSizing: "border-box" }}
+@@ -6258,7 +6100,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                   disabled={savingHoliday}
+                   style={{
+                     width: "100%", padding: "14px", borderRadius: 16, border: "none",
+-                    background: `linear-gradient(135deg, ${T.accent} 0%, ${T.accent2} 100%)`,
++                    background: `linear-gradient(135deg, ${T.gold} 0%, ${T.accent} 100%)`, 
+                     color: "white", cursor: "pointer", fontSize: 14, fontWeight: 800,
+                     display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                     boxShadow: `0 8px 20px ${T.accent}20`, transition: "all 0.2s"
+@@ -6276,7 +6118,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+               {holidays.length === 0 ? (
+                 <div style={{ textAlign: "center", padding: "60px 0", color: T.muted }}>
+                   <div style={{ fontSize: 40, marginBottom: 16 }}>?</div>
+-                  <div className="h-font" style={{ fontWeight: 700, fontSize: 16 }}>No holidays declared yet</div>
++                  <div className="h-font" style={{ fontWeight: 800, fontSize: 16 }}>No holidays declared yet</div>
+                   <div style={{ fontSize: 13, marginTop: 4 }}>Declare a holiday using the form on the left.</div>
+                 </div>
+               ) : (
+@@ -6293,10 +6135,10 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                           <div style={{
+                             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                             width: 50, height: 50, borderRadius: 12, background: T.surface,
+-                            color: T.accent, fontWeight: 700, textAlign: "center"
++                            color: T.accent, fontWeight: 800, textAlign: "center"
+                           }}>
+                             <div style={{ fontSize: 10, textTransform: "uppercase" }}>{hDate.toLocaleDateString("en-IN", { month: "short" })}</div>
+-                            <div style={{ fontSize: 16, fontWeight: 900, marginTop: 1 }}>{hDate.getDate()}</div>
++                            <div style={{ fontSize: 16, fontWeight: 800, marginTop: 1 }}>{hDate.getDate()}</div>
+                           </div>
+                           <div>
+                             <div className="h-font" style={{ fontWeight: 800, color: T.ink, fontSize: 15 }}>{h.name}</div>
+@@ -6305,7 +6147,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
+                         </div>
+ 
+                         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+-                          <div style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>{hDate.toLocaleDateString("en-IN", { weekday: "long", year: "numeric" })}</div>
++                          <div style={{ fontSize: 12, color: T.muted, fontWeight: 800 }}>{hDate.toLocaleDateString("en-IN", { weekday: "long", year: "numeric" })}</div>
+                           <button
+                             onClick={() => handleDeleteHoliday(h.id)}
+                             style={{
+@@ -6339,7 +6181,6 @@ function ForgotPasswordPage({ onBack, onSendLink }) {
+   const [email, setEmail] = useState("");
+   const [loading, setLoading] = useState(false);
+   const [msg, setMsg] = useState(null);
+-  const [focused, setFocused] = useState(false);
+ 
+   const submit = async () => {
+     if (!email) return;
+@@ -6354,214 +6195,62 @@ function ForgotPasswordPage({ onBack, onSendLink }) {
+   };
+ 
+   return (
+-    <div style={{
+-      minHeight: "100vh", display: "flex",
+-      fontFamily: "'Inter','Segoe UI',system-ui,sans-serif",
+-      background: "linear-gradient(135deg, #f0f4fa 0%, #e8f0fe 100%)"
+-    }}>
+-      <style>{LOGIN_STYLES}</style>
+-
+-      {/* Left decorative panel */}
+-      <div className="login-left-panel" style={{
+-        flex: "0 0 440px",
+-        background: "linear-gradient(160deg, #0b1f35 0%, #0d2b4e 50%, #0f3460 100%)",
+-        display: "flex", flexDirection: "column", justifyContent: "center",
+-        padding: "52px 44px", position: "relative", overflow: "hidden"
+-      }}>
+-        {/* Animated orbs */}
+-        {[
+-          { w: 280, h: 280, top: -80, left: -80, bg: "rgba(21,96,189,0.2)", anim: "float1 8s ease-in-out infinite" },
+-          { w: 200, h: 200, bottom: -50, right: -50, bg: "rgba(14,165,233,0.15)", anim: "float2 10s ease-in-out infinite" },
+-          { w: 140, h: 140, top: "40%", right: -30, bg: "rgba(109,40,217,0.1)", anim: "float3 7s ease-in-out infinite" },
+-        ].map((o, i) => (
+-          <div key={i} style={{
+-            position: "absolute", borderRadius: "50%", background: o.bg,
+-            width: o.w, height: o.h, top: o.top, bottom: o.bottom, left: o.left, right: o.right,
+-            animation: o.anim
+-          }} />
+-        ))}
+-        {/* Grid */}
+-        <div style={{
+-          position: "absolute", inset: 0, opacity: 0.04,
+-          backgroundImage: "linear-gradient(rgba(255,255,255,0.8) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.8) 1px,transparent 1px)",
+-          backgroundSize: "40px 40px"
+-        }} />
+-
+-        <div style={{ position: "relative", zIndex: 1, animation: "fadeInLeft 0.7s ease both" }}>
+-          {/* Logo */}
+-          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 56 }}>
+-            <div style={{
+-              width: 50, height: 50, borderRadius: 14, background: "white",
+-              display: "flex", alignItems: "center", justifyContent: "center",
+-              overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.2)"
+-            }}>
+-              <img src={logo} alt="Brolly Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+-            </div>
+-            <div>
+-              <div style={{ color: "white", fontWeight: 800, fontSize: 16 }}>Brolly Software Solutions</div>
+-              <div style={{ color: "rgba(168,188,212,0.8)", fontSize: 10, letterSpacing: 1.5, marginTop: 2 }}>ATTENDANCE MANAGEMENT</div>
++    <div className="flex items-center justify-center p-4 min-h-screen">
++      <Card className="w-full max-w-md shadow-2xl bg-white/90 backdrop-blur-sm border-none">
++        <CardHeader className="space-y-1">
++          <div className="flex justify-center mb-4">
++            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
++              <Icon d={icons.lock} size={24} color={T.accent} />
+             </div>
+           </div>
+-
+-          {/* Icon + heading */}
+-          <div style={{
+-            width: 64, height: 64, borderRadius: 18,
+-            background: "rgba(21,96,189,0.25)", border: "1.5px solid rgba(21,96,189,0.4)",
+-            display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 28
+-          }}>
+-            <Icon d={icons.lock} size={28} color="#38bdf8" />
+-          </div>
+-
+-          <h2 style={{ color: "white", fontSize: 30, fontWeight: 800, lineHeight: 1.2, margin: "0 0 16px", letterSpacing: -0.5 }}>
+-            Forgot your<br /><span style={{ color: "#38bdf8" }}>password?</span>
+-          </h2>
+-          <p style={{ color: "rgba(168,188,212,0.85)", fontSize: 14, lineHeight: 1.75, margin: 0 }}>
+-            No worries! Enter your registered email or username and we'll send you a secure reset link instantly.
+-          </p>
+-
+-          <div style={{ marginTop: 40, display: "flex", flexDirection: "column", gap: 14 }}>
+-            {[
+-              { icon: icons.check, text: "Secure token-based reset link" },
+-              { icon: icons.clock, text: "Link expires in 1 hour" },
+-              { icon: icons.lock, text: "Password encrypted on save" },
+-            ].map((f, i) => (
+-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, animation: `pillSlide 0.4s ease ${i * 0.1 + 0.1}s both` }}>
+-                <div style={{
+-                  width: 32, height: 32, borderRadius: 9,
+-                  background: "rgba(56,189,248,0.15)", border: "1px solid rgba(56,189,248,0.25)",
+-                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
+-                }}>
+-                  <Icon d={f.icon} size={14} color="#38bdf8" />
+-                </div>
+-                <span style={{ color: "rgba(255,255,255,0.75)", fontSize: 13.5, fontWeight: 500 }}>{f.text}</span>
+-              </div>
+-            ))}
+-          </div>
+-        </div>
+-      </div>
+-
+-      {/* Right form panel */}
+-      <div className="login-right-panel" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 24px" }}>
+-        <div style={{ width: "100%", maxWidth: 420, animation: "fadeInUp 0.6s cubic-bezier(0.4,0,0.2,1) both" }}>
+-
+-          <div className="login-card" style={{
+-            background: "white", borderRadius: 24,
+-            border: "1px solid rgba(220,232,244,0.8)",
+-            padding: "44px 40px",
+-            boxShadow: "0 20px 60px rgba(11,31,53,0.1), 0 4px 20px rgba(11,31,53,0.06)"
+-          }}>
+-
+-            {/* Header */}
+-            <div style={{ marginBottom: 32 }}>
+-              <div style={{
+-                width: 56, height: 56, borderRadius: 16,
+-                background: "linear-gradient(135deg, #eff6ff, #dbeafe)",
+-                border: "2px solid #bfdbfe",
+-                display: "flex", alignItems: "center", justifyContent: "center",
+-                marginBottom: 22, position: "relative"
+-              }}>
+-                <Icon d={icons.lock} size={24} color="#1560bd" />
+-                <div style={{
+-                  position: "absolute", inset: -4, borderRadius: 20,
+-                  border: "2px solid rgba(21,96,189,0.25)",
+-                  animation: "pulse-ring 2s ease-out infinite"
+-                }} />
+-              </div>
+-              <h2 style={{ margin: "0 0 8px", fontSize: 26, fontWeight: 800, color: "#0b1f35", letterSpacing: -0.5 }}>
+-                Reset Password ??
+-              </h2>
+-              <p style={{ margin: 0, fontSize: 14, color: "#6b82a0", lineHeight: 1.6 }}>
+-                Enter your <strong style={{ color: "#1560bd" }}>email or username</strong> and we'll send a reset link to your inbox.
+-              </p>
++          <CardTitle className="text-2xl font-black text-center">Reset Password</CardTitle>
++          <CardDescription className="text-center">
++            Enter your email or username to receive a reset link.
++          </CardDescription>
++        </CardHeader>
++        <CardContent className="space-y-4">
++          {msg && (
++            <div className={`p-3 rounded-md text-sm flex gap-3 ${
++              msg.type === "success" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"
++            }`}>
++              <Icon d={msg.type === "success" ? icons.check : icons.info} size={16} className="mt-0.5" />
++              <span>{msg.text}</span>
+             </div>
+-
+-            {/* Success / Error message */}
+-            {msg && (
+-              <div style={{
+-                display: "flex", alignItems: "flex-start", gap: 10,
+-                padding: "14px 16px", borderRadius: 12, marginBottom: 24,
+-                background: msg.type === "success" ? "#f0fdf4" : "#fff1f1",
+-                border: `1.5px solid ${msg.type === "success" ? "#86efac" : "#fca5a5"}`,
+-                animation: "fadeInUp 0.3s ease both"
+-              }}>
+-                <Icon d={msg.type === "success" ? icons.check : icons.info} size={16}
+-                  color={msg.type === "success" ? "#16a34a" : "#d93b3b"} />
+-                <span style={{ fontSize: 13.5, color: msg.type === "success" ? "#15803d" : "#d93b3b", lineHeight: 1.5, fontWeight: 500 }}>
+-                  {msg.text}
+-                </span>
+-              </div>
+-            )}
+-
+-            {/* Input */}
+-            <div style={{ marginBottom: 24, animation: "fadeInUp 0.5s ease 0.1s both" }}>
+-              <label style={{
+-                display: "block", fontSize: 11.5, fontWeight: 700,
+-                color: focused ? "#1560bd" : "#2c4a6e",
+-                marginBottom: 8, letterSpacing: 0.8, textTransform: "uppercase",
+-                transition: "color 0.2s"
+-              }}>Email or Username</label>
+-              <div style={{ position: "relative" }}>
+-                <div style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }}>
+-                  <Icon d={icons.user} size={16} color={focused ? "#1560bd" : "#a8bcd4"} />
+-                </div>
+-                <input
+-                  className="login-inp"
+-                  type="text"
+-                  placeholder="your.username or email@company.com"
+-                  value={email}
+-                  onChange={e => setEmail(e.target.value)}
+-                  onFocus={() => setFocused(true)}
+-                  onBlur={() => setFocused(false)}
+-                  onKeyDown={e => e.key === "Enter" && submit()}
+-                  style={{ paddingLeft: 44 }}
+-                />
++          )}
++          <div className="space-y-2">
++            <Label htmlFor="email">Email or Username</Label>
++            <div className="relative">
++              <div className="absolute left-3 top-3 text-muted-foreground">
++                <Icon d={icons.user} size={16} />
+               </div>
++              <Input
++                id="email"
++                placeholder="your.username or email@company.com"
++                value={email}
++                onChange={(e) => setEmail(e.target.value)}
++                onKeyDown={(e) => e.key === "Enter" && submit()}
++                className="pl-10"
++              />
+             </div>
+-
+-            {/* Send Button */}
+-            <div style={{ animation: "fadeInUp 0.5s ease 0.15s both" }}>
+-              <button className="login-btn" onClick={submit} disabled={loading || !!msg?.type === "success"}>
+-                {loading ? (
+-                  <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+-                    <span style={{
+-                      width: 16, height: 16, border: "2.5px solid rgba(255,255,255,0.4)",
+-                      borderTopColor: "white", borderRadius: "50%",
+-                      display: "inline-block", animation: "spin 0.8s linear infinite"
+-                    }} />
+-                    Sending Reset Link...
+-                  </span>
+-                ) : "Send Reset Link"}
+-              </button>
+-            </div>
+-
+-            {/* Divider */}
+-            <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "24px 0 0" }}>
+-              <div style={{ flex: 1, height: 1, background: "#e2ebf6" }} />
+-              <span style={{ fontSize: 11, color: "#a8bcd4", fontWeight: 500 }}>OR</span>
+-              <div style={{ flex: 1, height: 1, background: "#e2ebf6" }} />
+-            </div>
+-
+-            {/* Back button */}
+-            <button onClick={onBack} style={{
+-              width: "100%", background: "none",
+-              border: "2px solid #e2ebf6", borderRadius: 12,
+-              color: "#6b82a0", fontSize: 14, marginTop: 16,
+-              cursor: "pointer", fontWeight: 600, padding: "11px",
+-              fontFamily: "'Inter',sans-serif",
+-              transition: "all 0.2s"
+-            }}
+-              onMouseOver={e => { e.target.style.borderColor = "#1560bd"; e.target.style.color = "#1560bd"; }}
+-              onMouseOut={e => { e.target.style.borderColor = "#e2ebf6"; e.target.style.color = "#6b82a0"; }}
+-            >
+-              ? Back to Sign In
+-            </button>
+           </div>
+-
+-          <p style={{ textAlign: "center", marginTop: 20, fontSize: 12, color: "#6b82a0" }}>
+-            Didn't get the email? Check your spam folder.
+-          </p>
+-        </div>
+-      </div>
++        </CardContent>
++        <CardFooter className="flex flex-col gap-3">
++          <Button 
++            className="w-full font-black h-11" 
++            onClick={submit} 
++            disabled={loading || !!(msg && msg.type === "success")}
++          >
++            {loading ? "Sending..." : "Send Reset Link"}
++          </Button>
++          <Button 
++            variant="ghost" 
++            className="w-full text-muted-foreground hover:text-primary" 
++            onClick={onBack}
++          >
++            ? Back to Sign In
++          </Button>
++        </CardFooter>
++      </Card>
+     </div>
+   );
+ }
+@@ -6575,14 +6264,13 @@ function ResetPasswordPage({ token, onReset }) {
+   const [loading, setLoading] = useState(false);
+   const [error, setError] = useState("");
+   const [success, setSuccess] = useState(false);
+-  const [pFocus, setPFocus] = useState(false);
+-  const [p2Focus, setP2Focus] = useState(false);
+   const [showP, setShowP] = useState(false);
+   const [showP2, setShowP2] = useState(false);
+ 
+   const strength = p.length === 0 ? 0 : p.length < 6 ? 1 : p.length < 10 ? 2 : 3;
+   const strengthLabel = ["", "Weak", "Good", "Strong"];
+-  const strengthColor = ["", "#f87171", "#fb923c", "#22c55e"];
++  const strengthColor = ["", "bg-red-500", "bg-amber-500", "bg-green-500"];
++  const strengthTextColor = ["", "text-red-500", "text-amber-500", "text-green-500"];
+ 
+   const submit = async () => {
+     if (p !== p2) { setError("Passwords do not match"); return; }
+@@ -6594,261 +6282,123 @@ function ResetPasswordPage({ token, onReset }) {
+     else { setError("Failed to reset. The link may have expired. Please request a new one."); }
+   };
+ 
+-  return (
+-    <div style={{
+-      minHeight: "100vh", display: "flex",
+-      fontFamily: "'Inter','Segoe UI',system-ui,sans-serif",
+-      background: "linear-gradient(135deg, #f0f4fa 0%, #e8f0fe 100%)"
+-    }}>
+-      <style>{LOGIN_STYLES}</style>
+-
+-      {/* Left decorative panel */}
+-      <div className="login-left-panel" style={{
+-        flex: "0 0 440px",
+-        background: "linear-gradient(160deg, #0b1f35 0%, #0d2b4e 50%, #0f3460 100%)",
+-        display: "flex", flexDirection: "column", justifyContent: "center",
+-        padding: "52px 44px", position: "relative", overflow: "hidden"
+-      }}>
+-        {[
+-          { w: 280, h: 280, top: -80, left: -80, bg: "rgba(21,96,189,0.2)", anim: "float1 8s ease-in-out infinite" },
+-          { w: 200, h: 200, bottom: -50, right: -50, bg: "rgba(14,165,233,0.15)", anim: "float2 10s ease-in-out infinite" },
+-          { w: 140, h: 140, top: "40%", right: -30, bg: "rgba(34,197,94,0.08)", anim: "float3 7s ease-in-out infinite" },
+-        ].map((o, i) => (
+-          <div key={i} style={{
+-            position: "absolute", borderRadius: "50%", background: o.bg,
+-            width: o.w, height: o.h, top: o.top, bottom: o.bottom, left: o.left, right: o.right,
+-            animation: o.anim
+-          }} />
+-        ))}
+-        <div style={{
+-          position: "absolute", inset: 0, opacity: 0.04,
+-          backgroundImage: "linear-gradient(rgba(255,255,255,0.8) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.8) 1px,transparent 1px)",
+-          backgroundSize: "40px 40px"
+-        }} />
+-
+-        <div style={{ position: "relative", zIndex: 1, animation: "fadeInLeft 0.7s ease both" }}>
+-          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 56 }}>
+-            <div style={{
+-              width: 50, height: 50, borderRadius: 14, background: "white",
+-              display: "flex", alignItems: "center", justifyContent: "center",
+-              overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.2)"
+-            }}>
+-              <img src={logo} alt="Brolly Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+-            </div>
+-            <div>
+-              <div style={{ color: "white", fontWeight: 800, fontSize: 16 }}>Brolly Software Solutions</div>
+-              <div style={{ color: "rgba(168,188,212,0.8)", fontSize: 10, letterSpacing: 1.5, marginTop: 2 }}>ATTENDANCE MANAGEMENT</div>
++  if (success) {
++    return (
++      <div className="flex items-center justify-center p-4 min-h-screen">
++        <Card className="w-full max-w-md shadow-2xl bg-white/90 backdrop-blur-sm border-none text-center p-8">
++          <div className="flex justify-center mb-6">
++            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center border-4 border-green-50">
++              <Icon d={icons.check} size={32} color={T.green} stroke={3} />
+             </div>
+           </div>
++          <CardTitle className="text-2xl font-black mb-2">Password Updated!</CardTitle>
++          <CardDescription className="mb-8">
++            Your password has been reset successfully. you can now sign in with your new password.
++          </CardDescription>
++          <Button 
++            className="w-full font-black h-11" 
++            onClick={() => window.location.href = window.location.origin + window.location.pathname}
++          >
++            Go to Sign In
++          </Button>
++        </Card>
++      </div>
++    );
++  }
+ 
+-          <div style={{
+-            width: 64, height: 64, borderRadius: 18,
+-            background: "rgba(34,197,94,0.2)", border: "1.5px solid rgba(34,197,94,0.35)",
+-            display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 28
+-          }}>
+-            <Icon d={icons.check} size={30} color="#4ade80" />
++  return (
++    <div className="flex items-center justify-center p-4 min-h-screen">
++      <Card className="w-full max-w-md shadow-2xl bg-white/90 backdrop-blur-sm border-none">
++        <CardHeader className="space-y-1">
++          <div className="flex justify-center mb-4">
++            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
++              <Icon d={icons.lock} size={24} color={T.accent} />
++            </div>
+           </div>
+-
+-          <h2 style={{ color: "white", fontSize: 30, fontWeight: 800, lineHeight: 1.2, margin: "0 0 16px", letterSpacing: -0.5 }}>
+-            Set your<br /><span style={{ color: "#4ade80" }}>new password</span>
+-          </h2>
+-          <p style={{ color: "rgba(168,188,212,0.85)", fontSize: 14, lineHeight: 1.75, margin: 0 }}>
+-            Choose a strong password that you haven't used before to keep your account secure.
+-          </p>
+-
+-          <div style={{ marginTop: 40, display: "flex", flexDirection: "column", gap: 14 }}>
+-            {[
+-              { icon: icons.check, text: "Minimum 6 characters required" },
+-              { icon: icons.lock, text: "Password is encrypted on save" },
+-              { icon: icons.save, text: "Sheet is updated automatically" },
+-            ].map((f, i) => (
+-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, animation: `pillSlide 0.4s ease ${i * 0.1 + 0.1}s both` }}>
+-                <div style={{
+-                  width: 32, height: 32, borderRadius: 9,
+-                  background: "rgba(74,222,128,0.12)", border: "1px solid rgba(74,222,128,0.25)",
+-                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
+-                }}>
+-                  <Icon d={f.icon} size={14} color="#4ade80" />
+-                </div>
+-                <span style={{ color: "rgba(255,255,255,0.75)", fontSize: 13.5, fontWeight: 500 }}>{f.text}</span>
++          <CardTitle className="text-2xl font-black text-center">New Password</CardTitle>
++          <CardDescription className="text-center">
++            Choose a strong password for your account.
++          </CardDescription>
++        </CardHeader>
++        <CardContent className="space-y-4">
++          {error && (
++            <div className="p-3 rounded-md text-sm flex gap-3 bg-red-50 text-red-700 border border-red-200">
++              <Icon d={icons.info} size={16} className="mt-0.5" />
++              <span>{error}</span>
++            </div>
++          )}
++
++          <div className="space-y-2">
++            <Label htmlFor="password">New Password</Label>
++            <div className="relative">
++              <div className="absolute left-3 top-3 text-muted-foreground">
++                <Icon d={icons.lock} size={16} />
+               </div>
+-            ))}
+-          </div>
+-        </div>
+-      </div>
+-
+-      {/* Right form panel */}
+-      <div className="login-right-panel" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 24px" }}>
+-        <div style={{ width: "100%", maxWidth: 420, animation: "fadeInUp 0.6s cubic-bezier(0.4,0,0.2,1) both" }}>
+-
+-          <div className="login-card" style={{
+-            background: "white", borderRadius: 24,
+-            border: "1px solid rgba(220,232,244,0.8)",
+-            padding: "44px 40px",
+-            boxShadow: "0 20px 60px rgba(11,31,53,0.1), 0 4px 20px rgba(11,31,53,0.06)"
+-          }}>
+-
+-            {success ? (
+-              /* Success state */
+-              <div style={{ textAlign: "center", animation: "fadeInUp 0.5s ease both" }}>
+-                <div style={{
+-                  width: 72, height: 72, borderRadius: "50%",
+-                  background: "linear-gradient(135deg, #dcfce7, #bbf7d0)",
+-                  border: "3px solid #86efac",
+-                  display: "flex", alignItems: "center", justifyContent: "center",
+-                  margin: "0 auto 24px"
+-                }}>
+-                  <Icon d={icons.check} size={34} color="#16a34a" stroke={2.5} />
++              <Input
++                id="password"
++                type={showP ? "text" : "password"}
++                placeholder="Enter new password"
++                value={p}
++                onChange={(e) => setP(e.target.value)}
++                className="pl-10 pr-10"
++              />
++              <button 
++                type="button"
++                className="absolute right-3 top-3 text-muted-foreground hover:text-primary transition-colors"
++                onClick={() => setShowP(!showP)}
++              >
++                <Icon d={showP ? icons.eyeOff : icons.eye} size={16} />
++              </button>
++            </div>
++            {p.length > 0 && (
++              <div className="space-y-1.5 mt-2">
++                <div className="flex gap-1 h-1">
++                  {[1, 2, 3].map((i) => (
++                    <div key={i} className={`flex-1 rounded-full transition-colors ${strength >= i ? strengthColor[strength] : "bg-slate-200"}`} />
++                  ))}
+                 </div>
+-                <h2 style={{ fontSize: 24, fontWeight: 800, color: "#0b1f35", margin: "0 0 10px" }}>Password Updated!</h2>
+-                <p style={{ fontSize: 14, color: "#6b82a0", lineHeight: 1.6, marginBottom: 32 }}>
+-                  Your password has been reset successfully and your Excel sheet has been updated. You can now sign in with your new password.
++                <p className={`text-[10px] font-black uppercase tracking-wider ${strengthTextColor[strength]}`}>
++                  {strengthLabel[strength]} Security
+                 </p>
+-                <button className="login-btn" onClick={() => window.location.href = window.location.origin + window.location.pathname}>
+-                  Go to Sign In
+-                </button>
+               </div>
+-            ) : (
+-              /* Form state */
+-              <>
+-                <div style={{ marginBottom: 32 }}>
+-                  <div style={{
+-                    width: 56, height: 56, borderRadius: 16,
+-                    background: "linear-gradient(135deg, #f0fdf4, #dcfce7)",
+-                    border: "2px solid #86efac",
+-                    display: "flex", alignItems: "center", justifyContent: "center",
+-                    marginBottom: 22, position: "relative"
+-                  }}>
+-                    <Icon d={icons.lock} size={24} color="#16a34a" />
+-                    <div style={{
+-                      position: "absolute", inset: -4, borderRadius: 20,
+-                      border: "2px solid rgba(22,163,74,0.2)",
+-                      animation: "pulse-ring 2s ease-out infinite"
+-                    }} />
+-                  </div>
+-                  <h2 style={{ margin: "0 0 8px", fontSize: 26, fontWeight: 800, color: "#0b1f35", letterSpacing: -0.5 }}>
+-                    New Password ??
+-                  </h2>
+-                  <p style={{ margin: 0, fontSize: 14, color: "#6b82a0", lineHeight: 1.5 }}>
+-                    Choose a <strong style={{ color: "#16a34a" }}>strong password</strong> for your account.
+-                  </p>
+-                </div>
+-
+-                {error && (
+-                  <div style={{
+-                    display: "flex", alignItems: "center", gap: 10, padding: "12px 16px",
+-                    borderRadius: 12, background: "#fff1f1", border: "1.5px solid #fca5a5",
+-                    marginBottom: 20, fontSize: 13, color: "#d93b3b", animation: "fadeInUp 0.3s ease both"
+-                  }}>
+-                    <Icon d={icons.info} size={16} color="#d93b3b" />
+-                    <span>{error}</span>
+-                  </div>
+-                )}
+-
+-                {/* New Password */}
+-                <div style={{ marginBottom: 16, animation: "fadeInUp 0.5s ease 0.1s both" }}>
+-                  <label style={{
+-                    display: "block", fontSize: 11.5, fontWeight: 700,
+-                    color: pFocus ? "#16a34a" : "#2c4a6e",
+-                    marginBottom: 8, letterSpacing: 0.8, textTransform: "uppercase", transition: "color 0.2s"
+-                  }}>New Password</label>
+-                  <div style={{ position: "relative" }}>
+-                    <div style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }}>
+-                      <Icon d={icons.lock} size={16} color={pFocus ? "#16a34a" : "#a8bcd4"} />
+-                    </div>
+-                    <input className="login-inp" type={showP ? "text" : "password"}
+-                      placeholder="Enter new password"
+-                      value={p} onChange={e => setP(e.target.value)}
+-                      onFocus={() => setPFocus(true)} onBlur={() => setPFocus(false)}
+-                      style={{
+-                        paddingLeft: 44, paddingRight: 48,
+-                        borderColor: p.length > 0 ? strengthColor[strength] : undefined
+-                      }}
+-                    />
+-                    <button className="eye-btn" onClick={() => setShowP(v => !v)}>
+-                      <Icon d={showP ? icons.eyeOff : icons.eye} size={16} color="currentColor" />
+-                    </button>
+-                  </div>
+-                  {/* Strength bar */}
+-                  {p.length > 0 && (
+-                    <div style={{ marginTop: 8 }}>
+-                      <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
+-                        {[1, 2, 3].map(i => (
+-                          <div key={i} style={{
+-                            flex: 1, height: 3, borderRadius: 99,
+-                            background: strength >= i ? strengthColor[strength] : "#e2ebf6",
+-                            transition: "background 0.3s"
+-                          }} />
+-                        ))}
+-                      </div>
+-                      <span style={{ fontSize: 11, fontWeight: 600, color: strengthColor[strength] }}>
+-                        {strengthLabel[strength]} password
+-                      </span>
+-                    </div>
+-                  )}
+-                </div>
+-
+-                {/* Confirm Password */}
+-                <div style={{ marginBottom: 28, animation: "fadeInUp 0.5s ease 0.15s both" }}>
+-                  <label style={{
+-                    display: "block", fontSize: 11.5, fontWeight: 700,
+-                    color: p2Focus ? "#16a34a" : "#2c4a6e",
+-                    marginBottom: 8, letterSpacing: 0.8, textTransform: "uppercase", transition: "color 0.2s"
+-                  }}>Confirm Password</label>
+-                  <div style={{ position: "relative" }}>
+-                    <div style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }}>
+-                      <Icon d={icons.lock} size={16} color={p2Focus ? "#16a34a" : "#a8bcd4"} />
+-                    </div>
+-                    <input className="login-inp" type={showP2 ? "text" : "password"}
+-                      placeholder="Repeat your new password"
+-                      value={p2} onChange={e => setP2(e.target.value)}
+-                      onFocus={() => setP2Focus(true)} onBlur={() => setP2Focus(false)}
+-                      onKeyDown={e => e.key === "Enter" && submit()}
+-                      style={{
+-                        paddingLeft: 44, paddingRight: 48,
+-                        borderColor: p2.length > 0 ? (p === p2 ? "#22c55e" : "#f87171") : undefined
+-                      }}
+-                    />
+-                    <button className="eye-btn" onClick={() => setShowP2(v => !v)}>
+-                      <Icon d={showP2 ? icons.eyeOff : icons.eye} size={16} color="currentColor" />
+-                    </button>
+-                  </div>
+-                  {p2.length > 0 && p !== p2 && (
+-                    <p style={{ margin: "6px 0 0", fontSize: 12, color: "#f87171", fontWeight: 500 }}>
+-                      Passwords don't match
+-                    </p>
+-                  )}
+-                </div>
+-
+-                {/* Update Button */}
+-                <div style={{ animation: "fadeInUp 0.5s ease 0.2s both" }}>
+-                  <button
+-                    className="login-btn"
+-                    onClick={submit}
+-                    disabled={loading}
+-                    style={{
+-                      background: loading ? "#94a3b8" :
+-                        "linear-gradient(135deg, #16a34a 0%, #22c55e 100%)",
+-                      boxShadow: "0 4px 15px rgba(22,163,74,0.4)"
+-                    }}
+-                  >
+-                    {loading ? (
+-                      <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+-                        <span style={{
+-                          width: 16, height: 16, border: "2.5px solid rgba(255,255,255,0.4)",
+-                          borderTopColor: "white", borderRadius: "50%",
+-                          display: "inline-block", animation: "spin 0.8s linear infinite"
+-                        }} />
+-                        Updating Password...
+-                      </span>
+-                    ) : "Update Password"}
+-                  </button>
+-                </div>
+-              </>
+             )}
+           </div>
+-        </div>
+-      </div>
++
++          <div className="space-y-2">
++            <Label htmlFor="confirm-password">Confirm Password</Label>
++            <div className="relative">
++              <div className="absolute left-3 top-3 text-muted-foreground">
++                <Icon d={icons.lock} size={16} />
++              </div>
++              <Input
++                id="confirm-password"
++                type={showP2 ? "text" : "password"}
++                placeholder="Repeat your new password"
++                value={p2}
++                onChange={(e) => setP2(e.target.value)}
++                onKeyDown={(e) => e.key === "Enter" && submit()}
++                className={`pl-10 pr-10 ${p2.length > 0 && (p === p2 ? "border-green-500 focus-visible:ring-green-500" : "border-red-500 focus-visible:ring-red-500")}`}
++              />
++              <button 
++                type="button"
++                className="absolute right-3 top-3 text-muted-foreground hover:text-primary transition-colors"
++                onClick={() => setShowP2(!showP2)}
++              >
++                <Icon d={showP2 ? icons.eyeOff : icons.eye} size={16} />
++              </button>
++            </div>
++          </div>
++        </CardContent>
++        <CardFooter>
++          <Button 
++            className="w-full font-black h-11" 
++            onClick={submit} 
++            disabled={loading}
++          >
++            {loading ? "Updating..." : "Update Password"}
++          </Button>
++        </CardFooter>
++      </Card>
+     </div>
+   );
+ }
+@@ -7043,7 +6593,7 @@ export default function App() {
+           currentVersion.current = newVersion;
+         }
+       } catch (e) {
+-        console.warn("Version check failed:", e);
++        // Silently ignore network errors for background version checks
+       }
+     };
+ 
+@@ -7065,7 +6615,7 @@ export default function App() {
+             <Icon d={icons.message} size={20} color="white" />
+           </div>
+           <div>
+-            <div style={{ fontWeight: 800, fontSize: 14, color: T.ink }}>Notification</div>
++            <div style={{ fontWeight: 800, fontSize: 14, color: T.ink }}>Message Alert</div>
+             <div style={{ fontSize: 12, color: T.ink2, opacity: 0.9 }}>{toast.msg}</div>
+           </div>
+         </div>
+@@ -7091,15 +6641,19 @@ export default function App() {
+     </>
+   );
+ 
+-  if (view === "forgot") return <ForgotPasswordPage onBack={() => setView("login")} onSendLink={sendResetLink} />;
+-  if (view === "reset") return <ResetPasswordPage token={resetToken} onReset={resetPassword} />;
++  const authColors = ["#FF9B00"];
++
++  if (view === "forgot") return <BackgroundPaths colors={authColors} title="Brolly Portal"><ForgotPasswordPage onBack={() => setView("login")} onSendLink={sendResetLink} /></BackgroundPaths>;
++  if (view === "reset") return <BackgroundPaths colors={authColors} title="Brolly Portal"><ResetPasswordPage token={resetToken} onReset={resetPassword} /></BackgroundPaths>;
+ 
+   return (
+-    <LoginPage
+-      onLogin={handleLogin}
+-      error={error}
+-      isSyncing={isSyncing}
+-      onForgot={() => setView("forgot")}
+-    />
++    <BackgroundPaths colors={authColors} title="Brolly Portal">
++      <LoginPage
++        onLogin={handleLogin}
++        error={error}
++        isSyncing={isSyncing}
++        onForgot={() => setView("forgot")}
++      />
++    </BackgroundPaths>
+   );
