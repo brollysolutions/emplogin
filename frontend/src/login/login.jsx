@@ -273,7 +273,7 @@ function Avatar({ name, src, size = 40, accent = T.accent }) {
     <div style={{
       width: size, height: size, borderRadius: "50%", background: bg,
       display: "flex", alignItems: "center", justifyContent: "center",
-      fontWeight: 800, fontSize: size * 0.36, color: fg, flexShrink: 0, letterSpacing: 0.5
+      fontWeight: 700, fontSize: size * 0.36, color: fg, flexShrink: 0, letterSpacing: 0.5
     }}>
       {ini}
     </div>
@@ -285,7 +285,7 @@ function PremiumInput({ label, icon, placeholder, value, onChange, type = "text"
   const [focused, setFocused] = useState(false);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
-      <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 800, color: T.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>
+      <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>
         {icon}
         {label}
       </label>
@@ -315,7 +315,7 @@ function PremiumInput({ label, icon, placeholder, value, onChange, type = "text"
             background: "transparent",
             padding: "11px 12px",
             fontSize: "13.5px",
-            fontWeight: 800,
+            fontWeight: 700,
             color: T.ink,
             fontFamily: "inherit"
           }}
@@ -341,10 +341,10 @@ function PremiumFileUpload({ id, label, fileName, isUploaded, onFileSelect, view
       transition: "transform 0.2s, box-shadow 0.2s"
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontWeight: 800, fontSize: 13, color: T.ink, letterSpacing: -0.2 }}>{label}</span>
+        <span style={{ fontWeight: 700, fontSize: 13, color: T.ink, letterSpacing: -0.2 }}>{label}</span>
         <span style={{
           fontSize: 10,
-          fontWeight: 800,
+          fontWeight: 700,
           padding: "4px 10px",
           borderRadius: 8,
           background: isUploaded ? T.greenBg : T.redBg,
@@ -392,10 +392,10 @@ function PremiumFileUpload({ id, label, fileName, isUploaded, onFileSelect, view
             📤
           </div>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 800, color: T.ink }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: T.ink }}>
               {fileName ? fileName : "Upload Document"}
             </div>
-            <div style={{ fontSize: 9, color: T.muted, fontWeight: 800, marginTop: 4, letterSpacing: 0.3 }}>
+            <div style={{ fontSize: 9, color: T.muted, fontWeight: 700, marginTop: 4, letterSpacing: 0.3 }}>
               JPEG, PNG or JPG supported
             </div>
           </div>
@@ -413,7 +413,7 @@ function PremiumFileUpload({ id, label, fileName, isUploaded, onFileSelect, view
             background: T.accent + "12",
             color: T.accent,
             fontSize: 12,
-            fontWeight: 800,
+            fontWeight: 700,
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
@@ -498,7 +498,7 @@ const LOGIN_STYLES = `
 
   .login-inp {
     width:100%; padding:13px 16px; border-radius: 12px;
-    border:2px solid #e2ebf6; font-size:14px; font-family:'Times New Roman', Times, serif; letter-spacing: 0.01em;
+    border:2px solid #e2ebf6; font-size:14px; font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; letter-spacing: 0.01em;
     outline:none; box-sizing:border-box; color:#0b1f35; background:#fafcff;
     transition:all 0.25s cubic-bezier(0.4,0,0.2,1);
     box-shadow: 0 1px 3px rgba(0,0,0,0.04);
@@ -525,7 +525,7 @@ const LOGIN_STYLES = `
   .login-btn {
     width:100%; padding:14px; border-radius: 12px; border:none;
     background: linear-gradient(135deg, #1560bd 0%, #0ea5e9 100%);
-    color:white; font-weight: 800; font-size:15px; font-family:'Times New Roman', Times, serif; letter-spacing: 0.01em;
+    color:white; font-weight: 700; font-size:15px; font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; letter-spacing: 0.01em;
     cursor:pointer; letter-spacing:1px; position:relative; overflow:hidden;
     transition: transform 0.15s, box-shadow 0.2s;
     box-shadow: 0 4px 15px rgba(21,96,189,0.4);
@@ -541,7 +541,7 @@ const LOGIN_STYLES = `
 
   .forgot-btn {
     background:none; border:none; color:#1560bd; font-size:13px;
-    cursor:pointer; font-weight: 800; font-family:'Times New Roman', Times, serif; letter-spacing: 0.01em;
+    cursor:pointer; font-weight: 700; font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; letter-spacing: 0.01em;
     padding:2px 0; position:relative;
     transition: color 0.2s;
   }
@@ -646,11 +646,11 @@ function LoginPage({ onLogin, error, isSyncing, onForgot }) {
           <div className="w-[15rem] h-[15rem] bg-gold/20 absolute z-1 rounded-full -bottom-20 -left-20 blur-3xl animate-pulse"></div>
 
           <div className="relative z-10 space-y-6">
-            <h1 className="text-xl md:text-3xl font-bold leading-[1.1] tracking-tighter" style={{ fontFamily: "'Times New Roman', Times, serif", textShadow: '0.5px 0 0 currentColor' }}>
+            <h1 className="text-xl md:text-3xl font-bold leading-[1.1] tracking-tighter" style={{ fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', textShadow: '0.5px 0 0 currentColor' }}>
               Brolly Software Solutions <br/>
               <span className="text-gold" style={{ textShadow: '0.5px 0 0 #D4AF37' }}>Attendance Portal.</span>
             </h1>
-            <p className="text-slate-300 text-sm md:text-base max-w-md font-bold italic" style={{ fontFamily: "'Times New Roman', Times, serif", textShadow: "0.3px 0 0 currentColor" }}>
+            <p className="text-slate-300 text-sm md:text-base max-w-md font-bold italic" style={{ fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', textShadow: "0.3px 0 0 currentColor" }}>
               Empowering your team with seamless time tracking and management.
             </p>
           </div>
@@ -780,11 +780,11 @@ function StatCard({ label, value, sub, icon, color, bg, isLive, index = 0 }) {
         {isLive && (
           <div style={{ position: "absolute", top: 16, right: 16, display: "flex", alignItems: "center", gap: 6 }}>
             <div className="pulse-soft" style={{ width: 8, height: 8, borderRadius: "50%", background: T.green, boxShadow: `0 0 12px ${T.green}40` }} />
-            <span style={{ fontSize: 11, fontWeight: 800, color: T.green, textTransform: "uppercase", letterSpacing: "1px", fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em' }}>Live</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: T.green, textTransform: "uppercase", letterSpacing: "1px", fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em' }}>Live</span>
           </div>
         )}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, color: T.ink, textTransform: "uppercase", fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em', textShadow: '0.4px 0 0 currentColor' }}>{label}</span>
+          <span style={{ fontSize: 12, fontWeight: 400, letterSpacing: 1, color: T.ink, textTransform: "uppercase", fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em' }}>{label}</span>
           <div style={{
             width: 44, height: 44, borderRadius: 14, background: finalBg,
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -794,8 +794,8 @@ function StatCard({ label, value, sub, icon, color, bg, isLive, index = 0 }) {
           </div>
         </div>
         <div>
-          <div className="stat-value" style={{ fontSize: 30, fontWeight: 800, color: T.ink, marginBottom: 4, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.5px", fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em', textShadow: '0.6px 0 0 currentColor' }}>{value}</div>
-          {sub && <div style={{ fontSize: 13, color: T.ink, fontWeight: 800, opacity: 0.7 }}>{sub}</div>}
+          <div className="stat-value" style={{ fontSize: 30, fontWeight: 600, color: T.ink, marginBottom: 4, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.5px", fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em' }}>{value}</div>
+          {sub && <div style={{ fontSize: 13, color: T.ink, fontWeight: 700, opacity: 0.7 }}>{sub}</div>}
         </div>
       </div>
     </GlowCard>
@@ -828,7 +828,7 @@ function Badge({ status }) {
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 6,
-      padding: "4px 12px", borderRadius: 20, fontSize: 11, fontWeight: 800,
+      padding: "4px 12px", borderRadius: 20, fontSize: 11, fontWeight: 700,
       background: s.bg, color: s.color, border: `1px solid ${s.dot}20`,
       whiteSpace: "nowrap"
     }}>
@@ -1199,7 +1199,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
             const nowTime = new Date().getTime();
             const lastActive = todayRec.last_active ? new Date(todayRec.last_active).getTime() : 0;
-            const isStale = lastActive > 0 && (nowTime - lastActive) > 600000; // 10 minutes threshold (20 heartbeats)
+            const isStale = lastActive > 0 && (nowTime - lastActive) > 3600000; // 1 hour threshold (previously 10m)
 
             if (isStale && (todayRec.status === "Active" || todayRec.status === "On Break")) {
               console.log("Gap detected! Resuming from stale session. Correcting hours to exclude offline gap...");
@@ -1650,7 +1650,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
       logoutT: (effectiveLot && effectiveStatus !== "working" && effectiveStatus !== "break") ? fmtTime(effectiveLot) : "—",
       hours: hmsStr(hrs),
       breakTime: hmsStr(brk),
-      extraHours: "—",
+      extraHours: hrs.total > 8 ? hmsStr(secondsToHMS(Math.floor((hrs.total - 8) * 3600))) : "—",
       tasks: tasksOverride !== undefined ? tasksOverride : (state.taskInput || "—"),
       breakLogs: JSON.stringify(logsOverride || state.breakLogs || []),
       status: effectiveStatus === "working" ? "Active" : effectiveStatus === "break" ? "On Break" : dayStatus,
@@ -1810,30 +1810,130 @@ function Dashboard({ employee, onSignOut, showToast }) {
     }
   };
 
-  // Toggle silent audio based on user clock status
+  // ── Triple-Tier Persistence System to Prevent Background Throttling ──
+  const wakeLockRef = useRef(null);
+  const lastHeartbeatTimeRef = useRef(Date.now());
+
+  const startPersistence = async () => {
+    // Tier 1: Screen Wake Lock
+    if ('wakeLock' in navigator) {
+      try {
+        if (!wakeLockRef.current) {
+          wakeLockRef.current = await navigator.wakeLock.request('screen');
+          console.log("Tier 1: Wake Lock Active");
+        }
+      } catch (err) {
+        console.warn("Wake Lock failed:", err);
+      }
+    }
+
+    // Tier 2: Invisible Silent Video
+    if (!document.getElementById('keep-alive-video')) {
+      const video = document.createElement('video');
+      video.id = 'keep-alive-video';
+      video.muted = true;
+      video.playsInline = true;
+      video.loop = true;
+      video.style.position = 'fixed';
+      video.style.opacity = '0.001';
+      video.style.pointerEvents = 'none';
+      video.setAttribute('webkit-playsinline', 'true');
+      // Tiny 1s silent MP4
+      video.src = "data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pbmYxbXA0MgAAAAhmcmVlAAAAA21kYXTeAAABy0F2YzEAAAAAAAAAABhBVmNDAWQAKv/hABhnY0ArvSREAAADAAIAAAMAEpCAAAH0eDxl0AAEAAAbZHN0cwAAAAAAAAABAAAAGHN0c2MAAAAAAAAAAQAAAAEAAAABAAAAHHN0c3oAAAAAAAAAAAAAAAEAAABMc3RjbwAAAAAAAAABAAAAMAAAAG1mcmEAAAAAAAAAAAAAAAABAAAAbm1mcm8AAAAAAAAAAAAAAAEAAAAUdHJ1bgAAAAAAAAABAAAAAQAAAAAAAABhYXZjMQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAA==";
+      document.body.appendChild(video);
+      video.play().then(() => console.log("Tier 2: Silent Video Active")).catch(() => {
+        const resumeVideo = () => { video.play().then(() => document.removeEventListener('click', resumeVideo)); };
+        document.addEventListener('click', resumeVideo);
+      });
+    }
+
+    // Ensure Silent Audio is also running
+    startSilentAudio();
+  };
+
+  const stopPersistence = () => {
+    if (wakeLockRef.current) {
+      wakeLockRef.current.release().catch(() => {});
+      wakeLockRef.current = null;
+    }
+    const video = document.getElementById('keep-alive-video');
+    if (video) video.remove();
+    stopSilentAudio();
+  };
+
+  // Re-request Wake Lock when tab becomes visible
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && (status === "working" || status === "break")) {
+        startPersistence();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [status]);
+
+  // Tier 3: Staleness Alert Monitor
+  useEffect(() => {
+    if (status !== "working" && status !== "break") return;
+
+    const checkStaleness = () => {
+      const elapsed = Date.now() - lastHeartbeatTimeRef.current;
+      // If no heartbeat for 45 minutes, alert the user
+      if (elapsed > 2700000) { 
+        // 1. Audio Alert (Ping)
+        if (window.silentAudioCtx) {
+          const osc = window.silentAudioCtx.createOscillator();
+          const g = window.silentAudioCtx.createGain();
+          osc.connect(g); g.connect(window.silentAudioCtx.destination);
+          g.gain.setValueAtTime(0.1, window.silentAudioCtx.currentTime);
+          osc.frequency.setValueAtTime(880, window.silentAudioCtx.currentTime);
+          osc.start(); osc.stop(window.silentAudioCtx.currentTime + 0.5);
+        }
+        
+        // 2. Browser Notification
+        if ("Notification" in window && Notification.permission === "granted") {
+          new Notification("Attendance Alert", {
+            body: "Your session hasn't synced in a while. Please click back into the Brolly tab to ensure your hours are recorded.",
+            icon: "/favicon.ico"
+          });
+        } else if ("Notification" in window && Notification.permission !== "denied") {
+          Notification.requestPermission();
+        }
+      }
+    };
+
+    const interval = setInterval(checkStaleness, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, [status]);
+
+  // Toggle persistence based on status
   useEffect(() => {
     if (status === "working" || status === "break") {
-      startSilentAudio();
+      startPersistence();
+      if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission();
+      }
     } else {
-      stopSilentAudio();
+      stopPersistence();
     }
-    return () => {
-      stopSilentAudio();
-    };
+    return () => stopPersistence();
   }, [status]);
 
   const runHeartbeat = async () => {
     const state = latestStateRef.current;
     if (!state.employee?.id || (state.status !== "working" && state.status !== "break")) return;
     try {
-      await fetch(HEARTBEAT_URL, {
+      const res = await fetch(HEARTBEAT_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          employee_id: state.employee?.id || employee.id,
-          date: fmtDate(state.loginTime || loginTime || new Date())
+          employee_id: state.employee.id,
+          date: new Date().toLocaleDateString('en-CA')
         })
       });
+      if (res.ok) {
+        lastHeartbeatTimeRef.current = Date.now();
+      }
     } catch (e) { console.warn("Heartbeat failed", e); }
   };
 
@@ -2165,12 +2265,12 @@ function Dashboard({ employee, onSignOut, showToast }) {
       background: "#ffffff",
       position: "relative",
       overflow: "hidden",
-      fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em',
+      fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em',
       color: T.ink,
     }}>
       <style>{`
         body { margin: 0; padding: 0; }
-        .h-font { font-family: 'Times New Roman', Times, serif; }
+        .h-font { font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; }
 
         @keyframes gradientFlow {
           0% { background-position: 0% 50%; }
@@ -2193,8 +2293,8 @@ function Dashboard({ employee, onSignOut, showToast }) {
           border: 1px solid transparent;
           cursor: pointer;
           font-size: 14px;
-          font-weight: 800;
-          font-family: 'Times New Roman', Times, serif;
+          font-weight: 700;
+          font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
           transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
           background: #f8fafc;
           color: ${T.muted};
@@ -2218,8 +2318,8 @@ function Dashboard({ employee, onSignOut, showToast }) {
           padding: 14px 28px;
           border-radius: 16px;
           border: none;
-          font-weight: 800;
-          font-family: 'Times New Roman', Times, serif;
+          font-weight: 700;
+          font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
           cursor: pointer;
           display: flex;
           align-items: center;
@@ -2244,7 +2344,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
           line-height: 1.6;
           resize: vertical;
           outline: none;
-          font-family: 'Times New Roman', Times, serif;
+          font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
           color: ${T.ink};
           background: rgba(255, 255, 255, 0.03);
           transition: all 0.3s;
@@ -2281,8 +2381,8 @@ function Dashboard({ employee, onSignOut, showToast }) {
       {toast && (
         <div style={{
           position: "fixed", top: 24, right: 24, zIndex: 9999,
-          padding: "16px 24px", borderRadius: 16, fontSize: 14, fontWeight: 800,
-          fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em',
+          padding: "16px 24px", borderRadius: 16, fontSize: 14, fontWeight: 700,
+          fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em',
           display: "flex", alignItems: "center", gap: 12, animation: "slideUp 0.4s ease",
           background: toast.type === "success" ? T.green : toast.type === "error" ? T.red : toast.type === "amber" ? T.amber : T.accent,
           color: "white", boxShadow: "0 10px 40px rgba(0,0,0,0.1)"
@@ -2307,7 +2407,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
           }} onClick={e => e.stopPropagation()}>
             <div style={{ background: "#1e1b4b", padding: "28px 32px", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <div className="h-font" style={{ fontSize: 20, fontWeight: 800 }}>Start Working Session</div>
+                <div className="h-font" style={{ fontSize: 20, fontWeight: 700 }}>Start Working Session</div>
                 <div style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", marginTop: 4 }}>Attendance Tracker</div>
               </div>
               <button onClick={() => setShowStartWorkingModal(false)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "white", cursor: "pointer", width: 40, height: 40, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -2316,8 +2416,8 @@ function Dashboard({ employee, onSignOut, showToast }) {
             </div>
             <div style={{ padding: "32px", textAlign: "center" }}>
               <div style={{ fontSize: "52px", marginBottom: "18px", animation: "pulseSoft 2s infinite" }}>🚀</div>
-              <h3 className="h-font" style={{ margin: "0 0 10px 0", fontSize: "18px", color: "#1e1b4b", fontWeight: 800 }}>Ready to Clock In?</h3>
-              <p style={{ margin: 0, fontSize: "14px", color: "#6366f1", lineHeight: "1.5", fontWeight: 800 }}>
+              <h3 className="h-font" style={{ margin: "0 0 10px 0", fontSize: "18px", color: "#1e1b4b", fontWeight: 700 }}>Ready to Clock In?</h3>
+              <p style={{ margin: 0, fontSize: "14px", color: "#6366f1", lineHeight: "1.5", fontWeight: 700 }}>
                 Clicking confirm will start tracking your active hours for today. Please make sure you are ready to begin your work session.
               </p>
 
@@ -2326,7 +2426,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
                   onClick={() => setShowStartWorkingModal(false)}
                   style={{
                     flex: 1, padding: "14px", borderRadius: "18px", border: `1px solid ${T.border}`,
-                    background: "rgba(0,0,0,0.02)", color: T.ink, fontWeight: 800, cursor: "pointer",
+                    background: "rgba(0,0,0,0.02)", color: T.ink, fontWeight: 700, cursor: "pointer",
                     fontSize: "14px", transition: "all 0.2s"
                   }}
                 >
@@ -2340,7 +2440,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
                   style={{
                     flex: 1, padding: "14px", borderRadius: "18px", border: "none",
                     background: `linear-gradient(135deg, ${T.green} 0%, #059669 100%)`, color: "white",
-                    fontWeight: 800, cursor: "pointer", fontSize: "14px",
+                    fontWeight: 700, cursor: "pointer", fontSize: "14px",
                     boxShadow: "0 8px 20px rgba(16, 185, 129, 0.25)", transition: "all 0.2s"
                   }}
                 >
@@ -2367,7 +2467,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
           }} onClick={e => e.stopPropagation()}>
             <div style={{ background: T.ink, padding: "28px 32px", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <div className="h-font" style={{ fontSize: 22, fontWeight: 800 }}>Assigned Tasks</div>
+                <div className="h-font" style={{ fontSize: 22, fontWeight: 700 }}>Assigned Tasks</div>
                 <div style={{ fontSize: 13, color: T.faint, marginTop: 4 }}>Work prioritized by your administrator</div>
               </div>
               <button onClick={() => setShowTasksModal(false)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "white", cursor: "pointer", width: 40, height: 40, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -2378,7 +2478,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
               {assignedTasks.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "60px 0", color: T.muted }}>
                    <div style={{ fontSize: 40, marginBottom: 16 }}>?</div>
-                   <div className="h-font" style={{ fontWeight: 800, fontSize: 18 }}>You're all caught up!</div>
+                   <div className="h-font" style={{ fontWeight: 700, fontSize: 18 }}>You're all caught up!</div>
                    <div style={{ fontSize: 14, marginTop: 4 }}>No pending tasks assigned to you.</div>
                 </div>
               ) : (
@@ -2390,16 +2490,16 @@ function Dashboard({ employee, onSignOut, showToast }) {
                       transition: "all 0.3s"
                     }} onMouseEnter={() => t.status === "Assigned" && markTaskViewed(t.id)}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-                        <div className="h-font" style={{ fontWeight: 800, color: T.ink, fontSize: 16 }}>{t.title}</div>
+                        <div className="h-font" style={{ fontWeight: 700, color: T.ink, fontSize: 16 }}>{t.title}</div>
                         <Badge status={t.status} />
                       </div>
                       <p style={{ fontSize: 14, color: T.ink2, margin: "0 0 20px", lineHeight: 1.6 }}>{t.description}</p>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${T.border}`, paddingTop: 16 }}> 
-                        <div style={{ fontSize: 11, color: T.muted, fontWeight: 800 }}>Assigned {new Date(t.assigned_at).toLocaleDateString()}</div>
+                        <div style={{ fontSize: 11, color: T.muted, fontWeight: 700 }}>Assigned {new Date(t.assigned_at).toLocaleDateString()}</div>
                         {t.status !== "Completed" && (
                           <button onClick={() => markTaskCompleted(t.id)} style={{
                             padding: "10px 20px", borderRadius: 12, border: "none", background: T.green, color: "white",
-                            fontSize: 12, fontWeight: 800, cursor: "pointer", boxShadow: `0 4px 12px ${T.green}30`
+                            fontSize: 12, fontWeight: 700, cursor: "pointer", boxShadow: `0 4px 12px ${T.green}30`
                           }}>Complete Task</button>
                         )}
                       </div>
@@ -2430,8 +2530,8 @@ function Dashboard({ employee, onSignOut, showToast }) {
               display: "flex", justifyContent: "space-between", alignItems: "center"
             }}>
               <div>
-                <div style={{ fontSize: 11, color: T.faint, letterSpacing: 1.5, fontWeight: 800, marginBottom: 4 }}>RECORD ANALYSIS</div>
-                <div className="h-font" style={{ fontSize: 22, fontWeight: 800 }}>{selectedRecord.date}</div>
+                <div style={{ fontSize: 11, color: T.faint, letterSpacing: 1.5, fontWeight: 700, marginBottom: 4 }}>RECORD ANALYSIS</div>
+                <div className="h-font" style={{ fontSize: 22, fontWeight: 700 }}>{selectedRecord.date}</div>
               </div>
               <button onClick={() => setSelectedRecord(null)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "white", cursor: "pointer", width: 40, height: 40, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Icon d="M18 6L6 18M6 6l12 12" size={24} color="white" />
@@ -2441,20 +2541,20 @@ function Dashboard({ employee, onSignOut, showToast }) {
             <div style={{ padding: 32 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 32 }}>
                 <div style={{ background: T.surface, padding: 16, borderRadius: 16 }}>
-                  <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, marginBottom: 6, textTransform: "uppercase" }}>CLOCK IN</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: T.green }}>{selectedRecord.loginT || "—"}</div>
+                  <div style={{ fontSize: 10, color: T.muted, fontWeight: 700, marginBottom: 6, textTransform: "uppercase" }}>CLOCK IN</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: T.green }}>{selectedRecord.loginT || "—"}</div>
                 </div>
                 <div style={{ background: T.surface, padding: 16, borderRadius: 16 }}>
-                  <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, marginBottom: 6, textTransform: "uppercase" }}>CLOCK OUT</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: T.red }}>{selectedRecord.logoutT || "—"}</div>
+                  <div style={{ fontSize: 10, color: T.muted, fontWeight: 700, marginBottom: 6, textTransform: "uppercase" }}>CLOCK OUT</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: T.red }}>{selectedRecord.logoutT || "—"}</div>
                 </div>
                 <div style={{ background: T.surface, padding: 16, borderRadius: 16 }}>
-                  <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, marginBottom: 6, textTransform: "uppercase" }}>WORKING HOURS</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>{selectedRecord.hours || "—"}</div>
+                  <div style={{ fontSize: 10, color: T.muted, fontWeight: 700, marginBottom: 6, textTransform: "uppercase" }}>WORKING HOURS</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: T.ink }}>{selectedRecord.hours || "—"}</div>
                 </div>
                 <div style={{ background: T.surface, padding: 16, borderRadius: 16 }}>
-                  <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, marginBottom: 6, textTransform: "uppercase" }}>BREAK DURATION</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: T.amber }}>{selectedRecord.breakTime || "—"}</div>
+                  <div style={{ fontSize: 10, color: T.muted, fontWeight: 700, marginBottom: 6, textTransform: "uppercase" }}>BREAK DURATION</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: T.amber }}>{selectedRecord.breakTime || "—"}</div>
                 </div>
               </div>
 
@@ -2463,7 +2563,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: T.purpleBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <Icon d={icons.tasks} size={18} color={T.purple} />
                   </div>
-                  <div className="h-font" style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>Tasks Performed</div>
+                  <div className="h-font" style={{ fontSize: 16, fontWeight: 700, color: T.ink }}>Tasks Performed</div>
                 </div>
                 <div style={{
                   background: T.surface, padding: 20, borderRadius: 20,
@@ -2478,7 +2578,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
             <div style={{ padding: "0 32px 32px" }}>
               <button onClick={() => setSelectedRecord(null)} style={{
                 width: "100%", padding: 16, borderRadius: 16, border: "none",
-                background: T.ink, color: "white", fontWeight: 800, cursor: "pointer",
+                background: T.ink, color: "white", fontWeight: 700, cursor: "pointer",
                 fontSize: 15, transition: "all 0.2s"
               }} onMouseOver={e => e.currentTarget.style.opacity = 0.9} onMouseOut={e => e.currentTarget.style.opacity = 1}>
                 Dismiss
@@ -2505,8 +2605,8 @@ function Dashboard({ employee, onSignOut, showToast }) {
             <img src={logo} alt="Brolly Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </div>
           <div className="top-bar-title">
-            <div className="h-font" style={{ fontWeight: 800, fontSize: 16, color: T.ink, textShadow: "0.4px 0 0 currentColor", letterSpacing: "-0.3px", textShadow: "0.5px 0 0 currentColor" }}>Brolly Software Solutions</div>
-            <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, fontWeight: 800 }}>ATTENDANCE PORTAL</div>
+            <div className="h-font" style={{ fontWeight: 700, fontSize: 16, color: T.ink, textShadow: "0.4px 0 0 currentColor", letterSpacing: "-0.3px", textShadow: "0.5px 0 0 currentColor" }}>Brolly Software Solutions</div>
+            <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, fontWeight: 700 }}>ATTENDANCE PORTAL</div>
           </div>
         </div>
 
@@ -2518,7 +2618,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
             width: 8, height: 8, borderRadius: "50%",
             background: status === "working" ? T.green : status === "break" ? T.amber : T.faint,
           }} />
-          <span style={{ fontSize: 12, color: T.muted, fontWeight: 800 }}>
+          <span style={{ fontSize: 12, color: T.muted, fontWeight: 700 }}>
             {status === "working" ? "Working" : status === "break" ? "On Break" : "Paused"}
           </span>
         </div>
@@ -2533,7 +2633,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
             {assignedTasks.filter(t => t.status === "Assigned").length > 0 && (
               <span style={{
                 position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%",
-                background: T.red, color: "white", fontSize: 11, fontWeight: 800,
+                background: T.red, color: "white", fontSize: 11, fontWeight: 700,
                 display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid white",
                 boxShadow: "0 4px 10px rgba(239, 68, 68, 0.3)"
               }}>
@@ -2546,14 +2646,14 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
           <Avatar name={employee.name} src={profile.photo} size={38} />
           <div className="name-label" style={{ marginRight: 8 }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{employee.name}</div>
-            <div style={{ fontSize: 11, color: T.muted, fontWeight: 800 }}>{employee.role}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{employee.name}</div>
+            <div style={{ fontSize: 11, color: T.muted, fontWeight: 700 }}>{employee.role}</div>
           </div>
 
           <button onClick={onSignOut} style={{
             display: "flex", alignItems: "center", gap: 8,
             padding: "10px 16px", borderRadius: 12, border: "none",
-            background: T.surface, color: T.muted, cursor: "pointer", fontSize: 12, fontWeight: 800,
+            background: T.surface, color: T.muted, cursor: "pointer", fontSize: 12, fontWeight: 700,
             transition: "all 0.2s"
           }} onMouseOver={e => { e.currentTarget.style.background = T.redBg; e.currentTarget.style.color = T.red; }}>
             <Icon d={icons.logout} size={15} />
@@ -2568,22 +2668,22 @@ function Dashboard({ employee, onSignOut, showToast }) {
         {/* Greeting row */}
         <div className="greeting-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 36 }}>
           <div>
-            <h1 className="h-font" style={{ margin: "0 0 6px", fontSize: 30, fontWeight: 800, color: "#1e1b4b", letterSpacing: "-0.5px", textShadow: "0.5px 0 0 currentColor" }}>
+            <h1 className="h-font" style={{ margin: "0 0 6px", fontSize: 30, fontWeight: 700, color: "#1e1b4b", letterSpacing: "-0.5px", textShadow: "0.5px 0 0 currentColor" }}>
               {greeting}, {employee.name.split(" ")[0]} 👋
             </h1>
-            <p style={{ margin: 0, fontSize: 14, color: "#6366f1", fontWeight: 800 }}>
+            <p style={{ margin: 0, fontSize: 14, color: "#6366f1", fontWeight: 700 }}>
               {now.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
             </p>
           </div>
 
           <div className="time-display" style={{ background: "#ffffff", border: `1px solid ${T.border}`, borderRadius: 20, padding: "16px 28px", textAlign: "right", boxShadow: "0 1px 15px rgba(0, 0, 0, 0.05)" }}>
             <div className="h-font" style={{
-              fontSize: 32, fontWeight: 800, color: T.ink,
+              fontSize: 32, fontWeight: 700, color: T.ink,
               fontVariantNumeric: "tabular-nums", letterSpacing: 1
             }}>
               {now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
             </div>
-            <div style={{ fontSize: 11, color: T.muted, marginTop: 4, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase" }}>
+            <div style={{ fontSize: 11, color: T.muted, marginTop: 4, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>
               IST  {now.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
             </div>
           </div>
@@ -2593,18 +2693,18 @@ function Dashboard({ employee, onSignOut, showToast }) {
         {(status !== "idle") && (
           <div className="premium-card" style={{ padding: "24px 28px", marginBottom: 32 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-              <span className="h-font" style={{ fontSize: 15, fontWeight: 800, color: T.ink }}>Daily Performance Goal</span>
+              <span className="h-font" style={{ fontSize: 15, fontWeight: 700, color: T.ink }}>Daily Performance Goal</span>
               <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
                 {extraStr && (
                   <span style={{
-                    fontSize: 12, fontWeight: 800, color: T.amber,
+                    fontSize: 12, fontWeight: 700, color: T.amber,
                     background: T.amberBg, padding: "6px 14px", borderRadius: 20,
                     border: `1px solid ${T.amber}20`
                   }}>
                     ? +{extraStr} OVERTIME
                   </span>
                 )}
-                <span className="h-font" style={{ fontSize: 18, fontWeight: 800, color: pct >= 100 ? T.green : T.accent }}>{pct}%</span>
+                <span className="h-font" style={{ fontSize: 18, fontWeight: 700, color: pct >= 100 ? T.green : T.accent }}>{pct}%</span>
               </div>
             </div>
             <div style={{ height: 12, background: "rgba(0,0,0,0.05)", borderRadius: 99, overflow: "hidden" }}>
@@ -2614,7 +2714,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
                 transition: "width 1s cubic-bezier(0.34, 1.56, 0.64, 1)"
               }} />
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, fontSize: 12, color: T.muted, fontWeight: 800 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, fontSize: 12, color: T.muted, fontWeight: 700 }}>
               <span>
                 {hmsStr(liveHrs)} clocked today
                 {28800 - currentTotalWorkSeconds > 0 ? (
@@ -2652,7 +2752,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
                 <span style={{
                   position: "absolute", top: -8, right: -4, background: T.red, color: "white",
                   fontSize: 10, padding: "2px 8px", borderRadius: 12, border: "2px solid white",
-                  fontWeight: 800, boxShadow: "0 4px 10px rgba(239, 68, 68, 0.3)" 
+                  fontWeight: 700, boxShadow: "0 4px 10px rgba(239, 68, 68, 0.3)" 
                 }}>{t.badge}</span>
               )}
             </button>
@@ -2697,8 +2797,8 @@ function Dashboard({ employee, onSignOut, showToast }) {
                   <Icon d={icons.clock} size={24} color={T.accent} />
                 </div>
                 <div>
-                  <div className="h-font" style={{ fontSize: 20, fontWeight: 800, color: T.ink, letterSpacing: "-0.3px" }}>Session Control</div>
-                  <div style={{ fontSize: 13, color: T.muted, fontWeight: 800 }}>Manage your work-life balance</div>
+                  <div className="h-font" style={{ fontSize: 20, fontWeight: 700, color: T.ink, letterSpacing: "-0.3px" }}>Session Control</div>
+                  <div style={{ fontSize: 13, color: T.muted, fontWeight: 700 }}>Manage your work-life balance</div>
                 </div>
               </div>
 
@@ -2710,7 +2810,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
                       borderTopColor: T.accent, borderRadius: "50%",
                       display: "inline-block", animation: "spin 0.8s linear infinite"
                     }} />
-                    <span style={{ marginLeft: 12, fontSize: 14, color: T.muted, fontWeight: 800, letterSpacing: 0.5 }}>SYNCHRONIZING...</span>
+                    <span style={{ marginLeft: 12, fontSize: 14, color: T.muted, fontWeight: 700, letterSpacing: 0.5 }}>SYNCHRONIZING...</span>
                   </div>
                 ) : (status === "idle" || status === "loggedOut") ? (
                   <button className="act-btn" onClick={() => setShowStartWorkingModal(true)}
@@ -2766,8 +2866,8 @@ function Dashboard({ employee, onSignOut, showToast }) {
                       {s.done ? <Icon d={icons.check} size={18} color="white" stroke={3} /> : s.icon}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 11, fontWeight: 800, color: T.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>{s.label}</div>
-                      <div className="h-font" style={{ fontSize: 18, fontWeight: 800, color: T.ink, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>{s.time || "— —"}</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>{s.label}</div>
+                      <div className="h-font" style={{ fontSize: 18, fontWeight: 700, color: T.ink, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>{s.time || "— —"}</div>
                     </div>
                   </div>
                 ))}
@@ -2788,8 +2888,8 @@ function Dashboard({ employee, onSignOut, showToast }) {
                     <Icon d={icons.tasks} size={24} color={T.purple} />
                   </div>
                   <div>
-                    <div className="h-font" style={{ fontSize: 20, fontWeight: 800, color: T.ink, letterSpacing: "-0.3px" }}>Activity Logging</div>
-                    <div style={{ fontSize: 13, color: T.muted, fontWeight: 800 }}>Document your daily achievements</div>
+                    <div className="h-font" style={{ fontSize: 20, fontWeight: 700, color: T.ink, letterSpacing: "-0.3px" }}>Activity Logging</div>
+                    <div style={{ fontSize: 13, color: T.muted, fontWeight: 700 }}>Document your daily achievements</div>
                   </div>
                 </div>
                 <textarea className="task-area" value={taskInput}
@@ -2807,7 +2907,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
                     <label style={{
                       display: "flex", alignItems: "center", gap: 10, padding: "12px 24px", borderRadius: 16,
                       background: T.surface, border: `1px solid ${T.border}`, cursor: "pointer", 
-                      fontSize: 14, color: T.ink2, fontWeight: 800, transition: "all 0.2s"
+                      fontSize: 14, color: T.ink2, fontWeight: 700, transition: "all 0.2s"
                     }} onMouseOver={e => e.currentTarget.style.background = "white"}>
                       <Icon d={icons.camera} size={18} color={T.accent} />
                       {taskScreenshot ? "Change Proof" : "Attach Proof"}
@@ -2818,10 +2918,10 @@ function Dashboard({ employee, onSignOut, showToast }) {
                       }} />
                     </label>
                     {taskScreenshot && (
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: T.green, fontWeight: 800, animation: "fadeIn 0.3s" }}>    
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: T.green, fontWeight: 700, animation: "fadeIn 0.3s" }}>    
                         <Icon d={icons.check} size={16} />
                         Image Attached
-                        <button onClick={() => setTaskScreenshot(null)} style={{ background: T.redBg, border: "none", color: T.red, cursor: "pointer", width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}></button>
+                        <button onClick={() => setTaskScreenshot(null)} style={{ background: T.redBg, border: "none", color: T.red, cursor: "pointer", width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}></button>
                       </div>
                     )}
                   </div>
@@ -2835,13 +2935,13 @@ function Dashboard({ employee, onSignOut, showToast }) {
                     width: "100%", padding: "16px", borderRadius: 18, border: "none",
                     background: `linear-gradient(135deg, ${T.gold} 0%, ${T.accent} 100%)`, 
                     color: "white", cursor: "pointer", fontSize: 15,
-                    fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                    fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
                     boxShadow: `0 12px 25px ${T.accent}30`, transition: "all 0.3s"
                   }} onMouseOver={e => e.currentTarget.style.transform = "translateY(-2px)"} onMouseOut={e => e.currentTarget.style.transform = "none"}>
                   <Icon d={icons.refresh} size={18} color="white" />
                   Final Sync to Database
                 </button>
-                <div style={{ marginTop: 14, textAlign: "center", fontSize: 12, color: T.muted, fontWeight: 800, opacity: 0.8 }}>
+                <div style={{ marginTop: 14, textAlign: "center", fontSize: 12, color: T.muted, fontWeight: 700, opacity: 0.8 }}>
                   Last sync today: {history.find(r => r.date === fmtDate(now))?.logoutT || "Not yet synced"}
                 </div>
               </div>
@@ -2858,7 +2958,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
               display: "flex", alignItems: "center", justifyContent: "space-between"
             }}>
               <div>
-                <div style={{ fontSize: 15, fontWeight: 800, color: T.ink }}>Attendance History</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: T.ink }}>Attendance History</div>
                 <div style={{ fontSize: 12, color: T.muted }}>{history.length} records for {employee.name}</div>
               </div>
               {history.length === 0 && (
@@ -2878,7 +2978,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
                 }}>
                   <Icon d={icons.calendar} size={24} color={T.faint} />
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: T.muted, marginBottom: 4 }}>No records yet</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: T.muted, marginBottom: 4 }}>No records yet</div>
                 <div style={{ fontSize: 12, color: T.faint }}>
                   Load the Excel file and save your attendance to see records here.
                 </div>
@@ -2891,7 +2991,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
                       {["Date", "Clock In", "Clock Out", "Hours", "Break Time", "Over Time", "Status", "Tasks", ""].map(h => (
                         <th key={h} style={{
                           padding: "11px 16px", textAlign: "left",
-                          fontSize: 11, fontWeight: 800, color: T.muted, letterSpacing: 0.5,
+                          fontSize: 11, fontWeight: 700, color: T.muted, letterSpacing: 0.5,
                           borderBottom: `2px solid ${T.gold}`, textTransform: "uppercase"
                         }}>{h}</th>
                       ))}
@@ -2901,13 +3001,13 @@ function Dashboard({ employee, onSignOut, showToast }) {
                     {[...history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((r, i) => (
                       <tr key={i} className="hist-row"
                         style={{ borderBottom: `2px solid ${T.gold}`, transition: "background 0.1s" }}>
-                        <td style={{ padding: "12px 16px", color: T.ink, fontWeight: 800 }}>{r.date}</td>
-                        <td style={{ padding: "12px 16px", color: T.green, fontWeight: 800 }}>{r.loginT}</td>
-                        <td style={{ padding: "12px 16px", color: T.red, fontWeight: 800 }}>{r.logoutT}</td>
-                        <td style={{ padding: "12px 16px", fontWeight: 800, color: T.ink, fontVariantNumeric: "tabular-nums" }}>{r.hours}</td>
-                        <td style={{ padding: "12px 16px", fontWeight: 800, color: T.amber, fontVariantNumeric: "tabular-nums" }}>{r.breakTime || r.break_time || ""}</td>
+                        <td style={{ padding: "12px 16px", color: T.ink, fontWeight: 700 }}>{r.date}</td>
+                        <td style={{ padding: "12px 16px", color: T.green, fontWeight: 700 }}>{r.loginT}</td>
+                        <td style={{ padding: "12px 16px", color: T.red, fontWeight: 700 }}>{r.logoutT}</td>
+                        <td style={{ padding: "12px 16px", fontWeight: 700, color: T.ink, fontVariantNumeric: "tabular-nums" }}>{r.hours}</td>
+                        <td style={{ padding: "12px 16px", fontWeight: 700, color: T.amber, fontVariantNumeric: "tabular-nums" }}>{r.breakTime || r.break_time || ""}</td>
                         <td style={{
-                          padding: "12px 16px", fontWeight: 800,
+                          padding: "12px 16px", fontWeight: 700,
                           color: r.extraHours && r.extraHours !== "" ? T.amber : T.faint,
                           fontVariantNumeric: "tabular-nums"
                         }}>
@@ -2924,7 +3024,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
                             onClick={() => setSelectedRecord(r)}
                             style={{
                               padding: "6px 12px", borderRadius: 8, border: `1.5px solid ${T.border}`,
-                              background: "white", color: T.ink2, fontSize: 11, fontWeight: 800,
+                              background: "white", color: T.ink2, fontSize: 11, fontWeight: 700,
                               cursor: "pointer", transition: "all 0.15s", display: "flex", alignItems: "center", gap: 6
                             }}
                             onMouseOver={e => e.currentTarget.style.background = T.surface}
@@ -2955,11 +3055,11 @@ function Dashboard({ employee, onSignOut, showToast }) {
                   onClick={() => setRequestType("Leave")} 
                   style={{
                     flex: 1, padding: "12px 20px", border: "none", borderRadius: 12, cursor: "pointer",
-                    fontSize: 14, fontWeight: 800, transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    fontSize: 14, fontWeight: 700, transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                     background: requestType === "Leave" ? "white" : "none",
                     color: requestType === "Leave" ? T.accent : T.muted,
                     boxShadow: requestType === "Leave" ? "0 4px 15px rgba(0,0,0,0.05)" : "none",
-                    fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em'
+                    fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em'
                   }}
                 >
                   🌴 Casual Leave
@@ -2968,11 +3068,11 @@ function Dashboard({ employee, onSignOut, showToast }) {
                   onClick={() => setRequestType("Work From Home")} 
                   style={{
                     flex: 1, padding: "12px 20px", border: "none", borderRadius: 12, cursor: "pointer",
-                    fontSize: 14, fontWeight: 800, transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    fontSize: 14, fontWeight: 700, transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                     background: requestType === "Work From Home" ? "white" : "none",
                     color: requestType === "Work From Home" ? T.accent : T.muted,
                     boxShadow: requestType === "Work From Home" ? "0 4px 15px rgba(0,0,0,0.05)" : "none",
-                    fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em'
+                    fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em'
                   }}
                 >
                   🏠 Work From Home
@@ -2988,25 +3088,25 @@ function Dashboard({ employee, onSignOut, showToast }) {
                   <Icon d={requestType === "Leave" ? icons.calendar : icons.home} size={24} color={T.purple} />
                 </div>
                 <div>
-                  <div className="h-font" style={{ fontSize: 20, fontWeight: 800, color: T.ink, letterSpacing: "-0.3px" }}>
+                  <div className="h-font" style={{ fontSize: 20, fontWeight: 700, color: T.ink, letterSpacing: "-0.3px" }}>
                     {editingLeave ? `Edit ${requestType} Request` : `New ${requestType} Request`}
                   </div>
                   {requestType === "Leave" ? (
-                    <div style={{ fontSize: 13, color: T.muted, fontWeight: 800 }}>Balance: <b style={{ color: T.purple }}>{profile.total_leaves}</b> days available</div>
+                    <div style={{ fontSize: 13, color: T.muted, fontWeight: 700 }}>Balance: <b style={{ color: T.purple }}>{profile.total_leaves}</b> days available</div>
                   ) : (
-                    <div style={{ fontSize: 13, color: T.muted, fontWeight: 800 }}>Submit for management review</div>
+                    <div style={{ fontSize: 13, color: T.muted, fontWeight: 700 }}>Submit for management review</div>
                   )}
                 </div>
               </div>
 
               <div style={{ display: "flex", gap: 20, marginBottom: 24 }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: T.muted, marginBottom: 8, letterSpacing: 1, textTransform: "uppercase" }}>START DATE</label>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.muted, marginBottom: 8, letterSpacing: 1, textTransform: "uppercase" }}>START DATE</label>
                   <input className="adm-inp" type="date" style={{ width: "100%", boxSizing: "border-box" }}
                     value={leaveData.start} onChange={e => setLeaveData({ ...leaveData, start: e.target.value })} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: T.muted, marginBottom: 8, letterSpacing: 1, textTransform: "uppercase" }}>END DATE</label>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.muted, marginBottom: 8, letterSpacing: 1, textTransform: "uppercase" }}>END DATE</label>
                   <input className="adm-inp" type="date" style={{ width: "100%", boxSizing: "border-box" }}
                     value={leaveData.end} onChange={e => setLeaveData({ ...leaveData, end: e.target.value })} />
                 </div>
@@ -3018,8 +3118,8 @@ function Dashboard({ employee, onSignOut, showToast }) {
                   background: `${T.accent}05`, border: `1.5px solid ${T.accent}15`,
                   display: "flex", justifyContent: "space-between", alignItems: "center"
                 }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: T.accent }}>Requested Duration</div>
-                  <div className="h-font" style={{ fontSize: 18, fontWeight: 800, color: T.accent }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.accent }}>Requested Duration</div>
+                  <div className="h-font" style={{ fontSize: 18, fontWeight: 700, color: T.accent }}>
                     {(() => {
                       if (!leaveData.start || !leaveData.end) return "";
                       const s = new Date(leaveData.start);
@@ -3036,7 +3136,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
               )}
 
               <div style={{ marginBottom: 32 }}>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: T.muted, marginBottom: 8, letterSpacing: 1, textTransform: "uppercase" }}>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.muted, marginBottom: 8, letterSpacing: 1, textTransform: "uppercase" }}>
                   JUSTIFICATION / REASON
                 </label>
                 <textarea className="task-area" style={{ minHeight: 140 }} 
@@ -3063,12 +3163,12 @@ function Dashboard({ employee, onSignOut, showToast }) {
             </div>
 
             <div className="premium-card" style={{ padding: 32, overflow: "hidden" }}>
-              <div className="h-font" style={{ fontSize: 20, fontWeight: 800, color: T.ink, marginBottom: 28, letterSpacing: "-0.5px" }}>Request Timeline</div>    
+              <div className="h-font" style={{ fontSize: 20, fontWeight: 700, color: T.ink, marginBottom: 28, letterSpacing: "-0.5px" }}>Request Timeline</div>    
               <div style={{ overflowY: "auto", maxHeight: 580, paddingRight: 8 }}>
                 {myLeaves.length === 0 ? (
                   <div style={{ textAlign: "center", color: T.muted, padding: "100px 0" }}>
                     <div className="pulse-soft" style={{ fontSize: 48, marginBottom: 20 }}>📋</div>
-                    <div className="h-font" style={{ fontWeight: 800, fontSize: 18, color: T.ink }}>No requests found</div>
+                    <div className="h-font" style={{ fontWeight: 700, fontSize: 18, color: T.ink }}>No requests found</div>
                     <div style={{ fontSize: 14, marginTop: 6, opacity: 0.7 }}>Your submitted requests will appear here.</div>
                   </div>
                 ) : (
@@ -3080,21 +3180,21 @@ function Dashboard({ employee, onSignOut, showToast }) {
                         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
                       }} onMouseOver={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.background = "white"; e.currentTarget.style.boxShadow = "0 15px 35px -5px rgba(0,0,0,0.05)"; }} onMouseOut={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.background = "rgba(255, 255, 255, 0.4)"; e.currentTarget.style.boxShadow = "none"; }}>
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16, alignItems: "center" }}>
-                          <div className="h-font" style={{ fontWeight: 800, fontSize: 15, color: T.ink }}>{new Date(l.start_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })} - {new Date(l.end_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
+                          <div className="h-font" style={{ fontWeight: 700, fontSize: 15, color: T.ink }}>{new Date(l.start_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })} - {new Date(l.end_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
                           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                             <Badge status={l.leave_type === "Work From Home" ? "Work From Home" : "Leave"} />
                             <Badge status={l.status} />
                           </div>
                         </div>
-                        <div style={{ fontSize: 14, color: T.ink2, lineHeight: 1.6, fontWeight: 800, marginBottom: (l.admin_comment || l.status === "Pending") ? 20 : 0 }}>{l.reason}</div>
+                        <div style={{ fontSize: 14, color: T.ink2, lineHeight: 1.6, fontWeight: 700, marginBottom: (l.admin_comment || l.status === "Pending") ? 20 : 0 }}>{l.reason}</div>
 
                         {l.admin_comment && (
                           <div style={{
                             marginTop: 16, fontSize: 13, color: T.accent, background: "white",
                             padding: "16px 20px", borderRadius: 18, borderLeft: `5px solid ${T.accent}`,
-                            boxShadow: "0 8px 20px rgba(0,0,0,0.03)", fontWeight: 800
+                            boxShadow: "0 8px 20px rgba(0,0,0,0.03)", fontWeight: 700
                           }}>
-                            <div style={{ fontWeight: 800, fontSize: 10, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>OFFICIAL RESPONSE</div>  
+                            <div style={{ fontWeight: 700, fontSize: 10, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>OFFICIAL RESPONSE</div>  
                             {l.admin_comment}
                           </div>
                         )}
@@ -3102,21 +3202,21 @@ function Dashboard({ employee, onSignOut, showToast }) {
                           <div style={{ display: "flex", gap: 10, borderTop: `1.5px solid ${T.border}`, paddingTop: 16, marginTop: 4 }}>
                             <button onClick={() => handleEditLeave(l)} style={{
                               flex: 1, padding: "10px", borderRadius: 12, border: `1.5px solid ${T.accent}30`,
-                              background: `${T.accent}08`, color: T.accent, fontSize: 12, fontWeight: 800,
+                              background: `${T.accent}08`, color: T.accent, fontSize: 12, fontWeight: 700,
                               cursor: "pointer", transition: "all 0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: 6
                             }} onMouseOver={e => { e.currentTarget.style.background = T.accent; e.currentTarget.style.color = "white"; }}>
                               ✏️ Edit Details
                             </button>
                             <button onClick={() => handleDeleteLeave(l.id)} style={{
                               flex: 1, padding: "10px", borderRadius: 12, border: `1.5px solid ${T.red}30`,
-                              background: `${T.red}08`, color: T.red, fontSize: 12, fontWeight: 800,
+                              background: `${T.red}08`, color: T.red, fontSize: 12, fontWeight: 700,
                               cursor: "pointer", transition: "all 0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: 6
                             }} onMouseOver={e => { e.currentTarget.style.background = T.red; e.currentTarget.style.color = "white"; }}>
                               🗑️ Cancel
                             </button>
                           </div>
                         )}
-                        <div style={{ marginTop: 16, fontSize: 10, color: T.muted, textAlign: "right", fontWeight: 800, opacity: 0.6 }}>Submitted on {new Date(l.applied_at).toLocaleDateString()}</div>
+                        <div style={{ marginTop: 16, fontSize: 10, color: T.muted, textAlign: "right", fontWeight: 700, opacity: 0.6 }}>Submitted on {new Date(l.applied_at).toLocaleDateString()}</div>
                       </div>
                     ))}
                   </div>
@@ -3154,18 +3254,18 @@ function Dashboard({ employee, onSignOut, showToast }) {
                   }} />
                 </div>
 
-                <div style={{ fontWeight: 800, fontSize: 22, color: T.ink, letterSpacing: "-0.5px", marginBottom: 6 }}>{employee.name}</div>
-                <div style={{ fontSize: 13, color: T.muted, fontWeight: 800, marginBottom: 24, letterSpacing: 0.2 }}>{employee.role}  <span style={{ color: T.accent }}>{employee.dept}</span></div>
+                <div style={{ fontWeight: 700, fontSize: 22, color: T.ink, letterSpacing: "-0.5px", marginBottom: 6 }}>{employee.name}</div>
+                <div style={{ fontSize: 13, color: T.muted, fontWeight: 700, marginBottom: 24, letterSpacing: 0.2 }}>{employee.role}  <span style={{ color: T.accent }}>{employee.dept}</span></div>
 
                 <div style={{ width: "100%", background: T.surface, padding: 18, borderRadius: 20, display: "flex", justifyContent: "space-around", border: `1.5px solid ${T.border}` }}>
                   <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: T.accent }}>{employee.id}</div>
-                    <div style={{ fontSize: 9, fontWeight: 800, color: T.muted, textTransform: "uppercase", letterSpacing: 0.5, marginTop: 2 }}>ID CARD</div>      
+                    <div style={{ fontSize: 20, fontWeight: 700, color: T.accent }}>{employee.id}</div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: 0.5, marginTop: 2 }}>ID CARD</div>      
                   </div>
                   <div style={{ borderRight: `1.5px solid ${T.border}` }} />
                   <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: T.purple }}>{profile.total_leaves ?? 16}</div>
-                    <div style={{ fontSize: 9, fontWeight: 800, color: T.muted, textTransform: "uppercase", letterSpacing: 0.5, marginTop: 2 }}>Leaves Left</div>  
+                    <div style={{ fontSize: 20, fontWeight: 700, color: T.purple }}>{profile.total_leaves ?? 16}</div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: 0.5, marginTop: 2 }}>Leaves Left</div>  
                   </div>
                 </div>
               </div>
@@ -3175,10 +3275,10 @@ function Dashboard({ employee, onSignOut, showToast }) {
                 {/* Soft backdrop radial shine */}
                 <div style={{ position: "absolute", top: "-50%", right: "-30%", width: 200, height: 200, borderRadius: "50%", background: "rgba(21,96,189,0.25)", filter: "blur(40px)" }} />
 
-                <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ fontSize: 18 }}>🔒</span> Security & Verification
                 </div>
-                <p style={{ fontSize: 12.5, lineHeight: 1.6, color: "rgba(255,255,255,0.75)", margin: 0, fontWeight: 800 }}>
+                <p style={{ fontSize: 12.5, lineHeight: 1.6, color: "rgba(255,255,255,0.75)", margin: 0, fontWeight: 700 }}>
                   Please ensure your Aadhar Card and PAN Card details match your official documents. Updates will be locked for verification once saved.
                 </p>
               </div>
@@ -3188,15 +3288,15 @@ function Dashboard({ employee, onSignOut, showToast }) {
             <div className="premium-card" style={{ padding: 36, display: "flex", flexDirection: "column", gap: 30 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1.5px solid ${T.border}`, paddingBottom: 20 }}> 
                 <div>
-                  <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: T.ink, letterSpacing: "-0.5px" }}>Personal & Official Profile</h3>
-                  <p style={{ margin: "4px 0 0", fontSize: 12, color: T.muted, fontWeight: 800 }}>Update your official details and identity cards</p>
+                  <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: T.ink, letterSpacing: "-0.5px" }}>Personal & Official Profile</h3>
+                  <p style={{ margin: "4px 0 0", fontSize: 12, color: T.muted, fontWeight: 700 }}>Update your official details and identity cards</p>
                 </div>
                 <button
                   onClick={handleSaveProfile}
                   disabled={savingProfile}
                   style={{
                     padding: "12px 28px", borderRadius: 14, border: "none", background: T.accent,
-                    color: "white", fontSize: 13.5, fontWeight: 800, cursor: "pointer",
+                    color: "white", fontSize: 13.5, fontWeight: 700, cursor: "pointer",
                     boxShadow: `0 8px 24px ${T.accent}35`, display: "flex", alignItems: "center", gap: 8,
                     transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
                   }}
@@ -3251,7 +3351,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
               </div>
 
               <div style={{ borderTop: `1.5px solid ${T.border}`, paddingTop: 28 }}>
-                <h4 style={{ margin: "0 0 20px", fontSize: 15, fontWeight: 800, color: T.ink, display: "flex", alignItems: "center", gap: 8 }}>
+                <h4 style={{ margin: "0 0 20px", fontSize: 15, fontWeight: 700, color: T.ink, display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 18 }}>🆔</span> Official Identity Verification
                 </h4>
 
@@ -3312,17 +3412,17 @@ function Dashboard({ employee, onSignOut, showToast }) {
         {activeTab === "messages" && (
           <div className="chat-grid" style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: 20, height: "75vh" }}>
             <div className="chat-sidebar" style={{ background: "white", borderRadius: 20, border: `1px solid ${T.border}`, padding: 10, display: "flex", flexDirection: "column", gap: 4 }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: T.muted, textTransform: "uppercase", padding: "10px 12px" }}>Direct Message</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", padding: "10px 12px" }}>Direct Message</div>
               <button onClick={() => setActiveChat({ type: 'admin', id: 'admin', name: 'Admin Chat' })} style={{
                 padding: "12px 16px", borderRadius: 12, border: "none", cursor: "pointer", textAlign: "left",
                 background: activeChat.type === 'admin' ? T.surface : "none", color: activeChat.type === 'admin' ? T.accent : T.ink,
-                fontWeight: 800, fontSize: 13, display: "flex", alignItems: "center", gap: 10
+                fontWeight: 700, fontSize: 13, display: "flex", alignItems: "center", gap: 10
               }}>
                 <Icon d={icons.user} size={16} />
                 Admin Chat
               </button>
 
-              <div style={{ fontSize: 11, fontWeight: 800, color: T.muted, textTransform: "uppercase", padding: "10px 12px", marginTop: 10 }}>Team Channels</div>  
+              <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", padding: "10px 12px", marginTop: 10 }}>Team Channels</div>  
               {groups.length === 0 && <div style={{ fontSize: 12, color: T.faint, padding: "0 12px" }}>No groups yet</div>}
               {groups.map(g => {
                 const gId = `group_${g.id}`;
@@ -3331,12 +3431,12 @@ function Dashboard({ employee, onSignOut, showToast }) {
                   <button key={g.id} onClick={() => setActiveChat({ type: 'group', id: gId, name: g.name })} style={{
                     padding: "12px 16px", borderRadius: 12, border: "none", cursor: "pointer", textAlign: "left",
                     background: activeChat.id === gId ? T.surface : "none", color: activeChat.id === gId ? T.accent : T.ink,
-                    fontWeight: 800, fontSize: 13, display: "flex", alignItems: "center", gap: 10, position: "relative"
+                    fontWeight: 700, fontSize: 13, display: "flex", alignItems: "center", gap: 10, position: "relative"
                   }}>
                     <Icon d={icons.tasks} size={16} />
                     {g.name}
                     {unread > 0 && (
-                      <span style={{ position: "absolute", top: 12, right: 12, background: T.red, color: "white", fontSize: 10, padding: "2px 6px", borderRadius: 10, border: "2px solid white", fontWeight: 800 }}>{unread}</span>
+                      <span style={{ position: "absolute", top: 12, right: 12, background: T.red, color: "white", fontSize: 10, padding: "2px 6px", borderRadius: 10, border: "2px solid white", fontWeight: 700 }}>{unread}</span>
                     )}
                   </button>
                 );
@@ -3358,7 +3458,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
           <div className="premium-card" style={{ padding: "32px 36px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28, borderBottom: `2px solid ${T.gold}`, paddingBottom: 16 }}>
               <div>
-                <h2 className="h-font" style={{ margin: 0, fontSize: 22, fontWeight: 800, color: T.ink }}>Holidays List</h2>
+                <h2 className="h-font" style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.ink }}>Holidays List</h2>
                 <div style={{ fontSize: 13, color: T.muted, marginTop: 4 }}>Official calendar holidays declared by your company</div>
               </div>
               <div style={{ fontSize: 32 }}>📅</div>
@@ -3367,7 +3467,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
             {holidays.length === 0 ? (
               <div style={{ textAlign: "center", padding: "60px 0", color: T.muted }}>
                 <div style={{ fontSize: 48, marginBottom: 16 }}>?</div>
-                <div className="h-font" style={{ fontWeight: 800, fontSize: 18 }}>No holidays declared yet</div>
+                <div className="h-font" style={{ fontWeight: 700, fontSize: 18 }}>No holidays declared yet</div>
                 <div style={{ fontSize: 14, marginTop: 4 }}>Enjoy your workspace and check back later!</div>
               </div>
             ) : (
@@ -3388,21 +3488,21 @@ function Dashboard({ employee, onSignOut, showToast }) {
                       <div style={{
                         display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                         minWidth: 70, height: 70, borderRadius: 16, background: isUpcoming ? T.accent : "rgba(0,0,0,0.05)",
-                        color: isUpcoming ? "white" : T.muted, textAlign: "center", fontWeight: 800
+                        color: isUpcoming ? "white" : T.muted, textAlign: "center", fontWeight: 700
                       }}>
                         <div style={{ fontSize: 12, textTransform: "uppercase", opacity: 0.8 }}>
                           {hDate.toLocaleDateString("en-IN", { month: "short" })}
                         </div>
-                        <div style={{ fontSize: 24, fontWeight: 800, marginTop: 2 }}>
+                        <div style={{ fontSize: 24, fontWeight: 700, marginTop: 2 }}>
                           {hDate.getDate()}
                         </div>
                       </div>
                       
                       <div style={{ flex: 1 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <h4 className="h-font" style={{ margin: 0, fontSize: 16, fontWeight: 800, color: T.ink }}>{h.name}</h4>
+                          <h4 className="h-font" style={{ margin: 0, fontSize: 16, fontWeight: 700, color: T.ink }}>{h.name}</h4>
                           {isUpcoming && (
-                            <span style={{ fontSize: 10, background: T.greenBg, color: T.green, padding: "2px 8px", borderRadius: 10, fontWeight: 800, textTransform: "uppercase" }}>Upcoming</span>
+                            <span style={{ fontSize: 10, background: T.greenBg, color: T.green, padding: "2px 8px", borderRadius: 10, fontWeight: 700, textTransform: "uppercase" }}>Upcoming</span>
                           )}
                         </div>
                         <p style={{ margin: "6px 0 0 0", fontSize: 13, color: T.muted, lineHeight: 1.5 }}>
@@ -3410,7 +3510,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
                         </p>
                       </div>
 
-                      <div style={{ fontSize: 12, color: T.muted, fontWeight: 800 }}>
+                      <div style={{ fontSize: 12, color: T.muted, fontWeight: 700 }}>
                         {hDate.toLocaleDateString("en-IN", { weekday: "long" })}
                       </div>
                     </div>
@@ -3431,7 +3531,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <Avatar name={employee.name} src={profile.photo} size={44} />
             <div>
-              <div style={{ fontWeight: 800, fontSize: 15, color: T.ink }}>{employee.name}</div>
+              <div style={{ fontWeight: 700, fontSize: 15, color: T.ink }}>{employee.name}</div>
               <div style={{ fontSize: 12, color: T.muted }}>{employee.role}  {employee.dept}</div>
             </div>
           </div>
@@ -3443,7 +3543,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
             ].map(f => (
               <div key={f.label} style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 11, color: T.muted, marginBottom: 2, letterSpacing: 0.4 }}>{f.label.toUpperCase()}</div>
-                <div style={{ fontWeight: 800, fontSize: 13, color: T.ink }}>{f.value}</div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: T.ink }}>{f.value}</div>
               </div>
             ))}
           </div>
@@ -3512,8 +3612,8 @@ function AssignTaskModal({ employee, onClose, onAssigned }) {
                 <Icon d={icons.tasks} size={22} color="white" />
               </div>
               <div>
-                <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.5 }}>Assign Task</div>
-                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 800 }}>{employee.name}  {employee.id}</div>
+                <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: -0.5 }}>Assign Task</div>
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 700 }}>{employee.name}  {employee.id}</div>
               </div>
             </div>
           </div>
@@ -3523,28 +3623,28 @@ function AssignTaskModal({ employee, onClose, onAssigned }) {
 
         <div style={{ padding: "32px" }}>
           <div style={{ marginBottom: 20 }}>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: T.ink2, marginBottom: 8, marginLeft: 2 }}>Task Title</label>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: T.ink2, marginBottom: 8, marginLeft: 2 }}>Task Title</label>
             <input className="premium-inp"
               placeholder="e.g., Finalize Monthly Report"
               value={title}
               onChange={e => setTitle(e.target.value)}
               style={{
                 width: "100%", padding: "14px 18px", borderRadius: 14, border: `1.5px solid ${T.border}`,
-                background: T.surface, fontSize: 14, fontWeight: 800, outline: "none", transition: "all 0.2s",
+                background: T.surface, fontSize: 14, fontWeight: 700, outline: "none", transition: "all 0.2s",
                 boxSizing: "border-box"
               }}
             />
           </div>
 
           <div style={{ marginBottom: 32 }}>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: T.ink2, marginBottom: 8, marginLeft: 2 }}>Task Details</label>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: T.ink2, marginBottom: 8, marginLeft: 2 }}>Task Details</label>
             <textarea className="premium-area"
               placeholder="Provide clear instructions for the employee..."
               value={desc}
               onChange={e => setDesc(e.target.value)}
               style={{
                 width: "100%", padding: "14px 18px", borderRadius: 14, border: `1.5px solid ${T.border}`,
-                background: T.surface, fontSize: 14, fontWeight: 800, outline: "none", transition: "all 0.2s",
+                background: T.surface, fontSize: 14, fontWeight: 700, outline: "none", transition: "all 0.2s",
                 minHeight: 120, resize: "none", lineHeight: 1.6, boxSizing: "border-box"
               }}
             />
@@ -3553,13 +3653,13 @@ function AssignTaskModal({ employee, onClose, onAssigned }) {
           <div style={{ display: "flex", gap: 14 }}>
             <button onClick={onClose} style={{
               flex: 1, padding: "14px", borderRadius: 14, border: `1.5px solid ${T.border}`,
-              background: "white", color: T.ink2, fontWeight: 800, cursor: "pointer",
+              background: "white", color: T.ink2, fontWeight: 700, cursor: "pointer",
               transition: "all 0.2s", fontSize: 15
             }} className="p-btn-sec">Cancel</button>
             <button onClick={submit} disabled={loading} style={{
               flex: 1, padding: "14px", borderRadius: 14, border: "none",
               background: loading ? T.faint : T.accent,
-              color: "white", fontWeight: 800, cursor: "pointer",
+              color: "white", fontWeight: 700, cursor: "pointer",
               transition: "all 0.2s", fontSize: 15,
               boxShadow: `0 8px 20px ${T.accent}30`
             }} className="p-btn-pri">
@@ -3701,7 +3801,7 @@ function ChatPanel({ currentUser, targetUser, onBack, groupId = null, subStatus 
         {onBack && <button onClick={onBack} style={{ background: "none", border: "none", color: "white", cursor: "pointer", display: "flex", alignItems: "center" }}><Icon d={icons.chevronLeft} size={18} /></button>}
         {targetUser && <Avatar name={targetUser.name} size={32} />}
         <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 800, fontSize: 14 }}>{targetUser ? targetUser.name : (groupName || groupId?.replace('group_', 'Team: ') || 'Group Chat')}</div>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>{targetUser ? targetUser.name : (groupName || groupId?.replace('group_', 'Team: ') || 'Group Chat')}</div>
           <div style={{ fontSize: 10, color: T.faint }}>{subStatus || (targetUser ? (targetUser.id === "admin" ? "System Administrator" : "Employee") : "Group Conversation")}</div>
         </div>
       </div>
@@ -3728,7 +3828,7 @@ function ChatPanel({ currentUser, targetUser, onBack, groupId = null, subStatus 
             }}>
               {groupId && !isMe && (
                 <div
-                  style={{ fontSize: 10, fontWeight: 800, color: T.accent, marginBottom: 3, cursor: onUserClick ? "pointer" : "default" }}
+                  style={{ fontSize: 10, fontWeight: 700, color: T.accent, marginBottom: 3, cursor: onUserClick ? "pointer" : "default" }}
                   onClick={() => onUserClick && onUserClick(m.sender_id, m.sender_username)}
                 >
                   {m.sender_username || m.sender_id}
@@ -3761,7 +3861,7 @@ function ChatPanel({ currentUser, targetUser, onBack, groupId = null, subStatus 
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: T.surface, padding: "6px 12px", borderRadius: 8, fontSize: 12 }}>
             <Icon d={icons.camera} size={14} color={T.accent} />
             <span style={{ flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{file.name}</span>
-            <button onClick={() => setFile(null)} style={{ background: "none", border: "none", color: T.red, cursor: "pointer", fontWeight: 800 }}></button>      
+            <button onClick={() => setFile(null)} style={{ background: "none", border: "none", color: T.red, cursor: "pointer", fontWeight: 700 }}></button>      
           </div>
         )}
         <div style={{ display: "flex", gap: 10 }}>
@@ -4229,9 +4329,9 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
 
   // Pre-process records to include live data
   const processedRecords = records.map(r => {
-    // 1. Check Heartbeat Staleness (If last_active is older than 5 minutes, they are offline)
+    // 1. Check Heartbeat Staleness (If last_active is older than 1 hour, they are offline)
     const lastActive = r.last_active ? new Date(r.last_active).getTime() : 0;
-    const isHeartbeatStale = (now - lastActive) > 300000; // 300,000 ms threshold (10 heartbeats)
+    const isHeartbeatStale = (now - lastActive) > 3600000; // 1 hour threshold (previously 5m)
 
     const hasWfh = leaveRequests.some(l => {
       if (l.status !== "Approved" || l.leave_type !== "Work From Home") return false;
@@ -4629,7 +4729,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
   };
 
   const colStyle = {
-    padding: "11px 14px", textAlign: "left", fontSize: 11, fontWeight: 800,
+    padding: "11px 14px", textAlign: "left", fontSize: 11, fontWeight: 700,
     color: T.muted, letterSpacing: 0.5, borderBottom: `2px solid ${T.gold}`, textTransform: "uppercase", whiteSpace: "nowrap"
   };
   const cellStyle = { padding: "11px 14px", fontSize: 13, color: T.ink, borderBottom: `2px solid ${T.gold}` };
@@ -4642,12 +4742,12 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
       background: "#ffffff",
       position: "relative",
       overflow: "hidden",
-      fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em',
+      fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em',
       color: T.ink,
     }}>
       <style>{`
         body { margin: 0; padding: 0; }
-        .h-font { font-family: 'Times New Roman', Times, serif; }
+        .h-font { font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; }
 
         @keyframes gradientFlow {
           0% { background-position: 0% 50%; }
@@ -4661,8 +4761,8 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
           border: 1px solid transparent;
           cursor: pointer;
           font-size: 14px;
-          font-weight: 800;
-          font-family: 'Times New Roman', Times, serif;
+          font-weight: 700;
+          font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
           transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
           background: transparent;
           color: ${T.muted};
@@ -4697,7 +4797,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
           background: rgba(255, 255, 255, 0.6);
           backdrop-filter: blur(10px);
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          font-family: 'Times New Roman', Times, serif;
+          font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
         }
 
         .adm-inp:focus {
@@ -4753,8 +4853,8 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
           <a href="https://brollysolutions.in" style={{
             textDecoration: "none", display: "flex", alignItems: "center", gap: 8,
             padding: "8px 16px", borderRadius: 14, background: "rgba(255,255,255,0.08)",
-            color: "white", fontWeight: 800, fontSize: 13, border: "1px solid rgba(255,255,255,0.15)",
-            transition: "all 0.2s", marginRight: 12, fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em'
+            color: "white", fontWeight: 700, fontSize: 13, border: "1px solid rgba(255,255,255,0.15)",
+            transition: "all 0.2s", marginRight: 12, fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em'
           }} onMouseOver={e => { e.currentTarget.style.background = "rgba(255,255,255,0.15)"; }}
             onMouseOut={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; }}>
             <Icon d={icons.chevronLeft} size={14} color="white" />
@@ -4768,15 +4868,15 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
             <img src={logo} alt="Brolly Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </div>
           <div>
-            <div className="h-font" style={{ fontWeight: 800, fontSize: 18, color: "white", letterSpacing: "-0.3px", textShadow: "0.5px 0 0 currentColor" }}>Brolly
+            <div className="h-font" style={{ fontWeight: 700, fontSize: 18, color: "white", letterSpacing: "-0.3px", textShadow: "0.5px 0 0 currentColor" }}>Brolly
 Software Solutions</div>
-            <div style={{ fontSize: 10, color: T.faint, letterSpacing: 1, fontWeight: 800 }}>ADMIN PORTAL</div>
+            <div style={{ fontSize: 10, color: T.faint, letterSpacing: 1, fontWeight: 700 }}>ADMIN PORTAL</div>
           </div>
         </div>
 
         <div className="adm-topbar-actions" style={{ display: "flex", alignItems: "center", gap: 16 }}>
           {lastSync && (
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontWeight: 800, background: "rgba(255,255,255,0.05)", padding: "6px 14px", borderRadius: 12, fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em' }}>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontWeight: 700, background: "rgba(255,255,255,0.05)", padding: "6px 14px", borderRadius: 12, fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em' }}>
               SYNC: {lastSync.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
             </div>
           )}
@@ -4784,8 +4884,8 @@ Software Solutions</div>
             style={{
               display: "flex", alignItems: "center", gap: 10, padding: "10px 20px",
               borderRadius: 14, border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.08)",
-              color: "white", cursor: "pointer", fontSize: 13, fontWeight: 800,
-              transition: "all 0.25s", fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em'
+              color: "white", cursor: "pointer", fontSize: 13, fontWeight: 700,
+              transition: "all 0.25s", fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em'
             }} onMouseOver={e => e.currentTarget.style.background = "rgba(255,255,255,0.15)"} onMouseOut={e => e.currentTarget.style.background = "rgba(255,255,255,0.08)"}>
             <Icon d={icons.refresh} size={16} color="white" />
             <span className="adm-btn-text">Refresh</span>
@@ -4794,8 +4894,8 @@ Software Solutions</div>
             style={{
               display: "flex", alignItems: "center", gap: 10, padding: "10px 20px",
               borderRadius: 14, border: "none", background: T.accent,
-              color: "white", cursor: "pointer", fontSize: 13, fontWeight: 800,
-              transition: "all 0.2s", boxShadow: `0 8px 20px ${T.accent}40`, fontFamily: "'Times New Roman', Times, serif", letterSpacing: '0.01em'
+              color: "white", cursor: "pointer", fontSize: 13, fontWeight: 700,
+              transition: "all 0.2s", boxShadow: `0 8px 20px ${T.accent}40`, fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em'
             }} onMouseOver={e => e.currentTarget.style.transform = "translateY(-2px)"} onMouseOut={e => e.currentTarget.style.transform = "none"}>
             <Icon d={icons.save} size={16} color="white" />
             <span className="adm-btn-text">Export</span>
@@ -4811,7 +4911,7 @@ Software Solutions</div>
             {(Object.values(unreadMap).reduce((a, b) => a + b, 0) + Object.values(groupUnreadMapAdmin).reduce((a, b) => a + b, 0)) > 0 && (
               <span style={{
                 position: "absolute", top: -8, right: -8, width: 22, height: 22, borderRadius: "50%",
-                background: T.red, color: "white", fontSize: 10, fontWeight: 800,
+                background: T.red, color: "white", fontSize: 10, fontWeight: 700,
                 display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #0b1f35",
                 animation: "pulse 2s infinite"
               }}>
@@ -4824,7 +4924,7 @@ Software Solutions</div>
             style={{
               display: "flex", alignItems: "center", gap: 8, padding: "8px 16px",
               borderRadius: 12, border: "1.5px solid rgba(255,255,255,0.15)", background: "none",
-              color: "white", cursor: "pointer", fontSize: 13, fontWeight: 800,
+              color: "white", cursor: "pointer", fontSize: 13, fontWeight: 700,
               transition: "all 0.25s"
             }} onMouseOver={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"} onMouseOut={e => e.currentTarget.style.background = "none"}>
             <Icon d={icons.logout} size={14} color="white" />
@@ -4853,8 +4953,8 @@ Software Solutions</div>
               <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                 <Avatar name={selectedRecord.name || selectedRecord.employeename} size={44} />
                 <div>
-                  <div style={{ fontSize: 13, color: T.faint, fontWeight: 800, letterSpacing: 0.5 }}>{selectedRecord.id || selectedRecord.employeeid}</div>        
-                  <div style={{ fontSize: 18, fontWeight: 800 }}>{selectedRecord.name || selectedRecord.employeename}</div>
+                  <div style={{ fontSize: 13, color: T.faint, fontWeight: 700, letterSpacing: 0.5 }}>{selectedRecord.id || selectedRecord.employeeid}</div>        
+                  <div style={{ fontSize: 18, fontWeight: 700 }}>{selectedRecord.name || selectedRecord.employeename}</div>
                 </div>
               </div>
               <button onClick={() => setSelectedRecord(null)} style={{ background: "none", border: "none", color: "white", cursor: "pointer", opacity: 0.7 }}>
@@ -4863,22 +4963,22 @@ Software Solutions</div>
             </div>
 
             <div style={{ padding: 30 }}>
-              <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
                 <Icon d={icons.calendar} size={16} color={T.accent} />
                 Activity for {selectedRecord.date}
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24, background: T.surface, padding: 18, borderRadius: 14 }}>   
                 <div style={{ borderRight: `1px solid ${T.border}` }}>
-                  <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, marginBottom: 4, textTransform: "uppercase" }}>Work Session</div>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: T.ink }}>{selectedRecord.logint || selectedRecord.intime || ""} → {selectedRecord.logoutt || selectedRecord.outtime || ""}</div>
+                  <div style={{ fontSize: 10, color: T.muted, fontWeight: 700, marginBottom: 4, textTransform: "uppercase" }}>Work Session</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{selectedRecord.logint || selectedRecord.intime || ""} → {selectedRecord.logoutt || selectedRecord.outtime || ""}</div>
                 </div>
                 <div style={{ paddingLeft: 10 }}>
-                  <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, marginBottom: 4, textTransform: "uppercase" }}>Hours (Work / Break)</div>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: T.ink }}>{selectedRecord.live_hours || ""} / {selectedRecord.live_break_time || ""}</div>  
+                  <div style={{ fontSize: 10, color: T.muted, fontWeight: 700, marginBottom: 4, textTransform: "uppercase" }}>Hours (Work / Break)</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{selectedRecord.live_hours || ""} / {selectedRecord.live_break_time || ""}</div>  
                   {selectedRecord.break_logs_parsed && selectedRecord.break_logs_parsed.length > 0 && (
                     <div style={{ marginTop: 8, fontSize: 11, color: T.muted }}>
-                      <div style={{ fontWeight: 800, marginBottom: 2 }}>Break Logs:</div>
+                      <div style={{ fontWeight: 700, marginBottom: 2 }}>Break Logs:</div>
                       {selectedRecord.break_logs_parsed.map((log, lIdx) => (
                         <div key={lIdx}> {log.in} - {log.out} ({log.duration})</div>
                       ))}
@@ -4886,7 +4986,7 @@ Software Solutions</div>
                   )}
                   {selectedRecord.offline_logs_parsed && selectedRecord.offline_logs_parsed.length > 0 && (
                     <div style={{ marginTop: 12, fontSize: 11, color: T.red }}>
-                      <div style={{ fontWeight: 800, marginBottom: 2 }}>Offline Gaps:</div>
+                      <div style={{ fontWeight: 700, marginBottom: 2 }}>Offline Gaps:</div>
                       {selectedRecord.offline_logs_parsed.map((log, lIdx) => (
                         <div key={lIdx}> {log.start} - {log.end} ({log.duration})</div>
                       ))}
@@ -4900,7 +5000,7 @@ Software Solutions</div>
                   <div style={{ width: 28, height: 28, borderRadius: 8, background: T.purpleBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <Icon d={icons.tasks} size={15} color={T.purple} />
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>Task Report</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>Task Report</div>
                   <div style={{ marginLeft: "auto" }}><Badge status={selectedRecord.live_status || selectedRecord.status} /></div>
                 </div>
                 <div style={{
@@ -4927,11 +5027,11 @@ Software Solutions</div>
                   {taskFeed.filter(t => (t.employee_id === (selectedRecord.id || selectedRecord.employeeid)) && fmtDate(new Date(t.assigned_at)) === selectedRecord.date).map(t => (
                     <div key={t.id} style={{ padding: 14, background: "white", borderRadius: 12, border: `1px solid ${T.border}` }}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                        <span style={{ fontWeight: 800, color: T.ink }}>{t.title}</span>
+                        <span style={{ fontWeight: 700, color: T.ink }}>{t.title}</span>
                         <Badge status={t.status} />
                       </div>
                       <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.4 }}>{t.description}</div>
-                      {t.completed_at && <div style={{ marginTop: 6, fontSize: 10, color: T.green, fontWeight: 800 }}>? Done at {new Date(t.completed_at).toLocaleTimeString()}</div>}
+                      {t.completed_at && <div style={{ marginTop: 6, fontSize: 10, color: T.green, fontWeight: 700 }}>? Done at {new Date(t.completed_at).toLocaleTimeString()}</div>}
                     </div>
                   ))}
                   {taskFeed.filter(t => (t.employee_id === (selectedRecord.id || selectedRecord.employeeid)) && fmtDate(new Date(t.assigned_at)) === selectedRecord.date).length === 0 && (
@@ -4945,7 +5045,7 @@ Software Solutions</div>
             <div style={{ padding: "0 30px 30px", display: "flex", gap: 12 }}>
               <button onClick={() => setSelectedRecord(null)} style={{
                 flex: 1, padding: 14, borderRadius: 12, border: `1.5px solid ${T.border}`,
-                background: "white", color: T.ink, fontWeight: 800, cursor: "pointer"
+                background: "white", color: T.ink, fontWeight: 700, cursor: "pointer"
               }}>
                 Close
               </button>
@@ -4955,7 +5055,7 @@ Software Solutions</div>
                 alert("Report copied to clipboard!");
               }} style={{
                 flex: 1, padding: 14, borderRadius: 12, border: "none",
-                background: T.accent, color: "white", fontWeight: 800, cursor: "pointer",
+                background: T.accent, color: "white", fontWeight: 700, cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8
               }}>
                 <Icon d={icons.save} size={15} color="white" />
@@ -4992,8 +5092,8 @@ Software Solutions</div>
                 <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                   <Avatar name={emp.name} src={photoUrl} size={50} />
                   <div>
-                    <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.3px" }}>{emp.name}</div>
-                    <div style={{ fontSize: 12, color: T.faint, fontWeight: 800 }}>{emp.id}  <span style={{ color: T.accent2 }}>{emp.role}</span></div>
+                    <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.3px" }}>{emp.name}</div>
+                    <div style={{ fontSize: 12, color: T.faint, fontWeight: 700 }}>{emp.id}  <span style={{ color: T.accent2 }}>{emp.role}</span></div>
                   </div>
                 </div>
                 <button onClick={() => setSelectedEmployeeProfile(null)} style={{ background: "none", border: "none", color: "white", cursor: "pointer", opacity: 0.8, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -5023,8 +5123,8 @@ Software Solutions</div>
                         }} />
                       </div>
                       <div>
-                        <div style={{ fontWeight: 800, fontSize: 15, color: T.ink }}>Profile Photo</div>
-                        <div style={{ fontSize: 11, color: T.muted, fontWeight: 800, marginTop: 2 }}>Upload a clear passport-size photo of the employee.</div>     
+                        <div style={{ fontWeight: 700, fontSize: 15, color: T.ink }}>Profile Photo</div>
+                        <div style={{ fontSize: 11, color: T.muted, fontWeight: 700, marginTop: 2 }}>Upload a clear passport-size photo of the employee.</div>     
                       </div>
                     </div>
 
@@ -5068,7 +5168,7 @@ Software Solutions</div>
                     </div>
 
                     <div style={{ borderTop: `1.5px solid ${T.border}`, paddingTop: 20 }}>
-                      <div style={{ fontWeight: 800, fontSize: 14, color: T.ink, marginBottom: 16 }}>Identity Verification Documents</div>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: T.ink, marginBottom: 16 }}>Identity Verification Documents</div>
 
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
                         {/* Aadhar */}
@@ -5125,37 +5225,37 @@ Software Solutions</div>
                     
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 18 }}>
                       <div style={{ background: T.surface, padding: "16px 20px", borderRadius: 16, border: `1.5px solid ${T.border}`, textAlign: "center" }}>
-                        <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>📞 Contact</div>
-                        <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{prof?.contact || "—"}</div>
+                        <div style={{ fontSize: 10, color: T.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>📞 Contact</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{prof?.contact || "—"}</div>
                       </div>
                       <div style={{ background: T.surface, padding: "16px 20px", borderRadius: 16, border: `1.5px solid ${T.border}`, textAlign: "center" }}>
-                        <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>📅 Date of Birth</div>
-                        <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{prof?.dob || "—"}</div>
+                        <div style={{ fontSize: 10, color: T.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>📅 Date of Birth</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{prof?.dob || "—"}</div>
                       </div>
                       <div style={{ background: T.surface, padding: "16px 20px", borderRadius: 16, border: `1.5px solid ${T.border}`, textAlign: "center" }}>
-                        <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>📍 Location</div>
-                        <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{prof?.location || "—"}</div>
+                        <div style={{ fontSize: 10, color: T.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>📍 Location</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{prof?.location || "—"}</div>
                       </div>
                       <div style={{ background: T.surface, padding: "16px 20px", borderRadius: 16, border: `1.5px solid ${T.border}`, textAlign: "center" }}>
-                        <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>📅 Joining Date</div>
-                        <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{prof?.joining_date || "—"}</div>
+                        <div style={{ fontSize: 10, color: T.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>📅 Joining Date</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{prof?.joining_date || "—"}</div>
                       </div>
                     </div>
 
                     <div style={{ background: T.surface, padding: "20px 24px", borderRadius: 20, border: `1.5px solid ${T.border}`, display: "flex", justifyContent: "space-around", alignItems: "center" }}>
                       <div style={{ textAlign: "center" }}>
-                        <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Leaves Balance</div>
-                        <div style={{ fontSize: 20, fontWeight: 800, color: T.purple }}>{prof?.total_leaves ?? 16} Leaves</div>
+                        <div style={{ fontSize: 10, color: T.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Leaves Balance</div>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: T.purple }}>{prof?.total_leaves ?? 16} Leaves</div>
                       </div>
                       <div style={{ borderRight: `1.5px solid ${T.border}`, height: 40 }} />
                       <div style={{ textAlign: "center" }}>
-                        <div style={{ fontSize: 10, color: T.muted, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Role & Dept</div>
-                        <div style={{ fontSize: 15, fontWeight: 800, color: T.ink }}>{emp.role}  <span style={{ color: T.accent }}>{emp.dept}</span></div>        
+                        <div style={{ fontSize: 10, color: T.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Role & Dept</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: T.ink }}>{emp.role}  <span style={{ color: T.accent }}>{emp.dept}</span></div>        
                       </div>
                     </div>
 
                     <div style={{ borderTop: `1.5px solid ${T.border}`, paddingTop: 24 }}>
-                      <div style={{ fontWeight: 800, fontSize: 15, color: T.ink, marginBottom: 18, display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ fontWeight: 700, fontSize: 15, color: T.ink, marginBottom: 18, display: "flex", alignItems: "center", gap: 8 }}>
                         <span>??</span> Official Identity Verification
                       </div>
 
@@ -5163,9 +5263,9 @@ Software Solutions</div>
                         {/* Aadhar Card Details */}
                         <div style={{ border: `1.5px solid ${T.border}`, borderRadius: 20, padding: 20, display: "flex", flexDirection: "column", gap: 14, background: "white" }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <span style={{ fontSize: 11, fontWeight: 800, color: T.muted, letterSpacing: 0.5 }}>AADHAR CARD</span>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: T.muted, letterSpacing: 0.5 }}>AADHAR CARD</span>
                             <span style={{
-                              fontSize: 10, fontWeight: 800, padding: "4px 10px", borderRadius: 8,
+                              fontSize: 10, fontWeight: 700, padding: "4px 10px", borderRadius: 8,
                               background: prof?.aadhar_card ? T.greenBg : T.redBg,
                               color: prof?.aadhar_card ? T.green : T.red,
                               textTransform: "uppercase"
@@ -5174,8 +5274,8 @@ Software Solutions</div>
                             </span>
                           </div>
                           <div>
-                            <div style={{ fontSize: 10, color: T.muted, marginBottom: 4, fontWeight: 800 }}>Aadhar Number</div>
-                            <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{prof?.aadhar_number || ""}</div>
+                            <div style={{ fontSize: 10, color: T.muted, marginBottom: 4, fontWeight: 700 }}>Aadhar Number</div>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{prof?.aadhar_number || ""}</div>
                           </div>
                           {prof?.aadhar_card && (
                             <div style={{ cursor: "pointer", border: `1.5px solid ${T.border}`, borderRadius: 12, overflow: "hidden", height: 110, transition: "all 0.25s" }} 
@@ -5190,9 +5290,9 @@ Software Solutions</div>
                         {/* PAN Card Details */}
                         <div style={{ border: `1.5px solid ${T.border}`, borderRadius: 20, padding: 20, display: "flex", flexDirection: "column", gap: 14, background: "white" }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <span style={{ fontSize: 11, fontWeight: 800, color: T.muted, letterSpacing: 0.5 }}>PAN CARD</span>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: T.muted, letterSpacing: 0.5 }}>PAN CARD</span>
                             <span style={{
-                              fontSize: 10, fontWeight: 800, padding: "4px 10px", borderRadius: 8,
+                              fontSize: 10, fontWeight: 700, padding: "4px 10px", borderRadius: 8,
                               background: prof?.pan_card ? T.greenBg : T.redBg,
                               color: prof?.pan_card ? T.green : T.red,
                               textTransform: "uppercase"
@@ -5201,8 +5301,8 @@ Software Solutions</div>
                             </span>
                           </div>
                           <div>
-                            <div style={{ fontSize: 10, color: T.muted, marginBottom: 4, fontWeight: 800 }}>PAN Number</div>
-                            <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{prof?.pan_number || ""}</div>
+                            <div style={{ fontSize: 10, color: T.muted, marginBottom: 4, fontWeight: 700 }}>PAN Number</div>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{prof?.pan_number || ""}</div>
                           </div>
                           {prof?.pan_card && (
                             <div style={{ cursor: "pointer", border: `1.5px solid ${T.border}`, borderRadius: 12, overflow: "hidden", height: 110, transition: "all 0.25s" }} 
@@ -5228,7 +5328,7 @@ Software Solutions</div>
                       onClick={() => setEditingAdminProfile(false)} 
                       style={{
                         flex: 1, padding: 14, borderRadius: 14, border: `1.5px solid ${T.border}`,
-                        background: "white", color: T.ink, fontWeight: 800, cursor: "pointer",
+                        background: "white", color: T.ink, fontWeight: 700, cursor: "pointer",
                         transition: "all 0.2s"
                       }}
                       onMouseOver={e => e.currentTarget.style.background = T.surface}
@@ -5241,7 +5341,7 @@ Software Solutions</div>
                       disabled={savingAdminProfile}
                       style={{
                         flex: 1, padding: 14, borderRadius: 14, border: "none",
-                        background: T.accent, color: "white", fontWeight: 800, cursor: "pointer",
+                        background: T.accent, color: "white", fontWeight: 700, cursor: "pointer",
                         boxShadow: `0 6px 20px ${T.accent}30`, transition: "all 0.2s"
                       }}
                       onMouseOver={e => e.currentTarget.style.transform = "translateY(-1px)"}
@@ -5256,7 +5356,7 @@ Software Solutions</div>
                       onClick={() => setSelectedEmployeeProfile(null)} 
                       style={{
                         flex: 1, padding: 14, borderRadius: 14, border: `1.5px solid ${T.border}`,
-                        background: "white", color: T.ink, fontWeight: 800, cursor: "pointer",
+                        background: "white", color: T.ink, fontWeight: 700, cursor: "pointer",
                         transition: "all 0.2s"
                       }}
                       onMouseOver={e => e.currentTarget.style.background = T.surface}
@@ -5268,7 +5368,7 @@ Software Solutions</div>
                       onClick={() => setEditingAdminProfile(true)} 
                       style={{
                         flex: 1, padding: 14, borderRadius: 14, border: "none",
-                        background: T.purple, color: "white", fontWeight: 800, cursor: "pointer",
+                        background: T.purple, color: "white", fontWeight: 700, cursor: "pointer",
                         display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                         boxShadow: `0 6px 20px ${T.purple}30`, transition: "all 0.2s"
                       }}
@@ -5351,7 +5451,7 @@ Software Solutions</div>
               onClick={() => setTab(t.k)} style={{ position: "relative" }}>
               {t.label}
               {t.badge > 0 && (
-                <span style={{ position: "absolute", top: -6, right: -6, background: T.red, color: "white", fontSize: 10, padding: "2px 6px", borderRadius: 10, border: "2px solid white", fontWeight: 800 }}>{t.badge}</span>
+                <span style={{ position: "absolute", top: -6, right: -6, background: T.red, color: "white", fontSize: 10, padding: "2px 6px", borderRadius: 10, border: "2px solid white", fontWeight: 700 }}>{t.badge}</span>
               )}
             </button>
           ))}
@@ -5369,9 +5469,9 @@ Software Solutions</div>
           </div>
           {activeTab === "weekly" ? (
             <>
-              <div style={{ fontSize: 12, fontWeight: 800, color: T.muted }}>From:</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: T.muted }}>From:</div>
               <input className="adm-inp" type="date" value={weeklyFrom} onChange={e => setWeeklyFrom(e.target.value)} style={{ minWidth: 140 }} />
-              <div style={{ fontSize: 12, fontWeight: 800, color: T.muted }}>To:</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: T.muted }}>To:</div>
               <input className="adm-inp" type="date" value={weeklyTo} onChange={e => setWeeklyTo(e.target.value)} style={{ minWidth: 140 }} />
             </>
           ) : (
@@ -5416,7 +5516,7 @@ Software Solutions</div>
         {activeTab === "weekly" && (
           <div className="premium-card">
             <div style={{ padding: "18px 24px", borderBottom: `2px solid ${T.gold}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>    
-              <div style={{ fontWeight: 800, color: T.ink }}>Performance Summary Report</div>
+              <div style={{ fontWeight: 700, color: T.ink }}>Performance Summary Report</div>
               <div style={{ fontSize: 11, color: T.muted, background: T.surface, padding: "4px 10px", borderRadius: 8 }}>Range: {fmtDate(new Date(weeklyFrom))}  {fmtDate(new Date(weeklyTo))}</div>
             </div>
             <div style={{ overflowX: "auto" }}>
@@ -5424,7 +5524,7 @@ Software Solutions</div>
                 <thead>
                   <tr style={{ background: T.surface }}>
                     {["Employee", "Dept", "Days Present", "Total Work", "Total Break", "Avg Hours/Day", "Activity Log", "Actions"].map(h => (
-                      <th key={h} style={{ padding: "14px 24px", textAlign: "left", fontSize: 10, fontWeight: 800, color: T.muted, textTransform: "uppercase", letterSpacing: 0.6 }}>{h}</th>
+                      <th key={h} style={{ padding: "14px 24px", textAlign: "left", fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: 0.6 }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -5441,21 +5541,21 @@ Software Solutions</div>
                             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                               <Avatar name={r.name} size={32} />
                               <div>
-                                <div style={{ fontSize: 13, fontWeight: 800, color: T.ink }}>{r.name}</div>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{r.name}</div>
                                 <div style={{ fontSize: 11, color: T.muted }}>{r.id}</div>
                               </div>
                             </div>
                           </td>
                           <td style={{ padding: "16px 24px", fontSize: 13, color: T.ink2 }}>{r.dept}</td>
                           <td style={{ padding: "16px 24px" }}>
-                            <div style={{ fontSize: 13, fontWeight: 800, color: T.ink }}>{r.daysPresent} days</div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{r.daysPresent} days</div>
                           </td>
                           <td style={{ padding: "16px 24px" }}>
-                            <div style={{ fontSize: 13, fontWeight: 800, color: T.green }}>{r.totalWork}</div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: T.green }}>{r.totalWork}</div>
                           </td>
                           <td style={{ padding: "16px 24px", fontSize: 13, color: T.red }}>{r.totalBreak}</td>
                           <td style={{ padding: "16px 24px" }}>
-                            <div style={{ fontSize: 13, fontWeight: 800, color: T.accent }}>{r.avgWork}</div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: T.accent }}>{r.avgWork}</div>
                           </td>
                           <td style={{ padding: "16px 24px" }}>
                             <div style={{
@@ -5473,7 +5573,7 @@ Software Solutions</div>
                                 padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer",
                                 background: isExpanded ? T.accent : T.surface,
                                 color: isExpanded ? "white" : T.accent,
-                                fontWeight: 800, fontSize: 11, transition: "all 0.2s"
+                                fontWeight: 700, fontSize: 11, transition: "all 0.2s"
                               }}
                             >
                               {isExpanded ? "? Hide" : "? Daily"}
@@ -5486,7 +5586,7 @@ Software Solutions</div>
                           <tr key={r.id + "_detail"} style={{ borderBottom: `2px solid ${T.accent}30` }}>
                             <td colSpan="8" style={{ padding: "0 24px 20px 24px", background: `${T.accent}06` }}>
                               <div style={{ paddingTop: 14 }}>
-                                <div style={{ fontSize: 11, fontWeight: 800, color: T.accent, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: T.accent, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>
                                   📅 Day-wise Report for {r.name}
                                 </div>
                                 <div style={{ overflowX: "auto" }}>
@@ -5494,7 +5594,7 @@ Software Solutions</div>
                                     <thead>
                                       <tr style={{ background: `${T.accent}15` }}>
                                         {["Date", "Work Hours", "Break Time", "Status", "Tasks / Notes"].map(h => (
-                                          <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 10, fontWeight: 800, color: T.accent, textTransform: "uppercase", letterSpacing: 0.5 }}>{h}</th>
+                                          <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 10, fontWeight: 700, color: T.accent, textTransform: "uppercase", letterSpacing: 0.5 }}>{h}</th>
                                         ))}
                                       </tr>
                                     </thead>
@@ -5504,10 +5604,10 @@ Software Solutions</div>
                                       ) : (
                                         r.dailyBreakdown.map((day, i) => (
                                           <tr key={day.date} style={{ borderTop: `1px solid ${T.border}`, background: i % 2 === 0 ? "white" : T.surface }}>        
-                                            <td style={{ padding: "10px 16px", fontSize: 13, fontWeight: 800, color: T.ink }}>{day.date}</td>
-                                            <td style={{ padding: "10px 16px", fontSize: 13, fontWeight: 800, color: T.green }}>{formatHMS(day.work)}</td>
+                                            <td style={{ padding: "10px 16px", fontSize: 13, fontWeight: 700, color: T.ink }}>{day.date}</td>
+                                            <td style={{ padding: "10px 16px", fontSize: 13, fontWeight: 700, color: T.green }}>{formatHMS(day.work)}</td>
                                             <td style={{ padding: "10px 16px", fontSize: 13, color: T.red }}>
-                                              <div style={{ fontWeight: 800 }}>{formatHMS(day.brk)}</div>
+                                              <div style={{ fontWeight: 700 }}>{formatHMS(day.brk)}</div>
                                               {day.breakLogs && day.breakLogs.length > 0 && (
                                                 <div style={{ marginTop: 4, fontSize: 10, color: T.muted }}>
                                                   {day.breakLogs.map((log, lIdx) => (
@@ -5593,21 +5693,21 @@ Software Solutions</div>
                           onClick={() => setAssignTaskTo({ id: r.id || r.employeeid, name: r.name || r.employeename })}>
                           <Avatar name={r.name || r.employeename || "?"} src={profiles.find(p => String(p.employee_id).toLowerCase() === String(r.id || r.employeeid).toLowerCase())?.photo} size={32} />
                           <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                            <span style={{ fontWeight: 800, color: T.accent, fontSize: 13 }}>{r.name || r.employeename}</span>
-                            <span style={{ fontSize: 10, color: T.muted, fontWeight: 800 }}>Assign Task +</span>
+                            <span style={{ fontWeight: 700, color: T.accent, fontSize: 13 }}>{r.name || r.employeename}</span>
+                            <span style={{ fontSize: 10, color: T.muted, fontWeight: 700 }}>Assign Task +</span>
                           </div>
                         </div>
                       </td>
                       <td style={cellStyle}>{r.dept || r.department}</td>
-                      <td style={{ ...cellStyle, color: T.green, fontWeight: 800 }}>{r.logint || r.intime}</td>
-                      <td style={{ ...cellStyle, color: T.red, fontWeight: 800 }}>{r.logoutt || r.outtime}</td>
-                      <td style={{ ...cellStyle, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
+                      <td style={{ ...cellStyle, color: T.green, fontWeight: 700 }}>{r.logint || r.intime}</td>
+                      <td style={{ ...cellStyle, color: T.red, fontWeight: 700 }}>{r.logoutt || r.outtime}</td>
+                      <td style={{ ...cellStyle, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
                         {r.live_hours}
                       </td>
-                      <td style={{ ...cellStyle, color: T.amber, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
+                      <td style={{ ...cellStyle, color: T.amber, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
                         {r.live_break_time}
                       </td>
-                      <td style={{ ...cellStyle, fontWeight: 800, color: r.live_overtime && r.live_overtime !== "" ? T.amber : T.faint, fontVariantNumeric: "tabular-nums" }}>
+                      <td style={{ ...cellStyle, fontWeight: 700, color: r.live_overtime && r.live_overtime !== "" ? T.amber : T.faint, fontVariantNumeric: "tabular-nums" }}>
                         {r.live_overtime}
                       </td>
                       <td style={cellStyle}>
@@ -5628,7 +5728,7 @@ Software Solutions</div>
                           {taskFeed.filter(t => (t.employee_id === (r.id || r.employeeid)) &&
                             fmtDate(new Date(t.assigned_at)) === r.date).map(t => (
                               <div key={t.id} style={{ padding: "4px 8px", background: "white", borderRadius: 6, border: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <span style={{ fontWeight: 800, fontSize: 11, color: T.accent }}>{t.title}</span>
+                                <span style={{ fontWeight: 700, fontSize: 11, color: T.accent }}>{t.title}</span>
                                 <Badge status={t.status} />
                               </div>
                             ))}
@@ -5644,7 +5744,7 @@ Software Solutions</div>
                           onClick={() => setSelectedRecord(r)}
                           style={{
                             padding: "8px 12px", borderRadius: 10, border: `1.5px solid ${T.border}`,
-                            background: "white", color: T.ink2, fontSize: 12, fontWeight: 800,
+                            background: "white", color: T.ink2, fontSize: 12, fontWeight: 700,
                             cursor: "pointer", transition: "all 0.2s", display: "inline-flex", alignItems: "center", gap: 6
                           }}
                         >
@@ -5665,7 +5765,7 @@ Software Solutions</div>
           <div className="premium-card">
             <div style={{ padding: "24px 28px", borderBottom: `2px solid ${T.gold}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>    
               <div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>Individual Tasks Tracking</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: T.ink }}>Individual Tasks Tracking</div>
                 <div style={{ fontSize: 12, color: T.muted }}>Real-time activity from your team</div>
               </div>
             </div>
@@ -5683,11 +5783,11 @@ Software Solutions</div>
                       <td style={cellStyle}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <Avatar name={allEmployees.find(e => e.id === t.employee_id)?.name || "?"} src={profiles.find(p => String(p.employee_id).toLowerCase() === String(t.employee_id).toLowerCase())?.photo} size={28} />
-                          <div style={{ fontWeight: 800 }}>{allEmployees.find(e => e.id === t.employee_id)?.name || t.employee_id}</div>
+                          <div style={{ fontWeight: 700 }}>{allEmployees.find(e => e.id === t.employee_id)?.name || t.employee_id}</div>
                         </div>
                       </td>
                       <td style={cellStyle}>
-                        <div style={{ fontWeight: 800, color: T.ink }}>{t.title}</div>
+                        <div style={{ fontWeight: 700, color: T.ink }}>{t.title}</div>
                         <div style={{ fontSize: 11, color: T.muted, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis" }}>{t.description}</div>
                       </td>
                       <td style={cellStyle}><Badge status={t.status} /></td>
@@ -5695,11 +5795,11 @@ Software Solutions</div>
                         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                           <div style={{ fontSize: 10, display: "flex", gap: 6 }}>
                             <span style={{ color: T.muted }}>Viewed:</span>
-                            <span style={{ fontWeight: 800 }}>{t.viewed_at ? new Date(t.viewed_at).toLocaleTimeString() : ""}</span>
+                            <span style={{ fontWeight: 700 }}>{t.viewed_at ? new Date(t.viewed_at).toLocaleTimeString() : ""}</span>
                           </div>
                           <div style={{ fontSize: 10, display: "flex", gap: 6 }}>
                             <span style={{ color: T.muted }}>Done:</span>
-                            <span style={{ fontWeight: 800, color: T.green }}>{t.completed_at ? new Date(t.completed_at).toLocaleTimeString() : ""}</span>        
+                            <span style={{ fontWeight: 700, color: T.green }}>{t.completed_at ? new Date(t.completed_at).toLocaleTimeString() : ""}</span>        
                           </div>
                         </div>
                       </td>
@@ -5716,7 +5816,7 @@ Software Solutions</div>
           <div className="premium-card">
             <div style={{ padding: 24, borderBottom: `2px solid ${T.gold}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <div style={{ fontWeight: 800, fontSize: 18, color: T.ink }}>Employee Requests</div>
+                <div style={{ fontWeight: 700, fontSize: 18, color: T.ink }}>Employee Requests</div>
                 <div style={{ fontSize: 12, color: T.muted }}>Manage and approve employee requests (Leave & Work From Home)</div>
               </div>
             </div>
@@ -5739,13 +5839,13 @@ Software Solutions</div>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                             <Avatar name={l.employee_name} src={profiles.find(p => String(p.employee_id).toLowerCase() === String(l.employee_id).toLowerCase())?.photo} size={28} />
                             <div>
-                              <div style={{ fontWeight: 800 }}>{l.employee_name}</div>
+                              <div style={{ fontWeight: 700 }}>{l.employee_name}</div>
                               <div style={{ fontSize: 10, color: T.muted }}>
                                 {l.employee_id}
                                 {l.leave_type !== "Work From Home" && (
                                   <span> · <span style={{
                                     color: (profiles.find(p => String(p.employee_id).toLowerCase() === String(l.employee_id).toLowerCase())?.total_leaves <= 0) ? T.red : T.purple,
-                                    fontWeight: 800
+                                    fontWeight: 700
                                   }}>
                                     {profiles.find(p => String(p.employee_id).toLowerCase() === String(l.employee_id).toLowerCase())?.total_leaves ?? "—"} left
                                   </span></span>
@@ -5758,7 +5858,7 @@ Software Solutions</div>
                           <Badge status={l.leave_type === "Work From Home" ? "Work From Home" : "Leave"} />
                         </td>
                         <td style={cellStyle}>
-                          <div style={{ fontWeight: 800 }}>{l.start_date}</div>
+                          <div style={{ fontWeight: 700 }}>{l.start_date}</div>
                           <div style={{ fontSize: 10, color: T.muted }}>to {l.end_date}</div>
                         </td>
                         <td style={{ ...cellStyle, maxWidth: 250, whiteSpace: "normal", fontSize: 12, lineHeight: 1.4 }}>{l.reason}</td>
@@ -5769,8 +5869,8 @@ Software Solutions</div>
                               <input className="adm-inp" placeholder="Add comment..." style={{ fontSize: 11, padding: "6px 10px" }}
                                 value={adminComment} onChange={e => setAdminComment(e.target.value)} />
                               <div style={{ display: "flex", gap: 6 }}>
-                                <button onClick={() => handleApproveLeave(l.id, "Approved")} style={{ flex: 1, padding: "8px", background: T.green, color: "white", borderRadius: 8, border: "none", fontSize: 11, fontWeight: 800, cursor: "pointer", transition: "all 0.2s" }} onMouseOver={e => e.currentTarget.style.opacity = 0.8} onMouseOut={e => e.currentTarget.style.opacity = 1}>Approve</button>
-                                <button onClick={() => handleApproveLeave(l.id, "Rejected")} style={{ flex: 1, padding: "8px", background: T.red, color: "white", borderRadius: 8, border: "none", fontSize: 11, fontWeight: 800, cursor: "pointer", transition: "all 0.2s" }} onMouseOver={e => e.currentTarget.style.opacity = 0.8} onMouseOut={e => e.currentTarget.style.opacity = 1}>Reject</button>
+                                <button onClick={() => handleApproveLeave(l.id, "Approved")} style={{ flex: 1, padding: "8px", background: T.green, color: "white", borderRadius: 8, border: "none", fontSize: 11, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }} onMouseOver={e => e.currentTarget.style.opacity = 0.8} onMouseOut={e => e.currentTarget.style.opacity = 1}>Approve</button>
+                                <button onClick={() => handleApproveLeave(l.id, "Rejected")} style={{ flex: 1, padding: "8px", background: T.red, color: "white", borderRadius: 8, border: "none", fontSize: 11, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }} onMouseOver={e => e.currentTarget.style.opacity = 0.8} onMouseOut={e => e.currentTarget.style.opacity = 1}>Reject</button>
                               </div>
                             </div>
                           ) : (
@@ -5792,7 +5892,7 @@ Software Solutions</div>
             {/* Left: Group List */}
             <div className="chat-sidebar" style={{ background: T.white, borderRadius: 20, border: `1px solid ${T.border}`, overflow: "hidden" }}>
               <div style={{ padding: 20, borderBottom: `2px solid ${T.gold}`, background: T.surface }}>
-                <div style={{ fontSize: 15, fontWeight: 800, color: T.ink, marginBottom: 14 }}>Organization Groups</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: T.ink, marginBottom: 14 }}>Organization Groups</div>
                 <button onClick={() => {
                   const name = prompt("Enter new group name:");
                   if (name) fetch(GROUPS_URL, {
@@ -5800,7 +5900,7 @@ Software Solutions</div>
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ name, description: "New group" })
                   }).then(fetchAttendance);
-                }} style={{ width: "100%", padding: 10, background: T.accent, color: "white", border: "none", borderRadius: 10, fontWeight: 800, cursor: "pointer", fontSize: 12 }}>
+                }} style={{ width: "100%", padding: 10, background: T.accent, color: "white", border: "none", borderRadius: 10, fontWeight: 700, cursor: "pointer", fontSize: 12 }}>
                   + Create New Group
                 </button>
               </div>
@@ -5814,10 +5914,10 @@ Software Solutions</div>
                       border: selGroup?.id === g.id ? `1px solid ${T.purple}30` : "none",
                       marginBottom: 4, position: "relative"
                     }}>
-                      <div style={{ fontWeight: 800, fontSize: 14, color: selGroup?.id === g.id ? T.purple : T.ink }}>{g.name}</div>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: selGroup?.id === g.id ? T.purple : T.ink }}>{g.name}</div>
                       <div style={{ fontSize: 11, color: T.muted }}>{g.member_usernames?.length || 0} Members</div>
                       {unread > 0 && (
-                        <span style={{ position: "absolute", top: 12, right: 12, background: T.red, color: "white", fontSize: 10, padding: "2px 6px", borderRadius: 10, border: "2px solid white", fontWeight: 800 }}>{unread}</span>
+                        <span style={{ position: "absolute", top: 12, right: 12, background: T.red, color: "white", fontSize: 10, padding: "2px 6px", borderRadius: 10, border: "2px solid white", fontWeight: 700 }}>{unread}</span>
                       )}
                     </div>
                    );
@@ -5829,20 +5929,20 @@ Software Solutions</div>
               <div className="chat-sidebar" style={{ background: "white", borderRadius: 20, border: `1px solid ${T.border}`, padding: 10, display: "flex", flexDirection: "column", gap: 4 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
-                    <h2 style={{ margin: "0 0 4px", fontSize: 24, fontWeight: 800 }}>{selGroup.name}</h2>
+                    <h2 style={{ margin: "0 0 4px", fontSize: 24, fontWeight: 700 }}>{selGroup.name}</h2>
                     <p style={{ margin: 0, color: T.muted, fontSize: 14 }}>{selGroup.description}</p>
                   </div>
                   <button onClick={() => {
                     if (confirm(`Delete group "${selGroup.name}"?`)) {
                       fetch(`${GROUPS_URL}${selGroup.id}/`, { method: "DELETE" }).then(() => { setSelGroup(null); fetchAttendance(); });
                     }
-                  }} style={{ padding: "8px 14px", background: "none", color: T.red, border: `1.5px solid ${T.red}30`, borderRadius: 10, fontSize: 11, fontWeight: 800, cursor: "pointer" }}>Delete Group</button>
+                  }} style={{ padding: "8px 14px", background: "none", color: T.red, border: `1.5px solid ${T.red}30`, borderRadius: 10, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Delete Group</button>
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
                   {/* Left: Members & Search */}
                   <div>
-                    <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>Manage Members</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Manage Members</div>
                     <input className="adm-inp" placeholder="Search employees to add..." 
                       value={groupSearch} onChange={e => setGroupSearch(e.target.value)}
                       style={{ width: "100%", marginBottom: 16, boxSizing: "border-box" }} />
@@ -5853,7 +5953,7 @@ Software Solutions</div>
                         return (
                           <div key={e.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 8, background: isMember ? T.surface : "none" }}>
                             <div
-                              style={{ fontSize: 13, fontWeight: 800, cursor: "pointer", transition: "color 0.2s" }}
+                              style={{ fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "color 0.2s" }}
                               onClick={() => setChatWith({ id: e.id, name: e.name })}
                               onMouseEnter={(ev) => ev.currentTarget.style.color = T.accent}
                               onMouseLeave={(ev) => ev.currentTarget.style.color = T.ink}
@@ -5875,7 +5975,7 @@ Software Solutions</div>
                               } catch(err) { alert("Network error"); }
                             }} style={{
                               color: isMember ? T.red : T.accent,
-                              background: "none", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 800 
+                              background: "none", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700 
                             }}>
                               {isMember ? "Remove" : "+ Add"}
                             </button>
@@ -5912,7 +6012,7 @@ Software Solutions</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: T.white, padding: "16px 24px", borderRadius: 16, border: `1px solid ${T.border}` }}>
               <div>
-                <div style={{ fontWeight: 800, fontSize: 16 }}>Employee Directory</div>
+                <div style={{ fontWeight: 700, fontSize: 16 }}>Employee Directory</div>
                 <div style={{ fontSize: 12, color: T.muted }}>{allEmployees.length} registered employees</div>
               </div>
               <button onClick={async () => {
@@ -5926,7 +6026,7 @@ Software Solutions</div>
                     fetchAttendance();
                   }
                 }
-              }} style={{ padding: "10px 20px", background: T.surface, color: T.accent, border: `1.5px solid ${T.accent}40`, borderRadius: 10, fontWeight: 800, cursor: "pointer", fontSize: 13 }}>
+              }} style={{ padding: "10px 20px", background: T.surface, color: T.accent, border: `1.5px solid ${T.accent}40`, borderRadius: 10, fontWeight: 700, cursor: "pointer", fontSize: 13 }}>
                 🔄 Sync All Accounts
               </button>
             </div>
@@ -5969,9 +6069,9 @@ Software Solutions</div>
                     <div style={{ position: "absolute", bottom: 2, right: 2, width: 14, height: 14, borderRadius: "50%", background: isOnline ? T.green : T.faint, border: "3px solid white" }} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 800, color: T.ink, fontSize: 16 }}>{e.name}</div>
-                    <div style={{ fontSize: 11, color: T.muted, fontWeight: 800 }}>{isOnline ? "Online Now" : (lastActive && !isNaN(lastActive.getTime()) ? `Last seen: ${lastActive.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}` : "Offline")}</div>
-                    <div style={{ fontSize: 10, color: T.faint, fontWeight: 800 }}>{e.role}  {e.id}</div>
+                    <div style={{ fontWeight: 700, color: T.ink, fontSize: 16 }}>{e.name}</div>
+                    <div style={{ fontSize: 11, color: T.muted, fontWeight: 700 }}>{isOnline ? "Online Now" : (lastActive && !isNaN(lastActive.getTime()) ? `Last seen: ${lastActive.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}` : "Offline")}</div>
+                    <div style={{ fontSize: 10, color: T.faint, fontWeight: 700 }}>{e.role}  {e.id}</div>
                   </div>
                   <div
                     onClick={async () => {
@@ -6006,11 +6106,11 @@ Software Solutions</div>
                     onMouseOver={el => el.currentTarget.style.opacity = "0.8"}
                     onMouseOut={el => el.currentTarget.style.opacity = "1"}
                   >
-                    <div style={{ fontSize: 18, fontWeight: 800, color: T.purple, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4 }}>    
+                    <div style={{ fontSize: 18, fontWeight: 700, color: T.purple, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4 }}>    
                       {profiles.find(p => String(p.employee_id).toLowerCase() === String(e.id).toLowerCase())?.total_leaves ?? 16}
                       <span style={{ fontSize: 10, opacity: 0.6 }}>📄</span>
                     </div>
-                    <div style={{ fontSize: 9, fontWeight: 800, color: T.muted, textTransform: "uppercase", letterSpacing: 0.5 }}>Leaves Left</div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: 0.5 }}>Leaves Left</div>
                   </div>
                 </div>
 
@@ -6018,7 +6118,7 @@ Software Solutions</div>
                 <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 20, display: "flex", gap: 10 }}>
                   <button onClick={() => setAssignTaskTo(e)} style={{
                     flex: 1, padding: "12px", borderRadius: 14, border: "none",
-                    background: T.surface, color: T.ink, fontWeight: 800, cursor: "pointer",
+                    background: T.surface, color: T.ink, fontWeight: 700, cursor: "pointer",
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 10, transition: "all 0.2s"
                   }} onMouseOver={btn => { btn.currentTarget.style.background = T.accent; btn.currentTarget.style.color = "white"; }}
                     onMouseOut={btn => { btn.currentTarget.style.background = T.surface; btn.currentTarget.style.color = T.ink; }}>
@@ -6027,7 +6127,7 @@ Software Solutions</div>
                   </button>
                   <button onClick={() => setChatWith(e)} style={{
                     flex: 1, padding: "12px", borderRadius: 14, border: "none",
-                    background: T.purpleBg, color: T.purple, fontWeight: 800, cursor: "pointer",
+                    background: T.purpleBg, color: T.purple, fontWeight: 700, cursor: "pointer",
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 10, transition: "all 0.2s",
                     position: "relative"
                   }} onMouseOver={btn => { btn.currentTarget.style.background = T.purple; btn.currentTarget.style.color = "white"; }}
@@ -6035,7 +6135,7 @@ Software Solutions</div>
                     <Icon d={icons.message} size={16} />
                     Chat
                     {unread > 0 && (
-                      <span style={{ position: "absolute", top: -6, right: -6, background: T.red, color: "white", fontSize: 10, padding: "2px 6px", borderRadius: 10, border: "2px solid white", fontWeight: 800 }}>{unread}</span>
+                      <span style={{ position: "absolute", top: -6, right: -6, background: T.red, color: "white", fontSize: 10, padding: "2px 6px", borderRadius: 10, border: "2px solid white", fontWeight: 700 }}>{unread}</span>
                     )}
                   </button>
                 </div>
@@ -6052,12 +6152,12 @@ Software Solutions</div>
             <div className="premium-card" style={{ padding: "28px 32px", height: "fit-content" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
                 <div style={{ fontSize: 24 }}>📢</div>
-                <h3 className="h-font" style={{ margin: 0, fontSize: 18, fontWeight: 800, color: T.ink }}>Declare Holiday</h3>
+                <h3 className="h-font" style={{ margin: 0, fontSize: 18, fontWeight: 700, color: T.ink }}>Declare Holiday</h3>
               </div>
 
               <form onSubmit={handleAddHoliday} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <div>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: T.muted, marginBottom: 6, textTransform: "uppercase" }}>Holiday Name</label>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: T.muted, marginBottom: 6, textTransform: "uppercase" }}>Holiday Name</label>
                   <input
                     className="adm-inp"
                     style={{ width: "100%", padding: "10px 14px", boxSizing: "border-box" }}
@@ -6068,7 +6168,7 @@ Software Solutions</div>
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: T.muted, marginBottom: 6, textTransform: "uppercase" }}>Date</label>     
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: T.muted, marginBottom: 6, textTransform: "uppercase" }}>Date</label>     
                   <input
                     type="date"
                     className="adm-inp"
@@ -6079,7 +6179,7 @@ Software Solutions</div>
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: T.muted, marginBottom: 6, textTransform: "uppercase" }}>Description (Optional)</label>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: T.muted, marginBottom: 6, textTransform: "uppercase" }}>Description (Optional)</label>
                   <textarea
                     className="adm-inp"
                     style={{ width: "100%", padding: "10px 14px", height: 100, resize: "none", boxSizing: "border-box" }}
@@ -6095,7 +6195,7 @@ Software Solutions</div>
                   style={{
                     width: "100%", padding: "14px", borderRadius: 16, border: "none",
                     background: `linear-gradient(135deg, ${T.gold} 0%, ${T.accent} 100%)`, 
-                    color: "white", cursor: "pointer", fontSize: 14, fontWeight: 800,
+                    color: "white", cursor: "pointer", fontSize: 14, fontWeight: 700,
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
                     boxShadow: `0 8px 20px ${T.accent}20`, transition: "all 0.2s"
                   }}
@@ -6107,12 +6207,12 @@ Software Solutions</div>
             
             {/* Holiday List Card */}
             <div className="premium-card" style={{ padding: "28px 32px" }}>
-              <h3 className="h-font" style={{ margin: "0 0 20px 0", fontSize: 18, fontWeight: 800, color: T.ink }}>Declared Holidays</h3>
+              <h3 className="h-font" style={{ margin: "0 0 20px 0", fontSize: 18, fontWeight: 700, color: T.ink }}>Declared Holidays</h3>
               
               {holidays.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "60px 0", color: T.muted }}>
                   <div style={{ fontSize: 40, marginBottom: 16 }}>?</div>
-                  <div className="h-font" style={{ fontWeight: 800, fontSize: 16 }}>No holidays declared yet</div>
+                  <div className="h-font" style={{ fontWeight: 700, fontSize: 16 }}>No holidays declared yet</div>
                   <div style={{ fontSize: 13, marginTop: 4 }}>Declare a holiday using the form on the left.</div>
                 </div>
               ) : (
@@ -6129,19 +6229,19 @@ Software Solutions</div>
                           <div style={{
                             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                             width: 50, height: 50, borderRadius: 12, background: T.surface,
-                            color: T.accent, fontWeight: 800, textAlign: "center"
+                            color: T.accent, fontWeight: 700, textAlign: "center"
                           }}>
                             <div style={{ fontSize: 10, textTransform: "uppercase" }}>{hDate.toLocaleDateString("en-IN", { month: "short" })}</div>
-                            <div style={{ fontSize: 16, fontWeight: 800, marginTop: 1 }}>{hDate.getDate()}</div>
+                            <div style={{ fontSize: 16, fontWeight: 700, marginTop: 1 }}>{hDate.getDate()}</div>
                           </div>
                           <div>
-                            <div className="h-font" style={{ fontWeight: 800, color: T.ink, fontSize: 15 }}>{h.name}</div>
+                            <div className="h-font" style={{ fontWeight: 700, color: T.ink, fontSize: 15 }}>{h.name}</div>
                             <div style={{ fontSize: 12, color: T.muted, marginTop: 4 }}>{h.description || "No description"}</div>
                           </div>
                         </div>
 
                         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                          <div style={{ fontSize: 12, color: T.muted, fontWeight: 800 }}>{hDate.toLocaleDateString("en-IN", { weekday: "long", year: "numeric" })}</div>
+                          <div style={{ fontSize: 12, color: T.muted, fontWeight: 700 }}>{hDate.toLocaleDateString("en-IN", { weekday: "long", year: "numeric" })}</div>
                           <button
                             onClick={() => handleDeleteHoliday(h.id)}
                             style={{
@@ -6609,7 +6709,7 @@ export default function App() {
             <Icon d={icons.message} size={20} color="white" />
           </div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 14, color: T.ink }}>Message Alert</div>
+            <div style={{ fontWeight: 700, fontSize: 14, color: T.ink }}>Message Alert</div>
             <div style={{ fontSize: 12, color: T.ink2, opacity: 0.9 }}>{toast.msg}</div>
           </div>
         </div>
@@ -6627,7 +6727,7 @@ export default function App() {
             <Icon d={icons.message} size={20} color="white" />
           </div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 14, color: T.ink }}>Message Alert</div>
+            <div style={{ fontWeight: 700, fontSize: 14, color: T.ink }}>Message Alert</div>
             <div style={{ fontSize: 12, color: T.ink2, opacity: 0.9 }}>{toast.msg}</div>
           </div>
         </div>
