@@ -11,14 +11,14 @@ import logo from '../assets/brolly_logo_new.jpeg';
 /* -- Design tokens ------------------------------------------- */
 const T = {
   ink: "#000000",
-  ink2: "#111111",
-  muted: "#444444",
-  faint: "#eeeeee",
-  border: "#dddddd",
+  ink2: "#000000",
+  muted: "#1a1a1a",
+  faint: "#dddddd",
+  border: "#cccccc",
   surface: "#ffffff",
   white: "#ffffff",
   glass: "#ffffff",
-  accent: "#D4AF37",
+  accent: "#b58a0d",
   accent2: "#F9E2AF",
   green: "#10b981",
   greenBg: "rgba(16, 185, 129, 0.1)",
@@ -30,7 +30,7 @@ const T = {
   purpleBg: "rgba(99, 102, 241, 0.1)",
   orange: "#f97316",
   orangeBg: "rgba(249, 115, 22, 0.1)",
-  gold: "#D4AF37",
+  gold: "#b58a0d",
   goldBg: "rgba(212, 175, 55, 0.1)",
 };
 
@@ -1018,6 +1018,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
   const [holidays, setHolidays] = useState([]);
   const [activeTab, setTab] = useState("today");
   const [triggerConfetti, setTriggerConfetti] = useState(false);
+  const [alwaysActive, setAlwaysActive] = useState(() => localStorage.getItem("wt_always_active") !== "false");
   const newHolidaysCount = useMemo(() => {
     try {
       const seen = JSON.parse(localStorage.getItem(`wt_seen_holidays_${employee?.id}`) || "[]");
@@ -1812,9 +1813,40 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
   // ── Triple-Tier Persistence System to Prevent Background Throttling ──
   const wakeLockRef = useRef(null);
+  const webLockRef = useRef(null);
   const lastHeartbeatTimeRef = useRef(Date.now());
 
+  const startWebLock = async () => {
+    if ('locks' in navigator) {
+      try {
+        navigator.locks.request('brolly_keep_alive', { ifAvailable: true }, async (lock) => {
+          if (lock) {
+            console.log("Tier 4: Web Lock Active");
+            // Keep the lock held until stopWebLock is called
+            await new Promise((resolve) => {
+              webLockRef.current = resolve;
+            });
+            console.log("Tier 4: Web Lock Released");
+          } else {
+            console.warn("Web Lock already held by another tab.");
+          }
+        });
+      } catch (e) {
+        console.warn("Web Lock request failed:", e);
+      }
+    }
+  };
+
+  const stopWebLock = () => {
+    if (webLockRef.current) {
+      webLockRef.current();
+      webLockRef.current = null;
+    }
+  };
+
   const startPersistence = async () => {
+    if (!alwaysActive) return;
+
     // Tier 1: Screen Wake Lock
     if ('wakeLock' in navigator) {
       try {
@@ -1827,28 +1859,47 @@ function Dashboard({ employee, onSignOut, showToast }) {
       }
     }
 
-    // Tier 2: Invisible Silent Video
-    if (!document.getElementById('keep-alive-video')) {
-      const video = document.createElement('video');
-      video.id = 'keep-alive-video';
-      video.muted = true;
-      video.playsInline = true;
-      video.loop = true;
-      video.style.position = 'fixed';
-      video.style.opacity = '0.001';
-      video.style.pointerEvents = 'none';
-      video.setAttribute('webkit-playsinline', 'true');
-      // Tiny 1s silent MP4
-      video.src = "data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pbmYxbXA0MgAAAAhmcmVlAAAAA21kYXTeAAABy0F2YzEAAAAAAAAAABhBVmNDAWQAKv/hABhnY0ArvSREAAADAAIAAAMAEpCAAAH0eDxl0AAEAAAbZHN0cwAAAAAAAAABAAAAGHN0c2MAAAAAAAAAAQAAAAEAAAABAAAAHHN0c3oAAAAAAAAAAAAAAAEAAABMc3RjbwAAAAAAAAABAAAAMAAAAG1mcmEAAAAAAAAAAAAAAAABAAAAbm1mcm8AAAAAAAAAAAAAAAEAAAAUdHJ1bgAAAAAAAAABAAAAAQAAAAAAAABhYXZjMQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAA==";
-      document.body.appendChild(video);
-      video.play().then(() => console.log("Tier 2: Silent Video Active")).catch(() => {
-        const resumeVideo = () => { video.play().then(() => document.removeEventListener('click', resumeVideo)); };
-        document.addEventListener('click', resumeVideo);
-      });
+    // Tier 2: Invisible Silent Audio Loop (WAV) to prevent tab freezing/sleep
+    if (!document.getElementById('keep-alive-audio')) {
+      const audio = document.createElement('audio');
+      audio.id = 'keep-alive-audio';
+      audio.loop = true;
+      audio.volume = 0.001; // virtually silent but not muted (so browser doesn't throttle)
+      audio.style.position = 'fixed';
+      audio.style.opacity = '0.001';
+      audio.style.pointerEvents = 'none';
+      audio.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+      document.body.appendChild(audio);
+
+      const playAudio = () => {
+        audio.play()
+          .then(() => console.log("Tier 2: Silent WAV Audio Loop Active"))
+          .catch(e => console.warn("Silent WAV Audio play failed:", e));
+      };
+
+      playAudio();
+
+      // Setup interaction listener to resume audio if autoplay is blocked
+      const resumeAudio = () => {
+        audio.play().then(() => {
+          console.log("Silent WAV Audio resumed after user interaction");
+          document.removeEventListener('click', resumeAudio);
+          document.removeEventListener('keydown', resumeAudio);
+          document.removeEventListener('mousedown', resumeAudio);
+          document.removeEventListener('touchstart', resumeAudio);
+        }).catch(e => console.warn("Failed to resume WAV audio on user interaction:", e));
+      };
+      document.addEventListener('click', resumeAudio);
+      document.addEventListener('keydown', resumeAudio);
+      document.addEventListener('mousedown', resumeAudio);
+      document.addEventListener('touchstart', resumeAudio);
     }
 
-    // Ensure Silent Audio is also running
+    // Ensure Silent Audio Oscillator is running (Tier 3)
     startSilentAudio();
+
+    // Start Web Lock (Tier 4)
+    startWebLock();
   };
 
   const stopPersistence = () => {
@@ -1856,9 +1907,16 @@ function Dashboard({ employee, onSignOut, showToast }) {
       wakeLockRef.current.release().catch(() => {});
       wakeLockRef.current = null;
     }
+    const audio = document.getElementById('keep-alive-audio');
+    if (audio) {
+      audio.remove();
+    }
     const video = document.getElementById('keep-alive-video');
-    if (video) video.remove();
+    if (video) {
+      video.remove();
+    }
     stopSilentAudio();
+    stopWebLock();
   };
 
   // Re-request Wake Lock when tab becomes visible
@@ -1870,7 +1928,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [status]);
+  }, [status, alwaysActive]);
 
   // Tier 3: Staleness Alert Monitor
   useEffect(() => {
@@ -1908,7 +1966,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
   // Toggle persistence based on status
   useEffect(() => {
-    if (status === "working" || status === "break") {
+    if (alwaysActive && (status === "working" || status === "break")) {
       startPersistence();
       if ("Notification" in window && Notification.permission === "default") {
         Notification.requestPermission();
@@ -1917,7 +1975,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
       stopPersistence();
     }
     return () => stopPersistence();
-  }, [status]);
+  }, [status, alwaysActive]);
 
   const runHeartbeat = async () => {
     const state = latestStateRef.current;
@@ -2184,6 +2242,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
   const [groups, setGroups] = useState([]);
   const [activeChat, setActiveChat] = useState({ type: 'admin', id: 'admin', name: 'Admin Chat' });
+  const [mobileChatView, setMobileChatView] = useState('list');
 
   const [unreadCount, setUnreadCount] = useState(0);
   const [groupUnreadMap, setGroupUnreadMap] = useState({});
@@ -2262,15 +2321,21 @@ function Dashboard({ employee, onSignOut, showToast }) {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "#ffffff",
+      background: "#f4f6f9",
       position: "relative",
       overflow: "hidden",
       fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em',
       color: T.ink,
     }}>
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        body, button, input, select, textarea, span, div, p, h1, h2, h3, h4, h5, h6, a, label {
+          font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+        }
+
         body { margin: 0; padding: 0; }
-        .h-font { font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; }
+        .h-font { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
 
         @keyframes gradientFlow {
           0% { background-position: 0% 50%; }
@@ -2370,10 +2435,151 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
         .pulse-soft { animation: pulseSoft 2s infinite; }
 
+        .chat-grid .chat-back-btn {
+          display: none !important;
+        }
+
         @media (max-width: 768px) {
           .stat-grid { grid-template-columns: 1fr 1fr !important; }
           .main-grid { grid-template-columns: 1fr !important; }
           .greeting-text { font-size: 18px !important; }
+
+          /* Mobile Topbar Adjustments */
+          .top-bar {
+            display: grid !important;
+            grid-template-areas: 
+              "logo user"
+              "center center" !important;
+            grid-template-columns: 1fr auto !important;
+            height: auto !important;
+            padding: 12px 16px !important;
+            gap: 12px !important;
+          }
+          .top-bar-logo {
+            grid-area: logo !important;
+            gap: 8px !important;
+          }
+          .top-bar-logo img {
+            width: 32px !important;
+            height: 32px !important;
+          }
+          .top-bar-logo .top-bar-title {
+            font-size: 13px !important;
+          }
+          .top-bar-logo .top-bar-title div {
+            font-size: 13px !important;
+          }
+          .top-bar-logo .top-bar-title div:last-child {
+            font-size: 8px !important;
+          }
+          .top-bar-center {
+            grid-area: center !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            width: 100% !important;
+            gap: 10px !important;
+          }
+          .top-bar-status, .always-active-toggle {
+            flex: 1 !important;
+            justify-content: center !important;
+            text-align: center !important;
+            padding: 8px 10px !important;
+            font-size: 11px !important;
+            box-sizing: border-box !important;
+          }
+          .top-bar-user {
+            grid-area: user !important;
+            gap: 8px !important;
+          }
+          .top-bar-user .name-label {
+            display: none !important;
+          }
+          .top-bar-user .top-bar-divider {
+            display: none !important;
+          }
+
+          /* Greeting & Navigation Layout Adjustments */
+          .greeting-row {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 16px !important;
+            margin-bottom: 24px !important;
+          }
+          .time-display {
+            width: 100% !important;
+            box-sizing: border-box !important;
+            text-align: left !important;
+            padding: 12px 20px !important;
+          }
+          .time-display div {
+            font-size: 24px !important;
+          }
+          .tabs-container {
+            flex-wrap: wrap !important;
+            width: 100% !important;
+            justify-content: center !important;
+            gap: 8px !important;
+          }
+          .tab {
+            flex: 1 1 calc(50% - 8px) !important;
+            text-align: center !important;
+            padding: 10px 12px !important;
+            font-size: 12px !important;
+          }
+
+          /* Horizontal Scrollable Type Switcher for Leave requests */
+          .type-switcher {
+            display: flex !important;
+            overflow-x: auto !important;
+            white-space: nowrap !important;
+            scrollbar-width: none !important;
+            gap: 8px !important;
+          }
+          .type-switcher::-webkit-scrollbar {
+            display: none !important;
+          }
+          .type-switcher button {
+            flex: 0 0 auto !important;
+            min-width: 130px !important;
+          }
+
+          /* Mobile Grid Stacking for Main Views */
+          .leaves-grid, .profile-grid {
+            grid-template-columns: 1fr !important;
+            gap: 20px !important;
+          }
+
+          /* Support Chat Responsive Layout */
+          .chat-grid {
+            grid-template-columns: 1fr !important;
+            height: 75vh !important;
+            gap: 0 !important;
+          }
+          .chat-grid.mobile-view-chat .chat-sidebar {
+            display: none !important;
+          }
+          .chat-grid.mobile-view-list .chat-window-wrapper {
+            display: none !important;
+          }
+          .chat-grid .chat-back-btn {
+            display: flex !important;
+          }
+
+          /* Profile Details Mobile Adjustments */
+          .profile-header-row {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 16px !important;
+          }
+          .profile-header-row button {
+            width: 100% !important;
+            justify-content: center !important;
+          }
+          .profile-inner-grid {
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
+          }
         }
       `}</style>
 
@@ -2596,7 +2802,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
         position: "sticky", top: 0, zIndex: 1000,
         boxShadow: "0 1px 10px rgba(0,0,0,0.05)"
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        <div className="top-bar-logo" style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{
             width: 42, height: 42, borderRadius: 12, background: "white",
             display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
@@ -2610,17 +2816,51 @@ function Dashboard({ employee, onSignOut, showToast }) {
           </div>
         </div>
 
-        <div className="top-bar-status" style={{
-          display: "flex", alignItems: "center", gap: 10, padding: "8px 14px",
-          borderRadius: 14, background: T.surface, border: `1px solid ${T.border}`
-        }}>
-          <div className="pulse-soft" style={{
-            width: 8, height: 8, borderRadius: "50%",
-            background: status === "working" ? T.green : status === "break" ? T.amber : T.faint,
-          }} />
-          <span style={{ fontSize: 12, color: T.muted, fontWeight: 700 }}>
-            {status === "working" ? "Working" : status === "break" ? "On Break" : "Paused"}
-          </span>
+        <div className="top-bar-center" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div className="top-bar-status" style={{
+            display: "flex", alignItems: "center", gap: 10, padding: "8px 14px",
+            borderRadius: 14, background: T.surface, border: `1px solid ${T.border}`
+          }}>
+            <div className="pulse-soft" style={{
+              width: 8, height: 8, borderRadius: "50%",
+              background: status === "working" ? T.green : status === "break" ? T.amber : T.faint,
+            }} />
+            <span style={{ fontSize: 12, color: T.muted, fontWeight: 700 }}>
+              {status === "working" ? "Working" : status === "break" ? "On Break" : "Paused"}
+            </span>
+          </div>
+
+          <label 
+            className="always-active-toggle"
+            title="Keeps the tab active in the background to prevent the browser from sleeping and freezing your session hours."
+            style={{
+              display: "flex", alignItems: "center", gap: 8, cursor: "pointer",
+              padding: "8px 14px", borderRadius: 14, 
+              background: alwaysActive ? "rgba(16, 185, 129, 0.08)" : T.surface,
+              border: `1px solid ${alwaysActive ? "rgba(16, 185, 129, 0.2)" : T.border}`,
+              fontSize: 12, fontWeight: 700, color: alwaysActive ? T.green : T.muted,
+              transition: "all 0.2s"
+            }}
+          >
+            <input 
+              type="checkbox" 
+              checked={alwaysActive} 
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setAlwaysActive(checked);
+                localStorage.setItem("wt_always_active", String(checked));
+                if (checked) {
+                  if (status === "working" || status === "break") startPersistence();
+                } else {
+                  stopPersistence();
+                }
+              }} 
+              style={{
+                cursor: "pointer", accentColor: T.green, width: 14, height: 14, margin: 0
+              }} 
+            />
+            <span>Always Active Tab</span>
+          </label>
         </div>
 
         <div className="top-bar-user" style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -2642,7 +2882,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
             )}
           </button>
 
-          <div style={{ height: 32, width: 1, background: T.border, margin: "0 4px" }} />
+          <div className="top-bar-divider" style={{ height: 32, width: 1, background: T.border, margin: "0 4px" }} />
 
           <Avatar name={employee.name} src={profile.photo} size={38} />
           <div className="name-label" style={{ marginRight: 8 }}>
@@ -2872,6 +3112,22 @@ function Dashboard({ employee, onSignOut, showToast }) {
                   </div>
                 ))}
               </div>
+
+              {/* Background Tab Guard info panel */}
+              {alwaysActive && (status === "working" || status === "break") && (
+                <div style={{
+                  marginTop: 20, padding: "16px 20px", borderRadius: 20,
+                  background: "rgba(99, 102, 241, 0.04)", border: `1px solid rgba(99, 102, 241, 0.15)`,
+                  fontSize: 12, lineHeight: 1.5, color: T.muted
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, fontWeight: 700, color: T.purple }}>
+                    <span>💡 Background Tab Guard Active</span>
+                  </div>
+                  <span>
+                    To ensure the browser never pauses this tab, we've enabled active Web Locks and silent media play. For absolute certainty, keep this tab open and do not close your browser.
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Tasks + Save */}
@@ -3048,7 +3304,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
             <div className="premium-card" style={{ padding: 32, alignSelf: "start" }}>
               
               {/* Type Switcher Selector */}
-              <div style={{
+              <div className="type-switcher" style={{
                 display: "flex", background: "rgba(0, 0, 0, 0.05)", padding: 6, borderRadius: 16, marginBottom: 28
               }}>
                 <button 
@@ -3286,7 +3542,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
             {/* Right Column: Personal Info & Identification */}
             <div className="premium-card" style={{ padding: 36, display: "flex", flexDirection: "column", gap: 30 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1.5px solid ${T.border}`, paddingBottom: 20 }}> 
+              <div className="profile-header-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1.5px solid ${T.border}`, paddingBottom: 20 }}> 
                 <div>
                   <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: T.ink, letterSpacing: "-0.5px" }}>Personal & Official Profile</h3>
                   <p style={{ margin: "4px 0 0", fontSize: 12, color: T.muted, fontWeight: 700 }}>Update your official details and identity cards</p>
@@ -3316,7 +3572,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
                 </button>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+              <div className="profile-inner-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
                 <PremiumInput 
                   label="Contact Number" 
                   icon={<span>📞</span>} 
@@ -3333,7 +3589,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
                 />
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 24 }}>
+              <div className="profile-inner-grid" style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 24 }}>
                 <PremiumInput 
                   label="Location / Address" 
                   icon={<span>📍</span>} 
@@ -3355,7 +3611,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
                   <span style={{ fontSize: 18 }}>🆔</span> Official Identity Verification
                 </h4>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28 }}>
+                <div className="profile-inner-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28 }}>
                   {/* Aadhar Block */}
                   <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                     <PremiumInput 
@@ -3410,10 +3666,10 @@ function Dashboard({ employee, onSignOut, showToast }) {
         )}
 
         {activeTab === "messages" && (
-          <div className="chat-grid" style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: 20, height: "75vh" }}>
+          <div className={`chat-grid mobile-view-${mobileChatView}`} style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: 20, height: "75vh" }}>
             <div className="chat-sidebar" style={{ background: "white", borderRadius: 20, border: `1px solid ${T.border}`, padding: 10, display: "flex", flexDirection: "column", gap: 4 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", padding: "10px 12px" }}>Direct Message</div>
-              <button onClick={() => setActiveChat({ type: 'admin', id: 'admin', name: 'Admin Chat' })} style={{
+              <button onClick={() => { setActiveChat({ type: 'admin', id: 'admin', name: 'Admin Chat' }); setMobileChatView('chat'); }} style={{
                 padding: "12px 16px", borderRadius: 12, border: "none", cursor: "pointer", textAlign: "left",
                 background: activeChat.type === 'admin' ? T.surface : "none", color: activeChat.type === 'admin' ? T.accent : T.ink,
                 fontWeight: 700, fontSize: 13, display: "flex", alignItems: "center", gap: 10
@@ -3428,7 +3684,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
                 const gId = `group_${g.id}`;
                 const unread = groupUnreadMap[gId] || 0;
                 return (
-                  <button key={g.id} onClick={() => setActiveChat({ type: 'group', id: gId, name: g.name })} style={{
+                  <button key={g.id} onClick={() => { setActiveChat({ type: 'group', id: gId, name: g.name }); setMobileChatView('chat'); }} style={{
                     padding: "12px 16px", borderRadius: 12, border: "none", cursor: "pointer", textAlign: "left",
                     background: activeChat.id === gId ? T.surface : "none", color: activeChat.id === gId ? T.accent : T.ink,
                     fontWeight: 700, fontSize: 13, display: "flex", alignItems: "center", gap: 10, position: "relative"
@@ -3443,12 +3699,12 @@ function Dashboard({ employee, onSignOut, showToast }) {
               })}
             </div>
 
-            <div className="premium-card" style={{ padding: 0, overflow: "hidden" }}>
+            <div className="chat-window-wrapper premium-card" style={{ padding: 0, overflow: "hidden" }}>
               <ChatPanel
                 currentUser={{ id: employee.id, name: employee.name }}
                 targetUser={activeChat.type === 'admin' ? { id: 'admin', name: 'Admin' } : null}
                 groupId={activeChat.type === 'group' ? activeChat.id : null}
-                onBack={null}
+                onBack={() => setMobileChatView('list')}
               />
             </div>
           </div>
@@ -3798,7 +4054,7 @@ function ChatPanel({ currentUser, targetUser, onBack, groupId = null, subStatus 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", background: T.white, borderRadius: 20, overflow: "hidden", border: `1px solid ${T.border}` }}>
       <div style={{ padding: "16px 20px", background: T.ink, color: "white", display: "flex", alignItems: "center", gap: 12 }}>
-        {onBack && <button onClick={onBack} style={{ background: "none", border: "none", color: "white", cursor: "pointer", display: "flex", alignItems: "center" }}><Icon d={icons.chevronLeft} size={18} /></button>}
+        {onBack && <button onClick={onBack} className="chat-back-btn" style={{ background: "none", border: "none", color: "white", cursor: "pointer", display: "flex", alignItems: "center" }}><Icon d={icons.chevronLeft} size={18} /></button>}
         {targetUser && <Avatar name={targetUser.name} size={32} />}
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 700, fontSize: 14 }}>{targetUser ? targetUser.name : (groupName || groupId?.replace('group_', 'Team: ') || 'Group Chat')}</div>
@@ -4734,20 +4990,29 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
   };
   const cellStyle = { padding: "11px 14px", fontSize: 13, color: T.ink, borderBottom: `2px solid ${T.gold}` };
 
+  const reqColStyle = { ...colStyle, fontSize: 13 };
+  const reqCellStyle = { ...cellStyle, fontSize: 15 };
+
 
 
   return (
     <div style={{
       minHeight: "100vh",
-      background: "#ffffff",
+      background: "#f4f6f9",
       position: "relative",
       overflow: "hidden",
       fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em',
       color: T.ink,
     }}>
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        body, button, input, select, textarea, span, div, p, h1, h2, h3, h4, h5, h6, a, label {
+          font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+        }
+
         body { margin: 0; padding: 0; }
-        .h-font { font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; }
+        .h-font { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
 
         @keyframes gradientFlow {
           0% { background-position: 0% 50%; }
@@ -5821,63 +6086,20 @@ Software Solutions</div>
               </div>
             </div>
             <div style={{ overflowX: "auto", maxHeight: 600, overflowY: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>                <thead>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 15 }}>
+                <thead>
                   <tr style={{ background: T.surface }}>
                     {["Applied On", "Employee", "Type", "Duration", "Reason", "Status", "Actions"].map(h => (
-                      <th key={h} style={colStyle}>{h}</th>
+                      <th key={h} style={reqColStyle}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {leaveRequests.length === 0 ? (
-                    <tr><td colSpan="7" style={{ padding: 40, textAlign: "center", color: T.muted }}>No requests found</td></tr>
+                    <tr key="no-requests"><td colSpan="7" style={{ padding: 40, textAlign: "center", color: T.muted }}>No requests found</td></tr>
                   ) : (
                     [...leaveRequests].sort((a, b) => new Date(b.applied_at).getTime() - new Date(a.applied_at).getTime()).map((l, i) => (
-                      <tr key={i} className="adm-row">
-                        <td style={cellStyle}>{new Date(l.applied_at).toLocaleDateString()}</td>
-                        <td style={cellStyle}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            <Avatar name={l.employee_name} src={profiles.find(p => String(p.employee_id).toLowerCase() === String(l.employee_id).toLowerCase())?.photo} size={28} />
-                            <div>
-                              <div style={{ fontWeight: 700 }}>{l.employee_name}</div>
-                              <div style={{ fontSize: 10, color: T.muted }}>
-                                {l.employee_id}
-                                {l.leave_type !== "Work From Home" && (
-                                  <span> · <span style={{
-                                    color: (profiles.find(p => String(p.employee_id).toLowerCase() === String(l.employee_id).toLowerCase())?.total_leaves <= 0) ? T.red : T.purple,
-                                    fontWeight: 700
-                                  }}>
-                                    {profiles.find(p => String(p.employee_id).toLowerCase() === String(l.employee_id).toLowerCase())?.total_leaves ?? "—"} left
-                                  </span></span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td style={cellStyle}>
-                          <Badge status={l.leave_type === "Work From Home" ? "Work From Home" : "Leave"} />
-                        </td>
-                        <td style={cellStyle}>
-                          <div style={{ fontWeight: 700 }}>{l.start_date}</div>
-                          <div style={{ fontSize: 10, color: T.muted }}>to {l.end_date}</div>
-                        </td>
-                        <td style={{ ...cellStyle, maxWidth: 250, whiteSpace: "normal", fontSize: 12, lineHeight: 1.4 }}>{l.reason}</td>
-                        <td style={cellStyle}><Badge status={l.status} /></td>
-                        <td style={cellStyle}>
-                          {l.status === "Pending" ? (
-                            <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 160 }}>
-                              <input className="adm-inp" placeholder="Add comment..." style={{ fontSize: 11, padding: "6px 10px" }}
-                                value={adminComment} onChange={e => setAdminComment(e.target.value)} />
-                              <div style={{ display: "flex", gap: 6 }}>
-                                <button onClick={() => handleApproveLeave(l.id, "Approved")} style={{ flex: 1, padding: "8px", background: T.green, color: "white", borderRadius: 8, border: "none", fontSize: 11, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }} onMouseOver={e => e.currentTarget.style.opacity = 0.8} onMouseOut={e => e.currentTarget.style.opacity = 1}>Approve</button>
-                                <button onClick={() => handleApproveLeave(l.id, "Rejected")} style={{ flex: 1, padding: "8px", background: T.red, color: "white", borderRadius: 8, border: "none", fontSize: 11, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }} onMouseOver={e => e.currentTarget.style.opacity = 0.8} onMouseOut={e => e.currentTarget.style.opacity = 1}>Reject</button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div style={{ fontSize: 11, color: T.muted, fontWeight: 700 }}>{l.admin_comment || "No comment"}</div>
-                          )}
-                        </td>
-                      </tr>
+                      <tr key={l.id || i} className="adm-row"><td style={reqCellStyle}>{new Date(l.applied_at).toLocaleDateString()}</td><td style={reqCellStyle}><div style={{ display: "flex", alignItems: "center", gap: 10 }}><Avatar name={l.employee_name} src={profiles.find(p => String(p.employee_id).toLowerCase() === String(l.employee_id).toLowerCase())?.photo} size={28} /><div><div style={{ fontWeight: 700, fontSize: 15 }}>{l.employee_name}</div><div style={{ fontSize: 11, color: T.muted }}>{l.employee_id}{l.leave_type !== "Work From Home" && (<span> · <span style={{ color: (profiles.find(p => String(p.employee_id).toLowerCase() === String(l.employee_id).toLowerCase())?.total_leaves <= 0) ? T.red : T.purple, fontWeight: 700 }}>{profiles.find(p => String(p.employee_id).toLowerCase() === String(l.employee_id).toLowerCase())?.total_leaves ?? "—"} left</span></span>)}</div></div></div></td><td style={reqCellStyle}><Badge status={l.leave_type === "Work From Home" ? "Work From Home" : "Leave"} /></td><td style={reqCellStyle}><div style={{ fontWeight: 700, fontSize: 15 }}>{l.start_date}</div><div style={{ fontSize: 11, color: T.muted }}>to {l.end_date}</div></td><td style={{ ...reqCellStyle, maxWidth: 250, whiteSpace: "normal", fontSize: 14, lineHeight: 1.4 }}>{l.reason}</td><td style={reqCellStyle}><Badge status={l.status} /></td><td style={reqCellStyle}>{l.status === "Pending" ? (<div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 160 }}><input className="adm-inp" placeholder="Add comment..." style={{ fontSize: 13, padding: "6px 10px" }} value={adminComment} onChange={e => setAdminComment(e.target.value)} /><div style={{ display: "flex", gap: 6 }}><button onClick={() => handleApproveLeave(l.id, "Approved")} style={{ flex: 1, padding: "8px", background: T.green, color: "white", borderRadius: 8, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }} onMouseOver={e => e.currentTarget.style.opacity = 0.8} onMouseOut={e => e.currentTarget.style.opacity = 1}>Approve</button><button onClick={() => handleApproveLeave(l.id, "Rejected")} style={{ flex: 1, padding: "8px", background: T.red, color: "white", borderRadius: 8, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }} onMouseOver={e => e.currentTarget.style.opacity = 0.8} onMouseOut={e => e.currentTarget.style.opacity = 1}>Reject</button></div></div>) : (<div style={{ fontSize: 13, color: T.muted, fontWeight: 700 }}>{l.admin_comment || "No comment"}</div>)}</td></tr>
                     ))
                   )}
                 </tbody>
