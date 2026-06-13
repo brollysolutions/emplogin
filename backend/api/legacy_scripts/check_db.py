@@ -17,7 +17,7 @@ for u in users:
 
 
 
-print("\nListing ALL attendance records:")
+print("\nListing ALL Attendance :")
 all_records = Attendance.objects.all()
 for r in all_records:
     print(f"ID: {r.id}, Name: {r.name}, EmpID: {r.employee_id}, Date: '{r.date}', Status: {r.status}")

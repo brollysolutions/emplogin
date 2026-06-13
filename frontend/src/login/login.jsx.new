@@ -5339,7 +5339,7 @@ selectedRecord.outtime || ""}</div>
           padding: 4, marginBottom: 20, width: "fit-content"
         }}>
           {[
-            { k: "attendance", label: "Attendance Records" },
+            { k: "attendance", label: "Attendance " },
             { k: "weekly", label: "Weekly Report" },
             { k: "tasks", label: "Live Task Feed" },
             { k: "leaves", label: "Requests" },
@@ -5547,7 +5547,7 @@ selectedRecord.outtime || ""}</div>
           </div>
         )}
 
-        {/* Attendance Records Table */}
+        {/* Attendance  Table */}
         {activeTab === "attendance" && (
           <div className="premium-card">
             <div style={{ overflowX: "auto", maxHeight: 600, overflowY: "auto" }}>

@@ -768,34 +768,34 @@ function StatCard({ label, value, sub, icon, color, bg, isLive, index = 0 }) {
     >
       <div className="stat-card" style={{
         background: "transparent",
-        padding: "12px 14px",
+        padding: "8px 12px",
         display: "flex",
         flexDirection: "column",
-        gap: 8,
+        gap: 4,
         position: "relative",
         overflow: "hidden",
         width: "100%",
         height: "100%"
       }}>
         {isLive && (
-          <div style={{ position: "absolute", top: 10, right: 10, display: "flex", alignItems: "center", gap: 6 }}>
-            <div className="pulse-soft" style={{ width: 6, height: 6, borderRadius: "50%", background: T.green, boxShadow: `0 0 12px ${T.green}40` }} />
-            <span style={{ fontSize: 9, fontWeight: 700, color: T.green, textTransform: "uppercase", letterSpacing: "1px", fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em' }}>Live</span>
+          <div style={{ position: "absolute", top: 6, right: 6, display: "flex", alignItems: "center", gap: 4 }}>
+            <div className="pulse-soft" style={{ width: 5, height: 5, borderRadius: "50%", background: T.green, boxShadow: `0 0 12px ${T.green}40` }} />
+            <span style={{ fontSize: 8, fontWeight: 700, color: T.green, textTransform: "uppercase", fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em' }}>Live</span>
           </div>
         )}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: 0.5, color: T.ink, textTransform: "uppercase", fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em' }}>{label}</span>
+          <span style={{ fontSize: 9, fontWeight: 500, color: T.ink, textTransform: "uppercase", fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em' }}>{label}</span>
           <div style={{
-            width: 32, height: 32, borderRadius: 8, background: finalBg,
+            width: 24, height: 24, borderRadius: 6, background: finalBg,
             display: "flex", alignItems: "center", justifyContent: "center",
             boxShadow: `0 4px 10px ${finalColor}10`
           }}>
-            <Icon d={icon} size={16} color={finalColor} />
+            <Icon d={icon} size={12} color={finalColor} />
           </div>
         </div>
         <div>
-          <div className="stat-value" style={{ fontSize: 22, fontWeight: 600, color: T.ink, marginBottom: 2, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.5px", fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em' }}>{value}</div>
-          {sub && <div style={{ fontSize: 11, color: T.ink, fontWeight: 700, opacity: 0.7 }}>{sub}</div>}
+          <div className="stat-value" style={{ fontSize: 18, fontWeight: 600, color: T.ink, marginBottom: 1, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.5px", fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em' }}>{value}</div>
+          {sub && <div style={{ fontSize: 10, color: T.ink, fontWeight: 700, opacity: 0.7 }}>{sub}</div>}
         </div>
       </div>
     </GlowCard>
@@ -4193,6 +4193,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
   const [activeTab, setTab] = useState(() => localStorage.getItem("wt_tab_adm") || "attendance");
   const [analysisEmpId, setAnalysisEmpId] = useState("");
   const [analysisSearch, setAnalysisSearch] = useState("");
+  const [analysisType, setAnalysisType] = useState("monthly");
 
   useEffect(() => {
     localStorage.setItem("wt_tab_adm", activeTab);
@@ -5043,11 +5044,11 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
         .adm-tab {
           flex: 1;
           text-align: center;
-          padding: 10px 24px;
-          border-radius: 12px;
+          padding: 6px 14px;
+          border-radius: 8px;
           border: 1px solid transparent;
           cursor: pointer;
-          font-size: 14px;
+          font-size: 12px;
           font-weight: 700;
           font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
           transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -5075,10 +5076,10 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
         }
 
         .adm-inp {
-          padding: 12px 18px;
-          border-radius: 16px;
+          padding: 8px 12px;
+          border-radius: 8px;
           border: 1px solid ${T.border};
-          font-size: 14px;
+          font-size: 12px;
           outline: none;
           color: ${T.ink};
           background: rgba(255, 255, 255, 0.6);
@@ -5097,7 +5098,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
           background: rgba(255, 255, 255, 0.85);
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
-          border-radius: 28px;
+          border-radius: 16px;
           border: 1px solid rgba(0, 0, 0, 0.06);
           box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.03);
           transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -5717,7 +5718,7 @@ Software Solutions</div>
                 </div>
                 )}
 
-                <div style={{ maxWidth: "96%", margin: "0 auto", padding: "28px 24px" }}>
+                <div style={{ maxWidth: "96%", margin: "0 auto", padding: "16px 16px" }}>
         {/* Stat cards */}
         <div className="adm-stat-grid stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, marginBottom: 20 }}>
           <StatCard index={0} label="Total Employees" value={String(registeredCount)} sub="Registered" icon={icons.user} color={T.gold} bg={T.goldBg} />
@@ -5733,7 +5734,7 @@ Software Solutions</div>
           padding: 4, marginBottom: 20, width: "100%", boxSizing: "border-box"
         }}>
           {[
-            { k: "attendance", label: "Attendance Records" },
+            { k: "attendance", label: "Attendance " },
             { k: "weekly", label: "Weekly Report" },
             { k: "analysis", label: "Analysis" },
             { k: "tasks", label: "Live Task Feed" },
@@ -5811,7 +5812,30 @@ Software Solutions</div>
 
         {/* Analysis Overview tab */}
         {activeTab === "analysis" && (() => {
-          const maxDays = Math.max(...allEmployees.map(e => processedRecords.filter(r => r.id === e.id || r.employeeid === e.id).length), 5);
+          const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+          const now = new Date();
+          const currentMonthName = months[now.getMonth()];
+          const currentYearStr = String(now.getFullYear());
+          const matchStr = `${currentMonthName} ${currentYearStr}`;
+
+          const isCurrentMonth = (dateStr) => {
+            if (!dateStr) return false;
+            const cleanStr = String(dateStr).trim();
+            if (cleanStr.endsWith(matchStr)) return true;
+            try {
+              const d = new Date(dateStr);
+              if (!isNaN(d.getTime())) {
+                return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+              }
+            } catch (e) {}
+            return false;
+          };
+
+          const analysisRecords = analysisType === "monthly" 
+            ? processedRecords.filter(r => isCurrentMonth(r.date))
+            : processedRecords;
+
+          const maxDays = Math.max(...allEmployees.map(e => analysisRecords.filter(r => r.id === e.id || r.employeeid === e.id).length), 5);
           
           const filteredEmployees = allEmployees.filter(emp => 
             !analysisSearch || 
@@ -5821,17 +5845,17 @@ Software Solutions</div>
           );
           
           const teamAttendance = allEmployees.length > 0 ? Math.round(allEmployees.reduce((acc, e) => {
-            const days = processedRecords.filter(r => r.id === e.id || r.employeeid === e.id).length;
+            const days = analysisRecords.filter(r => r.id === e.id || r.employeeid === e.id).length;
             return acc + (days / Math.max(1, maxDays)) * 100;
           }, 0) / allEmployees.length) : 0;
           
-          const teamAvgHours = processedRecords.length > 0 ? (processedRecords.reduce((acc, r) => acc + (r.live_hours_secs || 0), 0) / processedRecords.length / 3600).toFixed(1) : "0.0";
+          const teamAvgHours = analysisRecords.length > 0 ? (analysisRecords.reduce((acc, r) => acc + (r.live_hours_secs || 0), 0) / analysisRecords.length / 3600).toFixed(1) : "0.0";
           
-          const teamAvgBreak = processedRecords.length > 0 ? (processedRecords.reduce((acc, r) => {
+          const teamAvgBreak = analysisRecords.length > 0 ? (analysisRecords.reduce((acc, r) => {
             const t = r.live_break_time || "00:00:00";
             const [h, m, s] = t.split(":").map(Number);
             return acc + (h * 3600 + m * 60 + s);
-          }, 0) / processedRecords.length / 3600).toFixed(1) : "0.0";
+          }, 0) / analysisRecords.length / 3600).toFixed(1) : "0.0";
           
           const teamTaskComp = taskFeed.length > 0 ? Math.round((taskFeed.filter(t => t.status === "Completed").length / taskFeed.length) * 100) : 100;
 
@@ -5839,7 +5863,7 @@ Software Solutions</div>
           
           let empStats = null;
           if (selectedEmp) {
-            const empRecords = processedRecords.filter(r => r.id === selectedEmp.id || r.employeeid === selectedEmp.id);
+            const empRecords = analysisRecords.filter(r => r.id === selectedEmp.id || r.employeeid === selectedEmp.id);
             const daysPresent = empRecords.length;
             const totalWorkSecs = empRecords.reduce((acc, r) => acc + (r.live_hours_secs || 0), 0);
             const avgWorkSecs = daysPresent > 0 ? totalWorkSecs / daysPresent : 0;
@@ -5915,6 +5939,41 @@ Software Solutions</div>
 
           return (
             <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+              
+              {/* Analysis Type Toggle (Monthly / Total) */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+                <div style={{ display: "inline-flex", background: "#e4eaf3", padding: 4, borderRadius: 10, gap: 4 }}>
+                  <button 
+                    onClick={() => setAnalysisType("monthly")}
+                    style={{
+                      padding: "6px 16px", borderRadius: 8, border: "none", cursor: "pointer",
+                      fontWeight: 700, fontSize: 12,
+                      background: analysisType === "monthly" ? "white" : "transparent",
+                      color: analysisType === "monthly" ? T.accent : T.muted,
+                      boxShadow: analysisType === "monthly" ? "0 2px 8px rgba(0,0,0,0.08)" : "none",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    📅 Monthly Analysis
+                  </button>
+                  <button 
+                    onClick={() => setAnalysisType("total")}
+                    style={{
+                      padding: "6px 16px", borderRadius: 8, border: "none", cursor: "pointer",
+                      fontWeight: 700, fontSize: 12,
+                      background: analysisType === "total" ? "white" : "transparent",
+                      color: analysisType === "total" ? T.accent : T.muted,
+                      boxShadow: analysisType === "total" ? "0 2px 8px rgba(0,0,0,0.08)" : "none",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    📊 Total Analysis
+                  </button>
+                </div>
+                <div style={{ fontSize: 12, color: T.muted, fontWeight: 700 }}>
+                  Showing {analysisType === "monthly" ? "Current Month" : "All Time"} performance metrics
+                </div>
+              </div>
               
               {/* Section 1: Team Analysis Overview */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 16 }}>
@@ -6084,6 +6143,141 @@ Software Solutions</div>
 
               </div>
 
+              {/* Section 3: Employee Performance Rankings */}
+              {(() => {
+                const parseTime = (s) => {
+                  if (!s || s === "—") return null;
+                  const parts = s.split(" ");
+                  if (parts.length < 2) return null;
+                  const [time, ampm] = parts;
+                  let [h, m] = time.split(":").map(Number);
+                  if (ampm.toLowerCase() === "pm" && h < 12) h += 12;
+                  if (ampm.toLowerCase() === "am" && h === 12) h = 0;
+                  return h * 3600 + m * 60;
+                };
+
+                const rankedData = allEmployees.map(emp => {
+                  const empRecords = analysisRecords.filter(r => r.id === emp.id || r.employeeid === emp.id);
+                  const daysPresent = empRecords.length;
+                  const totalWorkSecs = empRecords.reduce((acc, r) => acc + (r.live_hours_secs || 0), 0);
+                  const avgWorkSecs = daysPresent > 0 ? totalWorkSecs / daysPresent : 0;
+                  const avgWorkHours = (avgWorkSecs / 3600).toFixed(1);
+
+                  const onTimeDays = empRecords.filter(r => {
+                    const s = parseTime(r.logint || r.intime);
+                    return s !== null && s <= 36000; // 10:00 AM
+                  }).length;
+                  const punctualityRate = maxDays > 0 ? Math.round((onTimeDays / maxDays) * 100) : 0;
+
+                  const empTasks = taskFeed.filter(t => t.employee_id === emp.id);
+                  const completedTasks = empTasks.filter(t => t.status === "Completed").length;
+                  const taskCompScoreForPerformance = empTasks.length > 0 ? Math.round((completedTasks / empTasks.length) * 100) : 0;
+                  const taskCompRate = empTasks.length > 0 ? Math.round((completedTasks / empTasks.length) * 100) : 100;
+
+                  const attScore = Math.min(100, Math.round((daysPresent / Math.max(1, maxDays)) * 100));
+                  const hrsScore = Math.min(100, Math.round((avgWorkSecs / 28800) * 100));
+
+                  const finalScore = daysPresent > 0 ? Math.round(0.3 * attScore + 0.3 * hrsScore + 0.2 * punctualityRate + 0.2 * taskCompScoreForPerformance) : 0;
+
+                  let grade = "C";
+                  let color = T.red;
+                  if (finalScore >= 90) { grade = "A+"; color = T.green; }
+                  else if (finalScore >= 80) { grade = "A"; color = T.green; }
+                  else if (finalScore >= 70) { grade = "B"; color = T.amber; }
+                  else if (finalScore >= 50) { grade = "C+"; color = T.amber; }
+
+                  return {
+                    emp,
+                    daysPresent,
+                    avgWorkHours,
+                    punctualityRate,
+                    taskCompRate,
+                    finalScore,
+                    grade,
+                    color
+                  };
+                }).sort((a, b) => b.finalScore - a.finalScore);
+
+                return (
+                  <div className="premium-card" style={{ padding: "24px 28px" }}>
+                    <div style={{ marginBottom: 20 }}>
+                      <h2 className="h-font" style={{ margin: 0, fontSize: 18, fontWeight: 700, color: T.ink }}>Employee Performance Rankings</h2>
+                      <p style={{ margin: "4px 0 0 0", fontSize: 12, color: T.muted }}>Ranked list of employees sorted by performance score</p>
+                    </div>
+                    <div style={{ overflowX: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                        <thead>
+                          <tr style={{ background: T.surface, borderBottom: `2px solid ${T.border}` }}>
+                            <th style={{ padding: "12px 16px", fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", textAlign: "left", width: 60 }}>Rank</th>
+                            <th style={{ padding: "12px 16px", fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", textAlign: "left" }}>Employee</th>
+                            <th style={{ padding: "12px 16px", fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", textAlign: "center", width: 100 }}>Score</th>
+                            <th style={{ padding: "12px 16px", fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", textAlign: "center", width: 80 }}>Grade</th>
+                            <th style={{ padding: "12px 16px", fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", textAlign: "center" }}>Days Present</th>
+                            <th style={{ padding: "12px 16px", fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", textAlign: "center" }}>Avg Hours</th>
+                            <th style={{ padding: "12px 16px", fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", textAlign: "center" }}>Punctuality</th>
+                            <th style={{ padding: "12px 16px", fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", textAlign: "center" }}>Tasks Done</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rankedData.map((row, index) => {
+                            const isSelected = row.emp.id === analysisEmpId;
+                            return (
+                              <tr 
+                                key={row.emp.id} 
+                                style={{ 
+                                  borderBottom: `1px solid ${T.border}`,
+                                  background: isSelected ? `${T.accent}08` : "none",
+                                  transition: "background 0.2s",
+                                  cursor: "pointer"
+                                }}
+                                className="adm-row"
+                                onClick={() => {
+                                  setAnalysisEmpId(row.emp.id);
+                                  setAnalysisSearch("");
+                                }}
+                              >
+                                <td style={{ padding: "14px 16px", fontSize: 14, fontWeight: 800, color: index < 3 ? T.gold : T.muted }}>
+                                  {index === 0 ? "🥇 1" : index === 1 ? "🥈 2" : index === 2 ? "🥉 3" : `${index + 1}`}
+                                </td>
+                                <td style={{ padding: "14px 16px" }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                    <Avatar name={row.emp.name} src={profiles.find(p => String(p.employee_id).toLowerCase() === String(row.emp.id).toLowerCase())?.photo} size={32} />
+                                    <div>
+                                      <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{row.emp.name}</div>
+                                      <div style={{ fontSize: 11, color: T.muted, textTransform: "uppercase" }}>{row.emp.role}</div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td style={{ padding: "14px 16px", textAlign: "center" }}>
+                                  <div className="h-font" style={{ fontSize: 16, fontWeight: 800, color: row.color }}>{row.finalScore}</div>
+                                </td>
+                                <td style={{ padding: "14px 16px", textAlign: "center" }}>
+                                  <span style={{ background: `${row.color}15`, color: row.color, padding: "2px 8px", borderRadius: 8, fontSize: 11, fontWeight: 700 }}>
+                                    {row.grade}
+                                  </span>
+                                </td>
+                                <td style={{ padding: "14px 16px", textAlign: "center", fontSize: 13, color: T.ink2 }}>
+                                  {row.daysPresent} days
+                                </td>
+                                <td style={{ padding: "14px 16px", textAlign: "center", fontSize: 13, color: T.ink2 }}>
+                                  {row.avgWorkHours} hrs
+                                </td>
+                                <td style={{ padding: "14px 16px", textAlign: "center", fontSize: 13, color: T.ink2 }}>
+                                  {row.punctualityRate}%
+                                </td>
+                                <td style={{ padding: "14px 16px", textAlign: "center", fontSize: 13, color: T.ink2 }}>
+                                  {row.taskCompRate}%
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()}
+
             </div>
           );
         })()}
@@ -6223,7 +6417,7 @@ Software Solutions</div>
           </div>
         )}
 
-        {/* Attendance Records Table */}
+        {/* Attendance  Table */}
         {activeTab === "attendance" && (
           <div style={{ overflowX: "auto", maxHeight: 600, overflowY: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>

@@ -680,7 +680,7 @@ def employee_profile(request, employee_id):
         user = User.objects.filter(username__iexact=employee_id).first()
         if not user:
             # If the user doesn't exist, we auto-create the User + Profile on the fly
-            # Fetch name from their Attendance records to pre-populate User
+            # Fetch name from their Attendance  to pre-populate User
             name = ""
             attendance = Attendance.objects.filter(employee_id__iexact=employee_id).exclude(name='').order_by('-timestamp').first()
             if attendance and attendance.name and attendance.name != '—':

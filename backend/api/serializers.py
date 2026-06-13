@@ -53,7 +53,7 @@ class ChatMessageSerializer(serializers.ModelSerializer):
         if obj.sender_id.lower() == 'admin':
             return 'Admin'
         try:
-            # Primary: Look up from Attendance records (most reliable — stores full name)
+            # Primary: Look up from Attendance  (most reliable — stores full name)
             attendance = Attendance.objects.filter(
                 employee_id__iexact=obj.sender_id
             ).exclude(name='').order_by('-timestamp').first()
