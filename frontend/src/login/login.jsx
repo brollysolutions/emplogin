@@ -768,34 +768,34 @@ function StatCard({ label, value, sub, icon, color, bg, isLive, index = 0 }) {
     >
       <div className="stat-card" style={{
         background: "transparent",
-        padding: "20px",
+        padding: "12px 14px",
         display: "flex",
         flexDirection: "column",
-        gap: 16,
+        gap: 8,
         position: "relative",
         overflow: "hidden",
         width: "100%",
         height: "100%"
       }}>
         {isLive && (
-          <div style={{ position: "absolute", top: 16, right: 16, display: "flex", alignItems: "center", gap: 6 }}>
-            <div className="pulse-soft" style={{ width: 8, height: 8, borderRadius: "50%", background: T.green, boxShadow: `0 0 12px ${T.green}40` }} />
-            <span style={{ fontSize: 11, fontWeight: 700, color: T.green, textTransform: "uppercase", letterSpacing: "1px", fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em' }}>Live</span>
+          <div style={{ position: "absolute", top: 10, right: 10, display: "flex", alignItems: "center", gap: 6 }}>
+            <div className="pulse-soft" style={{ width: 6, height: 6, borderRadius: "50%", background: T.green, boxShadow: `0 0 12px ${T.green}40` }} />
+            <span style={{ fontSize: 9, fontWeight: 700, color: T.green, textTransform: "uppercase", letterSpacing: "1px", fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em' }}>Live</span>
           </div>
         )}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 12, fontWeight: 400, letterSpacing: 1, color: T.ink, textTransform: "uppercase", fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em' }}>{label}</span>
+          <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: 0.5, color: T.ink, textTransform: "uppercase", fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em' }}>{label}</span>
           <div style={{
-            width: 44, height: 44, borderRadius: 14, background: finalBg,
+            width: 32, height: 32, borderRadius: 8, background: finalBg,
             display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: `0 8px 16px ${finalColor}10`
+            boxShadow: `0 4px 10px ${finalColor}10`
           }}>
-            <Icon d={icon} size={20} color={finalColor} />
+            <Icon d={icon} size={16} color={finalColor} />
           </div>
         </div>
         <div>
-          <div className="stat-value" style={{ fontSize: 30, fontWeight: 600, color: T.ink, marginBottom: 4, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.5px", fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em' }}>{value}</div>
-          {sub && <div style={{ fontSize: 13, color: T.ink, fontWeight: 700, opacity: 0.7 }}>{sub}</div>}
+          <div className="stat-value" style={{ fontSize: 22, fontWeight: 600, color: T.ink, marginBottom: 2, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.5px", fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em' }}>{value}</div>
+          {sub && <div style={{ fontSize: 11, color: T.ink, fontWeight: 700, opacity: 0.7 }}>{sub}</div>}
         </div>
       </div>
     </GlowCard>
@@ -2321,7 +2321,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "#f4f6f9",
+      background: "radial-gradient(at 0% 0%, rgba(212, 175, 55, 0.04) 0, transparent 40%), radial-gradient(at 50% 0%, rgba(99, 102, 241, 0.03) 0, transparent 40%), radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.04) 0, transparent 40%), radial-gradient(at 50% 100%, rgba(212, 175, 55, 0.02) 0, transparent 50%), #f8fafc",
       position: "relative",
       overflow: "hidden",
       fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em',
@@ -2344,20 +2344,30 @@ function Dashboard({ employee, onSignOut, showToast }) {
         }
 
         .premium-card {
-          background: #ffffff;
-          border: 1px solid ${T.border};
-          border-radius: 28px;
-          box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.05);
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border: 1px solid rgba(0, 0, 0, 0.06);
+          border-radius: 20px;
+          box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.03);
           transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
           animation: slideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
         }
 
+        .premium-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 20px 45px -15px rgba(0, 0, 0, 0.08);
+          border-color: rgba(212, 175, 55, 0.35);
+        }
+
         .tab {
-          padding: 10px 24px;
-          border-radius: 12px;
+          flex: 1;
+          text-align: center;
+          padding: 8px 16px;
+          border-radius: 10px;
           border: 1px solid transparent;
           cursor: pointer;
-          font-size: 14px;
+          font-size: 13px;
           font-weight: 700;
           font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
           transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -2380,15 +2390,15 @@ function Dashboard({ employee, onSignOut, showToast }) {
         }
 
         .act-btn {
-          padding: 14px 28px;
-          border-radius: 16px;
+          padding: 10px 20px;
+          border-radius: 12px;
           border: none;
           font-weight: 700;
           font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
           cursor: pointer;
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 8px;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.3);
         }
@@ -2402,18 +2412,18 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
         .task-area {
           width: 100%;
-          padding: 20px;
-          border-radius: 16px;
+          padding: 12px;
+          border-radius: 12px;
           border: 1px solid ${T.border};
-          font-size: 15px;
-          line-height: 1.6;
+          font-size: 14px;
+          line-height: 1.5;
           resize: vertical;
           outline: none;
           font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
           color: ${T.ink};
           background: rgba(255, 255, 255, 0.03);
           transition: all 0.3s;
-          min-height: 240px;
+          min-height: 130px;
           box-sizing: border-box;
         }
 
@@ -2796,11 +2806,13 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
       {/* -- Topbar -- */}
       <div className="top-bar" style={{
-        background: "#ffffff",
-        borderBottom: `2px solid ${T.gold}`,
+        background: "rgba(255, 255, 255, 0.85)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        borderBottom: `1px solid rgba(181, 138, 13, 0.4)`,
         padding: "0 32px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 70,
         position: "sticky", top: 0, zIndex: 1000,
-        boxShadow: "0 1px 10px rgba(0,0,0,0.05)"
+        boxShadow: "0 4px 30px rgba(0,0,0,0.03)"
       }}>
         <div className="top-bar-logo" style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{
@@ -2903,27 +2915,27 @@ function Dashboard({ employee, onSignOut, showToast }) {
       </div>
 
       {/* ── Main content ── */}
-      <div className="dashboard-content" style={{ width: "100%", maxWidth: 1200, margin: "0 auto", padding: "40px 32px", boxSizing: "border-box" }}>
+      <div className="dashboard-content" style={{ width: "100%", maxWidth: "96%", margin: "0 auto", padding: "20px 24px", boxSizing: "border-box" }}>
 
         {/* Greeting row */}
-        <div className="greeting-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 36 }}>
+        <div className="greeting-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <div>
-            <h1 className="h-font" style={{ margin: "0 0 6px", fontSize: 30, fontWeight: 700, color: "#1e1b4b", letterSpacing: "-0.5px", textShadow: "0.5px 0 0 currentColor" }}>
+            <h1 className="h-font" style={{ margin: "0 0 4px", fontSize: 24, fontWeight: 700, color: "#1e1b4b", letterSpacing: "-0.5px", textShadow: "0.5px 0 0 currentColor" }}>
               {greeting}, {employee.name.split(" ")[0]} 👋
             </h1>
-            <p style={{ margin: 0, fontSize: 14, color: "#6366f1", fontWeight: 700 }}>
+            <p style={{ margin: 0, fontSize: 13, color: "#6366f1", fontWeight: 700 }}>
               {now.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
             </p>
           </div>
 
-          <div className="time-display" style={{ background: "#ffffff", border: `1px solid ${T.border}`, borderRadius: 20, padding: "16px 28px", textAlign: "right", boxShadow: "0 1px 15px rgba(0, 0, 0, 0.05)" }}>
+          <div className="time-display" style={{ background: "#ffffff", border: `1px solid ${T.border}`, borderRadius: 12, padding: "8px 16px", textAlign: "right", boxShadow: "0 1px 15px rgba(0, 0, 0, 0.05)" }}>
             <div className="h-font" style={{
-              fontSize: 32, fontWeight: 700, color: T.ink,
+              fontSize: 24, fontWeight: 700, color: T.ink,
               fontVariantNumeric: "tabular-nums", letterSpacing: 1
             }}>
               {now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
             </div>
-            <div style={{ fontSize: 11, color: T.muted, marginTop: 4, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>
+            <div style={{ fontSize: 10, color: T.muted, marginTop: 2, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>
               IST  {now.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
             </div>
           </div>
@@ -2931,30 +2943,30 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
         {/* Progress bar */}
         {(status !== "idle") && (
-          <div className="premium-card" style={{ padding: "24px 28px", marginBottom: 32 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-              <span className="h-font" style={{ fontSize: 15, fontWeight: 700, color: T.ink }}>Daily Performance Goal</span>
-              <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+          <div className="premium-card" style={{ padding: "12px 20px", borderRadius: 20, marginBottom: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span className="h-font" style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>Daily Performance Goal</span>
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                 {extraStr && (
                   <span style={{
-                    fontSize: 12, fontWeight: 700, color: T.amber,
-                    background: T.amberBg, padding: "6px 14px", borderRadius: 20,
+                    fontSize: 11, fontWeight: 700, color: T.amber,
+                    background: T.amberBg, padding: "4px 10px", borderRadius: 20,
                     border: `1px solid ${T.amber}20`
                   }}>
                     ? +{extraStr} OVERTIME
                   </span>
                 )}
-                <span className="h-font" style={{ fontSize: 18, fontWeight: 700, color: pct >= 100 ? T.green : T.accent }}>{pct}%</span>
+                <span className="h-font" style={{ fontSize: 16, fontWeight: 700, color: pct >= 100 ? T.green : T.accent }}>{pct}%</span>
               </div>
             </div>
-            <div style={{ height: 12, background: "rgba(0,0,0,0.05)", borderRadius: 99, overflow: "hidden" }}>
+            <div style={{ height: 8, background: "rgba(0,0,0,0.05)", borderRadius: 99, overflow: "hidden" }}>
               <div style={{
                 height: "100%", width: `${pct}%`, borderRadius: 99,
                 background: `linear-gradient(90deg, ${T.gold} 0%, ${T.accent} 100%)`,
                 transition: "width 1s cubic-bezier(0.34, 1.56, 0.64, 1)"
               }} />
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, fontSize: 12, color: T.muted, fontWeight: 700 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 11, color: T.muted, fontWeight: 700 }}>
               <span>
                 {hmsStr(liveHrs)} clocked today
                 {28800 - currentTotalWorkSeconds > 0 ? (
@@ -2974,8 +2986,8 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
         {/* Tabs */}
         <div className="tabs-container" style={{
-          display: "flex", gap: 6, background: "rgba(0, 0, 0, 0.05)", borderRadius: 18,
-          padding: 6, marginBottom: 32, width: "fit-content"
+          display: "flex", gap: 4, background: "rgba(0, 0, 0, 0.05)", borderRadius: 12,
+          padding: 4, marginBottom: 16, width: "100%", boxSizing: "border-box"
         }}>
           {[
             { k: "today", label: "My Workspace" }, 
@@ -3001,7 +3013,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
         {/* Stat cards */}
         {activeTab !== "messages" && activeTab !== "profile" && (
-          <div className="stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 20, marginBottom: 32 }}>
+          <div className="stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 12, marginBottom: 20 }}>
             <StatCard index={0} label="Active Work" value={hmsStr(liveHrs)}
               sub={`${pct}% of daily goal`}
               icon={icons.clock} color={T.green} bg={T.greenBg} isLive={status === "working"} />
@@ -3024,38 +3036,38 @@ function Dashboard({ employee, onSignOut, showToast }) {
         )}
 
         {activeTab === "today" && (
-          <div className="main-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28 }}>
+          <div className="main-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
 
             {/* Control Panel */}
-            <div className="premium-card" style={{ padding: "36px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 32 }}>
+            <div className="premium-card" style={{ padding: "20px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
                 <div style={{
-                  width: 54, height: 54, borderRadius: 16, background: `${T.accent}10`,
+                  width: 40, height: 40, borderRadius: 10, background: `${T.accent}10`,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  boxShadow: `0 8px 20px ${T.accent}08`
+                  boxShadow: `0 4px 10px ${T.accent}08`
                 }}>
-                  <Icon d={icons.clock} size={24} color={T.accent} />
+                  <Icon d={icons.clock} size={20} color={T.accent} />
                 </div>
                 <div>
-                  <div className="h-font" style={{ fontSize: 20, fontWeight: 700, color: T.ink, letterSpacing: "-0.3px" }}>Session Control</div>
-                  <div style={{ fontSize: 13, color: T.muted, fontWeight: 700 }}>Manage your work-life balance</div>
+                  <div className="h-font" style={{ fontSize: 16, fontWeight: 700, color: T.ink, letterSpacing: "-0.3px" }}>Session Control</div>
+                  <div style={{ fontSize: 11, color: T.muted, fontWeight: 700 }}>Manage your work-life balance</div>
                 </div>
               </div>
 
-              <div style={{ display: "flex", gap: 14, marginBottom: 32 }}>
+              <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
                 {!initialSyncDone ? (
-                  <div style={{ flex: 1, padding: "14px", display: "flex", justifyContent: "center", alignItems: "center", background: T.surface, borderRadius: "18px", border: `1px solid ${T.border}` }}>
+                  <div style={{ flex: 1, padding: "10px", display: "flex", justifyContent: "center", alignItems: "center", background: T.surface, borderRadius: "12px", border: `1px solid ${T.border}` }}>
                     <span className="pulse-soft" style={{
-                      width: 14, height: 14, border: `3px solid ${T.border}`,
+                      width: 12, height: 12, border: `2px solid ${T.border}`,
                       borderTopColor: T.accent, borderRadius: "50%",
                       display: "inline-block", animation: "spin 0.8s linear infinite"
                     }} />
-                    <span style={{ marginLeft: 12, fontSize: 14, color: T.muted, fontWeight: 700, letterSpacing: 0.5 }}>SYNCHRONIZING...</span>
+                    <span style={{ marginLeft: 8, fontSize: 12, color: T.muted, fontWeight: 700, letterSpacing: 0.5 }}>SYNCHRONIZING...</span>
                   </div>
                 ) : (status === "idle" || status === "loggedOut") ? (
                   <button className="act-btn" onClick={() => setShowStartWorkingModal(true)}
                     style={{ flex: 1, background: `linear-gradient(135deg, ${T.green} 0%, #059669 100%)`, color: "white", justifyContent: "center" }}>
-                    <Icon d={icons.check} size={18} color="white" />
+                    <Icon d={icons.check} size={16} color="white" />
                     Start Working
                   </button>
                 ) : (
@@ -3063,19 +3075,19 @@ function Dashboard({ employee, onSignOut, showToast }) {
                     {status === "working" ? (
                       <button className="act-btn" onClick={handleBreak}
                         style={{ flex: 1, background: `linear-gradient(135deg, ${T.amber} 0%, #d97706 100%)`, color: "white", justifyContent: "center" }}>
-                        <Icon d={icons.refresh} size={18} color="white" />
+                        <Icon d={icons.refresh} size={16} color="white" />
                         Take Break
                       </button>
                     ) : (
                       <button className="act-btn" onClick={handleBreak}
                         style={{ flex: 1, background: `linear-gradient(135deg, ${T.green} 0%, #059669 100%)`, color: "white", justifyContent: "center" }}>
-                        <Icon d={icons.check} size={18} color="white" />
+                        <Icon d={icons.check} size={16} color="white" />
                         Resume Work
                       </button>
                     )}
                     <button className="act-btn" onClick={handleLogout}
                       style={{ flex: 1, background: "#f1f5f9", color: T.red, justifyContent: "center", boxShadow: "none", border: `1px solid ${T.red}20` }}>
-                      <Icon d={icons.logout} size={18} color={T.red} />
+                      <Icon d={icons.logout} size={16} color={T.red} />
                       Pause Session
                     </button>
                   </>
@@ -3083,31 +3095,31 @@ function Dashboard({ employee, onSignOut, showToast }) {
               </div>
 
               {/* Status timeline */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {[
                   { label: "Today's Arrival", time: loginTime ? fmtTime(loginTime) : null, done: !!loginTime, color: T.accent, icon: "🌅" },
                   { label: "Net Work Hours", time: hmsStr(liveHrs), done: liveHrs.total > 0, color: T.green, icon: "💻" },
                   { label: "Total Recess", time: hmsStr(liveBreakHrs), done: liveBreakHrs.total > 0, color: T.amber, icon: "☕" },
                 ].map((s, i) => (
                   <div key={i} style={{
-                    display: "flex", alignItems: "center", gap: 16,
-                    padding: "16px 20px", borderRadius: 20,
+                    display: "flex", alignItems: "center", gap: 12,
+                    padding: "10px 14px", borderRadius: 12,
                     background: s.done ? `${s.color}06` : T.surface,
                     border: `1px solid ${s.done ? s.color + "20" : T.border}`,
                     transition: "all 0.3s"
                   }}>
                     <div style={{
-                      width: 42, height: 42, borderRadius: "50%", flexShrink: 0,
+                      width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
                       background: s.done ? s.color : "white",
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      boxShadow: s.done ? `0 6px 15px ${s.color}30` : "none",
-                      fontSize: 18
+                      boxShadow: s.done ? `0 4px 10px ${s.color}30` : "none",
+                      fontSize: 14
                     }}>
-                      {s.done ? <Icon d={icons.check} size={18} color="white" stroke={3} /> : s.icon}
+                      {s.done ? <Icon d={icons.check} size={14} color="white" stroke={3} /> : s.icon}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>{s.label}</div>
-                      <div className="h-font" style={{ fontSize: 18, fontWeight: 700, color: T.ink, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>{s.time || "— —"}</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>{s.label}</div>
+                      <div className="h-font" style={{ fontSize: 15, fontWeight: 700, color: T.ink, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>{s.time || "— —"}</div>
                     </div>
                   </div>
                 ))}
@@ -3116,11 +3128,11 @@ function Dashboard({ employee, onSignOut, showToast }) {
               {/* Background Tab Guard info panel */}
               {alwaysActive && (status === "working" || status === "break") && (
                 <div style={{
-                  marginTop: 20, padding: "16px 20px", borderRadius: 20,
+                  marginTop: 14, padding: "10px 14px", borderRadius: 12,
                   background: "rgba(99, 102, 241, 0.04)", border: `1px solid rgba(99, 102, 241, 0.15)`,
-                  fontSize: 12, lineHeight: 1.5, color: T.muted
+                  fontSize: 11, lineHeight: 1.4, color: T.muted
                 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, fontWeight: 700, color: T.purple }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, fontWeight: 700, color: T.purple }}>
                     <span>💡 Background Tab Guard Active</span>
                   </div>
                   <span>
@@ -3131,21 +3143,21 @@ function Dashboard({ employee, onSignOut, showToast }) {
             </div>
 
             {/* Tasks + Save */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
               {/* Task entry */}
-              <div className="premium-card" style={{ padding: "36px", flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
+              <div className="premium-card" style={{ padding: "20px", flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
                   <div style={{
-                    width: 54, height: 54, borderRadius: 16, background: `${T.purple}10`,
+                    width: 40, height: 40, borderRadius: 10, background: `${T.purple}10`,
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    boxShadow: `0 8px 20px ${T.purple}08`
+                    boxShadow: `0 4px 10px ${T.purple}08`
                   }}>
-                    <Icon d={icons.tasks} size={24} color={T.purple} />
+                    <Icon d={icons.tasks} size={20} color={T.purple} />
                   </div>
                   <div>
-                    <div className="h-font" style={{ fontSize: 20, fontWeight: 700, color: T.ink, letterSpacing: "-0.3px" }}>Activity Logging</div>
-                    <div style={{ fontSize: 13, color: T.muted, fontWeight: 700 }}>Document your daily achievements</div>
+                    <div className="h-font" style={{ fontSize: 16, fontWeight: 700, color: T.ink, letterSpacing: "-0.3px" }}>Activity Logging</div>
+                    <div style={{ fontSize: 11, color: T.muted, fontWeight: 700 }}>Document your daily achievements</div>
                   </div>
                 </div>
                 <textarea className="task-area" value={taskInput}
@@ -3158,14 +3170,14 @@ function Dashboard({ employee, onSignOut, showToast }) {
                   }}
                   placeholder="• Example: Completed API integration&#10;• Example: Resolved UI bugs in dashboard&#10;• Example: Attended weekly sync" />
                 
-                <div style={{ marginTop: 24 }}>
+                <div style={{ marginTop: 16 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                     <label style={{
-                      display: "flex", alignItems: "center", gap: 10, padding: "12px 24px", borderRadius: 16,
+                      display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", borderRadius: 10,
                       background: T.surface, border: `1px solid ${T.border}`, cursor: "pointer", 
-                      fontSize: 14, color: T.ink2, fontWeight: 700, transition: "all 0.2s"
+                      fontSize: 13, color: T.ink2, fontWeight: 700, transition: "all 0.2s"
                     }} onMouseOver={e => e.currentTarget.style.background = "white"}>
-                      <Icon d={icons.camera} size={18} color={T.accent} />
+                      <Icon d={icons.camera} size={16} color={T.accent} />
                       {taskScreenshot ? "Change Proof" : "Attach Proof"}
                       <input type="file" hidden accept="image/*" onChange={e => {
                         if (e.target.files?.[0]) {
@@ -3174,10 +3186,10 @@ function Dashboard({ employee, onSignOut, showToast }) {
                       }} />
                     </label>
                     {taskScreenshot && (
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: T.green, fontWeight: 700, animation: "fadeIn 0.3s" }}>    
-                        <Icon d={icons.check} size={16} />
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12, color: T.green, fontWeight: 700, animation: "fadeIn 0.3s" }}>    
+                        <Icon d={icons.check} size={14} />
                         Image Attached
-                        <button onClick={() => setTaskScreenshot(null)} style={{ background: T.redBg, border: "none", color: T.red, cursor: "pointer", width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}></button>
+                        <button onClick={() => setTaskScreenshot(null)} style={{ background: T.redBg, border: "none", color: T.red, cursor: "pointer", width: 20, height: 20, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}></button>
                       </div>
                     )}
                   </div>
@@ -3185,19 +3197,19 @@ function Dashboard({ employee, onSignOut, showToast }) {
               </div>
 
               {/* Sync to Cloud */}
-              <div className="premium-card" style={{ padding: "28px 36px" }}>
+              <div className="premium-card" style={{ padding: "16px 20px" }}>
                 <button onClick={handleSave}
                   style={{
-                    width: "100%", padding: "16px", borderRadius: 18, border: "none",
+                    width: "100%", padding: "12px", borderRadius: 12, border: "none",
                     background: `linear-gradient(135deg, ${T.gold} 0%, ${T.accent} 100%)`, 
-                    color: "white", cursor: "pointer", fontSize: 15,
-                    fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-                    boxShadow: `0 12px 25px ${T.accent}30`, transition: "all 0.3s"
+                    color: "white", cursor: "pointer", fontSize: 14,
+                    fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                    boxShadow: `0 6px 15px ${T.accent}30`, transition: "all 0.3s"
                   }} onMouseOver={e => e.currentTarget.style.transform = "translateY(-2px)"} onMouseOut={e => e.currentTarget.style.transform = "none"}>
-                  <Icon d={icons.refresh} size={18} color="white" />
+                  <Icon d={icons.refresh} size={16} color="white" />
                   Final Sync to Database
                 </button>
-                <div style={{ marginTop: 14, textAlign: "center", fontSize: 12, color: T.muted, fontWeight: 700, opacity: 0.8 }}>
+                <div style={{ marginTop: 8, textAlign: "center", fontSize: 11, color: T.muted, fontWeight: 700, opacity: 0.8 }}>
                   Last sync today: {history.find(r => r.date === fmtDate(now))?.logoutT || "Not yet synced"}
                 </div>
               </div>
@@ -4179,10 +4191,17 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
     return d.toISOString().split('T')[0];
   });
   const [activeTab, setTab] = useState(() => localStorage.getItem("wt_tab_adm") || "attendance");
+  const [analysisEmpId, setAnalysisEmpId] = useState("");
 
   useEffect(() => {
     localStorage.setItem("wt_tab_adm", activeTab);
   }, [activeTab]);
+
+  useEffect(() => {
+    if (!analysisEmpId && allEmployees.length > 0) {
+      setAnalysisEmpId(allEmployees[0].id);
+    }
+  }, [allEmployees, analysisEmpId]);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [assignTaskTo, setAssignTaskTo] = useState(null);
   const [taskFeed, setTaskFeed] = useState([]);
@@ -4922,7 +4941,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
       const ms = !q || (r.name || r.employeename || "").toLowerCase().includes(q)
         || (r.id || r.employeeid || "").toLowerCase().includes(q)
         || (r.dept || r.department || "").toLowerCase().includes(q);
-      const md = !filterDate || (r.date || "") === targetDate;
+      const md = (r.date || "") === targetDate;
       
       // Use live_status for filtering if it's today
       const currentStatus = (r.date === today && r.status === "Active") ? r.live_status : r.status;
@@ -4988,7 +5007,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
     padding: "11px 14px", textAlign: "left", fontSize: 11, fontWeight: 700,
     color: T.muted, letterSpacing: 0.5, borderBottom: `2px solid ${T.gold}`, textTransform: "uppercase", whiteSpace: "nowrap"
   };
-  const cellStyle = { padding: "11px 14px", fontSize: 13, color: T.ink, borderBottom: `2px solid ${T.gold}` };
+  const cellStyle = { padding: "11px 14px", fontSize: 13, color: T.ink, borderBottom: `1px solid ${T.border}` };
 
   const reqColStyle = { ...colStyle, fontSize: 13 };
   const reqCellStyle = { ...cellStyle, fontSize: 15 };
@@ -4998,7 +5017,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "#f4f6f9",
+      background: "radial-gradient(at 0% 0%, rgba(212, 175, 55, 0.04) 0, transparent 40%), radial-gradient(at 50% 0%, rgba(99, 102, 241, 0.03) 0, transparent 40%), radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.04) 0, transparent 40%), radial-gradient(at 50% 100%, rgba(212, 175, 55, 0.02) 0, transparent 50%), #f8fafc",
       position: "relative",
       overflow: "hidden",
       fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em',
@@ -5021,6 +5040,8 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
         }
 
         .adm-tab {
+          flex: 1;
+          text-align: center;
           padding: 10px 24px;
           border-radius: 12px;
           border: 1px solid transparent;
@@ -5072,14 +5093,20 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
         }
 
         .premium-card {
-          background: rgba(255, 255, 255, 0.8);
+          background: rgba(255, 255, 255, 0.85);
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
           border-radius: 28px;
-          border: 1px solid ${T.border};
+          border: 1px solid rgba(0, 0, 0, 0.06);
           box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.03);
           transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
           animation: slideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+        }
+
+        .premium-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 20px 45px -15px rgba(0, 0, 0, 0.08);
+          border-color: rgba(212, 175, 55, 0.35);
         }
 
         @keyframes slideUp {
@@ -5110,9 +5137,12 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
 
       {/* Topbar */}
       <div className="adm-topbar" style={{
-        background: "#020617", padding: "0 32px", display: "flex", alignItems: "center",
-        justifyContent: "space-between", height: 70, boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
-        position: "sticky", top: 0, zIndex: 1000, borderBottom: `2px solid ${T.gold}`
+        background: "rgba(2, 6, 23, 0.95)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        padding: "0 32px", display: "flex", alignItems: "center",
+        justifyContent: "space-between", height: 70, boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
+        position: "sticky", top: 0, zIndex: 1000, borderBottom: `1px solid rgba(212, 175, 55, 0.4)`
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <a href="https://brollysolutions.in" style={{
@@ -5686,26 +5716,25 @@ Software Solutions</div>
                 </div>
                 )}
 
-                <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px" }}>
+                <div style={{ maxWidth: "96%", margin: "0 auto", padding: "28px 24px" }}>
         {/* Stat cards */}
-        <div className="adm-stat-grid stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 18, marginBottom: 32 }}>
+        <div className="adm-stat-grid stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, marginBottom: 20 }}>
           <StatCard index={0} label="Total Employees" value={String(registeredCount)} sub="Registered" icon={icons.user} color={T.gold} bg={T.goldBg} />
           <StatCard index={1} label="Today Present" value={String(todayRecs.length)} sub={today} icon={icons.check} color={T.green} bg="rgba(16, 185, 129, 0.1)" isLive={true} />
           <StatCard index={2} label="Full Day Today" value={String(fullDayToday)} sub="= 8 hours" icon={icons.clock} color={T.green} bg="rgba(16, 185, 129, 0.1)" />
           <StatCard index={3} label="IWD Today" value={String(iwdToday)} sub="4.5 - 8 hrs" icon={icons.chart} color={T.orange} bg="rgba(249, 115, 22, 0.1)" />     
           <StatCard index={4} label="Half Day Today" value={String(halfDayToday)} sub="< 4.5 hours" icon={icons.clock} color={T.amber} bg="rgba(245, 158, 11, 0.1)" />
-          <StatCard index={5} label="Month Records" value={String(currentMonthRecsCount)} sub="This month" icon={icons.calendar} color={T.orange} bg="rgba(249, 115, 22, 0.1)" />
-          <StatCard index={6} label="Total Records" value={String(records.length)} sub="All time" icon={icons.calendar} color={T.purple} bg="rgba(139, 92, 246, 0.1)" />
         </div>
 
         {/* Tabs */}
         <div className="adm-tab-container" style={{
           display: "flex", gap: 4, background: "#e4eaf3", borderRadius: 10,
-          padding: 4, marginBottom: 20, width: "fit-content"
+          padding: 4, marginBottom: 20, width: "100%", boxSizing: "border-box"
         }}>
           {[
             { k: "attendance", label: "Attendance Records" },
             { k: "weekly", label: "Weekly Report" },
+            { k: "analysis", label: "Analysis" },
             { k: "tasks", label: "Live Task Feed" },
             { k: "leaves", label: "Requests" },
             { k: "groups", label: "Manage Groups", badge: Object.values(groupUnreadMapAdmin).reduce((a, b) => a + b, 0) },
@@ -5723,59 +5752,306 @@ Software Solutions</div>
         </div>
 
         {/* Filters row */}
-        <div className="adm-filter-bar" style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
-          <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
-            <div style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }}>
-              <Icon d={icons.eye} size={14} color={T.faint} />
+        {activeTab !== "analysis" && (
+          <div className="adm-filter-bar" style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+            <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
+              <div style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }}>
+                <Icon d={icons.eye} size={14} color={T.faint} />
+              </div>
+              <input className="adm-inp" placeholder="Search by name or ID..."
+                value={search} onChange={e => setSearch(e.target.value)}
+                style={{ width: "100%", paddingLeft: 32, boxSizing: "border-box" }} />
             </div>
-            <input className="adm-inp" placeholder="Search by name or ID..."
-              value={search} onChange={e => setSearch(e.target.value)}
-              style={{ width: "100%", paddingLeft: 32, boxSizing: "border-box" }} />
+            {activeTab === "weekly" ? (
+              <>
+                <div style={{ fontSize: 12, fontWeight: 700, color: T.muted }}>From:</div>
+                <input className="adm-inp" type="date" value={weeklyFrom} onChange={e => setWeeklyFrom(e.target.value)} style={{ minWidth: 140 }} />
+                <div style={{ fontSize: 12, fontWeight: 700, color: T.muted }}>To:</div>
+                <input className="adm-inp" type="date" value={weeklyTo} onChange={e => setWeeklyTo(e.target.value)} style={{ minWidth: 140 }} />
+              </>
+            ) : (
+              <>
+                <input
+                  className="adm-inp"
+                  type="date"
+                  placeholder="Filter date..."
+                  value={filterDate}
+                  onChange={e => setFilterDate(e.target.value)}
+                  style={{ minWidth: 150 }}
+                />
+                <select className="adm-inp" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+                  <option value="all">All Status</option>
+                  <option value="Active">Active Today</option>
+                  <option value="On Break">On Break</option>
+                  <option value="Offline">Offline</option>
+                  <option value="Work From Home">Work From Home</option>
+                  <option value="notlogin">Not Logged In</option>
+                  <option value="leaves">On Leave</option>
+                  <option value="Full Day">Full Day</option>
+                  <option value="Incomplete Workday(IWD)">Incomplete Workday(IWD)</option>
+                  <option value="Half Day">Half Day</option>
+                  <option value="messages">Unread Messages</option>
+                </select>
+              </>
+            )}
+
+            <select className="adm-inp" value={filterDept} onChange={e => setFilterDept(e.target.value)} style={{ minWidth: 150 }}>
+              <option value="all">All Departments</option>
+              {departments.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+
+            {activeTab !== "weekly" && (
+              <div style={{ fontSize: 12, color: T.muted, marginLeft: 4 }}>
+                {loading ? "Syncing..." : `${filtered.length} records`}
+              </div>
+            )}
           </div>
-          {activeTab === "weekly" ? (
-            <>
-              <div style={{ fontSize: 12, fontWeight: 700, color: T.muted }}>From:</div>
-              <input className="adm-inp" type="date" value={weeklyFrom} onChange={e => setWeeklyFrom(e.target.value)} style={{ minWidth: 140 }} />
-              <div style={{ fontSize: 12, fontWeight: 700, color: T.muted }}>To:</div>
-              <input className="adm-inp" type="date" value={weeklyTo} onChange={e => setWeeklyTo(e.target.value)} style={{ minWidth: 140 }} />
-            </>
-          ) : (
-            <>
-              <input
-                className="adm-inp"
-                type="date"
-                placeholder="Filter date..."
-                value={filterDate}
-                onChange={e => setFilterDate(e.target.value)}
-                style={{ minWidth: 150 }}
-              />
-              <select className="adm-inp" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-                <option value="all">All Status</option>
-                <option value="Active">Active Today</option>
-                <option value="On Break">On Break</option>
-                <option value="Offline">Offline</option>
-                <option value="Work From Home">Work From Home</option>
-                <option value="notlogin">Not Logged In</option>
-                <option value="leaves">On Leave</option>
-                <option value="Full Day">Full Day</option>
-                <option value="Incomplete Workday(IWD)">Incomplete Workday(IWD)</option>
-                <option value="Half Day">Half Day</option>
-                <option value="messages">Unread Messages</option>
-              </select>
-            </>
-          )}
+        )}
 
-          <select className="adm-inp" value={filterDept} onChange={e => setFilterDept(e.target.value)} style={{ minWidth: 150 }}>
-            <option value="all">All Departments</option>
-            {departments.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
+        {/* Analysis Overview tab */}
+        {activeTab === "analysis" && (() => {
+          const maxDays = Math.max(...allEmployees.map(e => processedRecords.filter(r => r.id === e.id || r.employeeid === e.id).length), 5);
+          
+          const teamAttendance = allEmployees.length > 0 ? Math.round(allEmployees.reduce((acc, e) => {
+            const days = processedRecords.filter(r => r.id === e.id || r.employeeid === e.id).length;
+            return acc + (days / Math.max(1, maxDays)) * 100;
+          }, 0) / allEmployees.length) : 0;
+          
+          const teamAvgHours = processedRecords.length > 0 ? (processedRecords.reduce((acc, r) => acc + (r.live_hours_secs || 0), 0) / processedRecords.length / 3600).toFixed(1) : "0.0";
+          
+          const teamAvgBreak = processedRecords.length > 0 ? (processedRecords.reduce((acc, r) => {
+            const t = r.live_break_time || "00:00:00";
+            const [h, m, s] = t.split(":").map(Number);
+            return acc + (h * 3600 + m * 60 + s);
+          }, 0) / processedRecords.length / 3600).toFixed(1) : "0.0";
+          
+          const teamTaskComp = taskFeed.length > 0 ? Math.round((taskFeed.filter(t => t.status === "Completed").length / taskFeed.length) * 100) : 100;
 
-          {activeTab !== "weekly" && (
-            <div style={{ fontSize: 12, color: T.muted, marginLeft: 4 }}>
-              {loading ? "Syncing..." : `${filtered.length} records`}
+          const selectedEmp = allEmployees.find(e => e.id === analysisEmpId) || allEmployees[0];
+          
+          let empStats = null;
+          if (selectedEmp) {
+            const empRecords = processedRecords.filter(r => r.id === selectedEmp.id || r.employeeid === selectedEmp.id);
+            const daysPresent = empRecords.length;
+            const totalWorkSecs = empRecords.reduce((acc, r) => acc + (r.live_hours_secs || 0), 0);
+            const avgWorkSecs = daysPresent > 0 ? totalWorkSecs / daysPresent : 0;
+            const avgWorkHours = (avgWorkSecs / 3600).toFixed(1);
+            
+            const totalBreakSecs = empRecords.reduce((acc, r) => {
+              const t = r.live_break_time || "00:00:00";
+              const [h, m, s] = t.split(":").map(Number);
+              return acc + (h * 3600 + m * 60 + s);
+            }, 0);
+            const avgBreakHours = daysPresent > 0 ? (totalBreakSecs / daysPresent / 3600).toFixed(1) : "0.0";
+            
+            const parseTime = (s) => {
+              if (!s || s === "—") return null;
+              const parts = s.split(" ");
+              if (parts.length < 2) return null;
+              const [time, ampm] = parts;
+              let [h, m] = time.split(":").map(Number);
+              if (ampm.toLowerCase() === "pm" && h < 12) h += 12;
+              if (ampm.toLowerCase() === "am" && h === 12) h = 0;
+              return h * 3600 + m * 60;
+            };
+
+            const onTimeDays = empRecords.filter(r => {
+              const s = parseTime(r.logint || r.intime);
+              return s !== null && s <= 36000; // 10:00 AM
+            }).length;
+            const punctualityRate = daysPresent > 0 ? Math.round((onTimeDays / daysPresent) * 100) : 100;
+            
+            const empTasks = taskFeed.filter(t => t.employee_id === selectedEmp.id);
+            const completedTasks = empTasks.filter(t => t.status === "Completed").length;
+            const taskCompRate = empTasks.length > 0 ? Math.round((completedTasks / empTasks.length) * 100) : 100;
+            
+            const attScore = Math.min(100, Math.round((daysPresent / Math.max(1, maxDays)) * 100));
+            const hrsScore = Math.min(100, Math.round((avgWorkSecs / 28800) * 100));
+            
+            const finalScore = Math.round(0.3 * attScore + 0.3 * hrsScore + 0.2 * punctualityRate + 0.2 * taskCompRate);
+            
+            let grade = "C";
+            let gradeText = "Needs Attention";
+            let color = T.red;
+            if (finalScore >= 90) { grade = "A+"; gradeText = "Outstanding"; color = T.green; }
+            else if (finalScore >= 80) { grade = "A"; gradeText = "Excellent"; color = T.green; }
+            else if (finalScore >= 70) { grade = "B"; gradeText = "Good"; color = T.amber; }
+            else if (finalScore >= 50) { grade = "C+"; gradeText = "Satisfactory"; color = T.amber; }
+
+            let insight = "";
+            if (finalScore >= 90) {
+              insight = "Outstanding performance. Demonstrates high consistency in work hours and task execution.";
+            } else if (finalScore >= 70) {
+              insight = "Solid performance. Punctual and reliable, with opportunities to optimize task delivery speed.";
+            } else {
+              insight = "Requires review. Attendance consistency or daily work hours fall below target levels.";
+            }
+
+            empStats = {
+              daysPresent,
+              avgWorkHours,
+              avgBreakHours,
+              punctualityRate,
+              taskCompRate,
+              finalScore,
+              grade,
+              gradeText,
+              color,
+              insight,
+              assignedTasksCount: empTasks.length,
+              completedTasksCount: completedTasks
+            };
+          }
+
+          return (
+            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+              
+              {/* Section 1: Team Analysis Overview */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 16 }}>
+                <div className="premium-card" style={{ padding: "16px 20px" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Team Attendance Rate</div>
+                  <div className="h-font" style={{ fontSize: 24, fontWeight: 700, color: T.ink, marginTop: 8 }}>{teamAttendance}%</div>
+                  <div style={{ fontSize: 11, color: T.green, fontWeight: 700, marginTop: 4 }}>Based on historical records</div>
+                </div>
+                <div className="premium-card" style={{ padding: "16px 20px" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Avg Daily Work Hours</div>
+                  <div className="h-font" style={{ fontSize: 24, fontWeight: 700, color: T.ink, marginTop: 8 }}>{teamAvgHours} hrs</div>
+                  <div style={{ fontSize: 11, color: T.muted, fontWeight: 700, marginTop: 4 }}>Target: 8.0 hrs/day</div>
+                </div>
+                <div className="premium-card" style={{ padding: "16px 20px" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Avg Break Duration</div>
+                  <div className="h-font" style={{ fontSize: 24, fontWeight: 700, color: T.ink, marginTop: 8 }}>{teamAvgBreak} hrs</div>
+                  <div style={{ fontSize: 11, color: T.muted, fontWeight: 700, marginTop: 4 }}>Time spent on pause</div>
+                </div>
+                <div className="premium-card" style={{ padding: "16px 20px" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Task Completion Rate</div>
+                  <div className="h-font" style={{ fontSize: 24, fontWeight: 700, color: T.ink, marginTop: 8 }}>{teamTaskComp}%</div>
+                  <div style={{ fontSize: 11, color: T.green, fontWeight: 700, marginTop: 4 }}>Across all assigned tasks</div>
+                </div>
+                <div className="premium-card" style={{ padding: "16px 20px" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Total Records</div>
+                  <div className="h-font" style={{ fontSize: 24, fontWeight: 700, color: T.ink, marginTop: 8 }}>{records.length}</div>
+                  <div style={{ fontSize: 11, color: T.muted, fontWeight: 700, marginTop: 4 }}>All time</div>
+                </div>
+                <div className="premium-card" style={{ padding: "16px 20px" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Monthly Records</div>
+                  <div className="h-font" style={{ fontSize: 24, fontWeight: 700, color: T.ink, marginTop: 8 }}>{currentMonthRecsCount}</div>
+                  <div style={{ fontSize: 11, color: T.muted, fontWeight: 700, marginTop: 4 }}>Current month</div>
+                </div>
+              </div>
+
+              {/* Section 2: Individual Employee Performance Analysis */}
+              <div className="premium-card" style={{ padding: "24px 28px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+                  <div>
+                    <h2 className="h-font" style={{ margin: 0, fontSize: 18, fontWeight: 700, color: T.ink }}>Individual Performance Scorecard</h2>
+                    <p style={{ margin: "4px 0 0 0", fontSize: 12, color: T.muted }}>Analyze dynamic performance score and key operational metrics</p>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: T.muted }}>Select Employee:</span>
+                    <select 
+                      className="adm-inp" 
+                      value={analysisEmpId} 
+                      onChange={e => setAnalysisEmpId(e.target.value)}
+                      style={{ minWidth: 200, padding: "8px 12px", borderRadius: 10 }}
+                    >
+                      {allEmployees.map(emp => (
+                        <option key={emp.id} value={emp.id}>{emp.name} ({emp.id})</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {selectedEmp && empStats ? (
+                  <div style={{ display: "grid", gridTemplateColumns: "1.2fr 2fr", gap: 32 }}>
+                    
+                    {/* Left Panel: Profile and Score Ring */}
+                    <div style={{ borderRight: `1px solid ${T.border}`, paddingRight: 32, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+                      <Avatar name={selectedEmp.name} src={profiles.find(p => String(p.employee_id).toLowerCase() === String(selectedEmp.id).toLowerCase())?.photo} size={80} />
+                      <h3 className="h-font" style={{ margin: "14px 0 2px", fontSize: 18, fontWeight: 700, color: T.ink }}>{selectedEmp.name}</h3>
+                      <div style={{ fontSize: 12, color: T.muted, fontWeight: 700, textTransform: "uppercase" }}>{selectedEmp.role} | {selectedEmp.dept}</div>
+
+                      {/* Performance Score Circular Ring */}
+                      <div style={{ position: "relative", width: 120, height: 120, margin: "20px 0 14px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <svg width="100%" height="100%" viewBox="0 0 36 36">
+                          <path
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                            fill="none"
+                            stroke="#f1f5f9"
+                            strokeWidth="3.5"
+                          />
+                          <path
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                            fill="none"
+                            stroke={empStats.color}
+                            strokeDasharray={`${empStats.finalScore}, 100`}
+                            strokeWidth="3.5"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                        <div style={{ position: "absolute", textAlign: "center" }}>
+                          <div className="h-font" style={{ fontSize: 28, fontWeight: 800, color: T.ink }}>{empStats.finalScore}</div>
+                          <div style={{ fontSize: 9, fontWeight: 700, color: T.muted, textTransform: "uppercase" }}>SCORE</div>
+                        </div>
+                      </div>
+
+                      <div style={{ background: `${empStats.color}10`, color: empStats.color, padding: "4px 12px", borderRadius: 16, fontSize: 11, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <span>Grade: {empStats.grade}</span>
+                        <span>•</span>
+                        <span>{empStats.gradeText}</span>
+                      </div>
+                    </div>
+
+                    {/* Right Panel: Detailed Metrics */}
+                    <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                      <div>
+                        <h4 className="h-font" style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: T.ink, textTransform: "uppercase", letterSpacing: 0.5 }}>Metrics Breakdown</h4>
+                        
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                          <div style={{ background: T.surface, padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}` }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase" }}>Days Present</div>
+                            <div className="h-font" style={{ fontSize: 18, fontWeight: 700, color: T.ink, marginTop: 2 }}>{empStats.daysPresent} days</div>
+                            <div style={{ fontSize: 9, color: T.muted, marginTop: 1 }}>Out of {maxDays} team workdays</div>
+                          </div>
+                          
+                          <div style={{ background: T.surface, padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}` }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase" }}>Avg Work Hours</div>
+                            <div className="h-font" style={{ fontSize: 18, fontWeight: 700, color: T.ink, marginTop: 2 }}>{empStats.avgWorkHours} hrs/day</div>
+                            <div style={{ fontSize: 9, color: T.muted, marginTop: 1 }}>Active logged time</div>
+                          </div>
+
+                          <div style={{ background: T.surface, padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}` }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase" }}>Punctuality Rate</div>
+                            <div className="h-font" style={{ fontSize: 18, fontWeight: 700, color: T.ink, marginTop: 2 }}>{empStats.punctualityRate}%</div>
+                            <div style={{ fontSize: 9, color: T.muted, marginTop: 1 }}>Clock-in before 10:00 AM</div>
+                          </div>
+
+                          <div style={{ background: T.surface, padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}` }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase" }}>Task Completion</div>
+                            <div className="h-font" style={{ fontSize: 18, fontWeight: 700, color: T.ink, marginTop: 2 }}>{empStats.taskCompRate}%</div>
+                            <div style={{ fontSize: 9, color: T.muted, marginTop: 1 }}>{empStats.completedTasksCount} done of {empStats.assignedTasksCount} assigned</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Insight box */}
+                      <div style={{ background: "rgba(99, 102, 241, 0.04)", border: `1px solid rgba(99, 102, 241, 0.15)`, padding: "12px 14px", borderRadius: 10, marginTop: 14 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: T.purple, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Performance Insight</div>
+                        <div style={{ fontSize: 12, color: T.ink2, lineHeight: 1.4 }}>{empStats.insight}</div>
+                      </div>
+
+                    </div>
+
+                  </div>
+                ) : (
+                  <div style={{ textAlign: "center", padding: "40px", color: T.muted }}>No employee data available for analysis.</div>
+                )}
+
+              </div>
+
             </div>
-          )}
-        </div>
+          );
+        })()}
 
         {/* Weekly Report Table */}
         {activeTab === "weekly" && (
@@ -5914,8 +6190,7 @@ Software Solutions</div>
 
         {/* Attendance Records Table */}
         {activeTab === "attendance" && (
-          <div className="premium-card">
-            <div style={{ overflowX: "auto", maxHeight: 600, overflowY: "auto" }}>
+          <div style={{ overflowX: "auto", maxHeight: 600, overflowY: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: T.surface }}>
@@ -5958,21 +6233,21 @@ Software Solutions</div>
                           onClick={() => setAssignTaskTo({ id: r.id || r.employeeid, name: r.name || r.employeename })}>
                           <Avatar name={r.name || r.employeename || "?"} src={profiles.find(p => String(p.employee_id).toLowerCase() === String(r.id || r.employeeid).toLowerCase())?.photo} size={32} />
                           <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                            <span style={{ fontWeight: 700, color: T.accent, fontSize: 13 }}>{r.name || r.employeename}</span>
-                            <span style={{ fontSize: 10, color: T.muted, fontWeight: 700 }}>Assign Task +</span>
+                            <span style={{ color: T.accent, fontSize: 13 }}>{r.name || r.employeename}</span>
+                            <span style={{ fontSize: 10, color: T.muted }}>Assign Task +</span>
                           </div>
                         </div>
                       </td>
                       <td style={cellStyle}>{r.dept || r.department}</td>
-                      <td style={{ ...cellStyle, color: T.green, fontWeight: 700 }}>{r.logint || r.intime}</td>
-                      <td style={{ ...cellStyle, color: T.red, fontWeight: 700 }}>{r.logoutt || r.outtime}</td>
-                      <td style={{ ...cellStyle, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+                      <td style={{ ...cellStyle, color: T.green }}>{r.logint || r.intime}</td>
+                      <td style={{ ...cellStyle, color: T.red }}>{r.logoutt || r.outtime}</td>
+                      <td style={{ ...cellStyle, fontVariantNumeric: "tabular-nums" }}>
                         {r.live_hours}
                       </td>
-                      <td style={{ ...cellStyle, color: T.amber, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+                      <td style={{ ...cellStyle, color: T.amber, fontVariantNumeric: "tabular-nums" }}>
                         {r.live_break_time}
                       </td>
-                      <td style={{ ...cellStyle, fontWeight: 700, color: r.live_overtime && r.live_overtime !== "" ? T.amber : T.faint, fontVariantNumeric: "tabular-nums" }}>
+                      <td style={{ ...cellStyle, color: r.live_overtime && r.live_overtime !== "" ? T.amber : T.faint, fontVariantNumeric: "tabular-nums" }}>
                         {r.live_overtime}
                       </td>
                       <td style={cellStyle}>
@@ -5983,7 +6258,7 @@ Software Solutions</div>
                           {/* Manual Logs */}
                           {(r.tasks || r.workstatus) && (
                             <div style={{ padding: "4px 8px", background: T.surface, borderRadius: 6, border: `1px solid ${T.border}`, fontSize: 11, maxHeight: 60, overflowY: "auto" }} title={r.tasks || r.workstatus}>
-                              <b style={{ fontSize: 9, color: T.muted, display: "block", textTransform: "uppercase" }}>Manual Log:</b>
+                              <span style={{ fontSize: 9, color: T.muted, display: "block", textTransform: "uppercase" }}>Manual Log:</span>
                               {r.tasks || r.workstatus}
                             </div>
                           )}
@@ -5993,7 +6268,7 @@ Software Solutions</div>
                           {taskFeed.filter(t => (t.employee_id === (r.id || r.employeeid)) &&
                             fmtDate(new Date(t.assigned_at)) === r.date).map(t => (
                               <div key={t.id} style={{ padding: "4px 8px", background: "white", borderRadius: 6, border: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <span style={{ fontWeight: 700, fontSize: 11, color: T.accent }}>{t.title}</span>
+                                <span style={{ fontSize: 11, color: T.accent }}>{t.title}</span>
                                 <Badge status={t.status} />
                               </div>
                             ))}
@@ -6009,7 +6284,7 @@ Software Solutions</div>
                           onClick={() => setSelectedRecord(r)}
                           style={{
                             padding: "8px 12px", borderRadius: 10, border: `1.5px solid ${T.border}`,
-                            background: "white", color: T.ink2, fontSize: 12, fontWeight: 700,
+                            background: "white", color: T.ink2, fontSize: 12,
                             cursor: "pointer", transition: "all 0.2s", display: "inline-flex", alignItems: "center", gap: 6
                           }}
                         >
@@ -6022,7 +6297,6 @@ Software Solutions</div>
                 </tbody>
               </table>
             </div>
-          </div>
         )}
 
         {/* Live Task Feed */}
