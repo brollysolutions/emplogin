@@ -5871,12 +5871,13 @@ Software Solutions</div>
             
             const empTasks = taskFeed.filter(t => t.employee_id === selectedEmp.id);
             const completedTasks = empTasks.filter(t => t.status === "Completed").length;
-            const taskCompRate = empTasks.length > 0 ? Math.round((completedTasks / empTasks.length) * 100) : 0;
+            const taskCompRate = empTasks.length > 0 ? Math.round((completedTasks / empTasks.length) * 100) : 100;
+            const taskCompScoreForPerformance = empTasks.length > 0 ? Math.round((completedTasks / empTasks.length) * 100) : 0;
             
             const attScore = Math.min(100, Math.round((daysPresent / Math.max(1, maxDays)) * 100));
             const hrsScore = Math.min(100, Math.round((avgWorkSecs / 28800) * 100));
             
-            const finalScore = Math.round(0.3 * attScore + 0.3 * hrsScore + 0.2 * punctualityRate + 0.2 * taskCompRate);
+            const finalScore = daysPresent > 0 ? Math.round(0.3 * attScore + 0.3 * hrsScore + 0.2 * punctualityRate + 0.2 * taskCompScoreForPerformance) : 0;
             
             let grade = "C";
             let gradeText = "Needs Attention";
@@ -5964,13 +5965,28 @@ Software Solutions</div>
                         className="adm-inp" 
                         placeholder="Search employee..." 
                         value={analysisSearch} 
-                        onChange={e => setAnalysisSearch(e.target.value)} 
+                        onChange={e => {
+                          const val = e.target.value;
+                          setAnalysisSearch(val);
+                          if (val) {
+                            const match = allEmployees.find(emp => 
+                              emp.name?.toLowerCase().includes(val.toLowerCase()) || 
+                              emp.id?.toLowerCase().includes(val.toLowerCase())
+                            );
+                            if (match) {
+                              setAnalysisEmpId(match.id);
+                            }
+                          }
+                        }} 
                         style={{ padding: "8px 12px", borderRadius: 10, width: 150 }}
                       />
                       <select 
                         className="adm-inp" 
                         value={analysisEmpId} 
-                        onChange={e => setAnalysisEmpId(e.target.value)}
+                        onChange={e => {
+                          setAnalysisEmpId(e.target.value);
+                          setAnalysisSearch("");
+                        }}
                         style={{ minWidth: 200, padding: "8px 12px", borderRadius: 10 }}
                       >
                         {filteredEmployees.map(emp => (
