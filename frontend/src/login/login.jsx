@@ -4192,6 +4192,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
   });
   const [activeTab, setTab] = useState(() => localStorage.getItem("wt_tab_adm") || "attendance");
   const [analysisEmpId, setAnalysisEmpId] = useState("");
+  const [analysisSearch, setAnalysisSearch] = useState("");
 
   useEffect(() => {
     localStorage.setItem("wt_tab_adm", activeTab);
@@ -5812,6 +5813,13 @@ Software Solutions</div>
         {activeTab === "analysis" && (() => {
           const maxDays = Math.max(...allEmployees.map(e => processedRecords.filter(r => r.id === e.id || r.employeeid === e.id).length), 5);
           
+          const filteredEmployees = allEmployees.filter(emp => 
+            !analysisSearch || 
+            emp.name.toLowerCase().includes(analysisSearch.toLowerCase()) || 
+            emp.id.toLowerCase().includes(analysisSearch.toLowerCase()) ||
+            emp.id === analysisEmpId
+          );
+          
           const teamAttendance = allEmployees.length > 0 ? Math.round(allEmployees.reduce((acc, e) => {
             const days = processedRecords.filter(r => r.id === e.id || r.employeeid === e.id).length;
             return acc + (days / Math.max(1, maxDays)) * 100;
@@ -5859,11 +5867,11 @@ Software Solutions</div>
               const s = parseTime(r.logint || r.intime);
               return s !== null && s <= 36000; // 10:00 AM
             }).length;
-            const punctualityRate = daysPresent > 0 ? Math.round((onTimeDays / daysPresent) * 100) : 100;
+            const punctualityRate = maxDays > 0 ? Math.round((onTimeDays / maxDays) * 100) : 0;
             
             const empTasks = taskFeed.filter(t => t.employee_id === selectedEmp.id);
             const completedTasks = empTasks.filter(t => t.status === "Completed").length;
-            const taskCompRate = empTasks.length > 0 ? Math.round((completedTasks / empTasks.length) * 100) : 100;
+            const taskCompRate = empTasks.length > 0 ? Math.round((completedTasks / empTasks.length) * 100) : 0;
             
             const attScore = Math.min(100, Math.round((daysPresent / Math.max(1, maxDays)) * 100));
             const hrsScore = Math.min(100, Math.round((avgWorkSecs / 28800) * 100));
@@ -5899,7 +5907,8 @@ Software Solutions</div>
               color,
               insight,
               assignedTasksCount: empTasks.length,
-              completedTasksCount: completedTasks
+              completedTasksCount: completedTasks,
+              onTimeDaysCount: onTimeDays
             };
           }
 
@@ -5947,18 +5956,28 @@ Software Solutions</div>
                     <h2 className="h-font" style={{ margin: 0, fontSize: 18, fontWeight: 700, color: T.ink }}>Individual Performance Scorecard</h2>
                     <p style={{ margin: "4px 0 0 0", fontSize: 12, color: T.muted }}>Analyze dynamic performance score and key operational metrics</p>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                     <span style={{ fontSize: 12, fontWeight: 700, color: T.muted }}>Select Employee:</span>
-                    <select 
-                      className="adm-inp" 
-                      value={analysisEmpId} 
-                      onChange={e => setAnalysisEmpId(e.target.value)}
-                      style={{ minWidth: 200, padding: "8px 12px", borderRadius: 10 }}
-                    >
-                      {allEmployees.map(emp => (
-                        <option key={emp.id} value={emp.id}>{emp.name} ({emp.id})</option>
-                      ))}
-                    </select>
+                    <div style={{ position: "relative", display: "flex", gap: 8 }}>
+                      <input 
+                        type="text" 
+                        className="adm-inp" 
+                        placeholder="Search employee..." 
+                        value={analysisSearch} 
+                        onChange={e => setAnalysisSearch(e.target.value)} 
+                        style={{ padding: "8px 12px", borderRadius: 10, width: 150 }}
+                      />
+                      <select 
+                        className="adm-inp" 
+                        value={analysisEmpId} 
+                        onChange={e => setAnalysisEmpId(e.target.value)}
+                        style={{ minWidth: 200, padding: "8px 12px", borderRadius: 10 }}
+                      >
+                        {filteredEmployees.map(emp => (
+                          <option key={emp.id} value={emp.id}>{emp.name} ({emp.id})</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
 
@@ -6023,7 +6042,7 @@ Software Solutions</div>
                           <div style={{ background: T.surface, padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}` }}>
                             <div style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase" }}>Punctuality Rate</div>
                             <div className="h-font" style={{ fontSize: 18, fontWeight: 700, color: T.ink, marginTop: 2 }}>{empStats.punctualityRate}%</div>
-                            <div style={{ fontSize: 9, color: T.muted, marginTop: 1 }}>Clock-in before 10:00 AM</div>
+                            <div style={{ fontSize: 9, color: T.muted, marginTop: 1 }}>{empStats.onTimeDaysCount} of {maxDays} days before 10:00 AM</div>
                           </div>
 
                           <div style={{ background: T.surface, padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}` }}>
