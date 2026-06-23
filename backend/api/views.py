@@ -1,7 +1,8 @@
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import Attendance, PasswordResetToken, Task, Profile, LeaveRequest, ChatMessage, EmployeeGroup, Holiday
+from .models import Attendance, PasswordResetToken, Task, Profile, LeaveRequest, ChatMessage, EmployeeGroup, Holiday, EmployeeSession
+import secrets
 from .serializers import (
     AttendanceSerializer, TaskSerializer, ProfileSerializer, 
     LeaveRequestSerializer, ChatMessageSerializer, EmployeeGroupSerializer, HolidaySerializer
@@ -40,6 +41,85 @@ def health_check(request):
         "message": "System is running smoothly",
         "server_start_time": SERVER_START_TIME,
     }, status=status.HTTP_200_OK)
+
+# Session lifetime: an employee must re-authenticate after this many hours.
+SESSION_DURATION_HOURS = 12
+
+
+@api_view(['POST'])
+def create_session(request):
+    """Register a server-side session after the client has matched credentials.
+
+    Returns a token that every device validates. Fail-soft by design: if this
+    call fails the client still logs in locally, but cross-device logout/expiry
+    only works once a session is registered here.
+    """
+    employee_id = str(request.data.get('employee_id', '')).strip()
+    if not employee_id:
+        return Response({"error": "employee_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    name = str(request.data.get('employee_name', '')).strip()[:255]
+    device = str(request.data.get('device_label', '')).strip()[:255]
+    token = secrets.token_urlsafe(32)
+    expires = timezone.now() + timedelta(hours=SESSION_DURATION_HOURS)
+
+    EmployeeSession.objects.create(
+        token=token,
+        employee_id=employee_id,
+        employee_name=name,
+        device_label=device,
+        expires_at=expires,
+    )
+    return Response({
+        "token": token,
+        "expires_at": expires.isoformat(),
+        "server_time": timezone.now().isoformat(),
+    }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+def validate_session(request, token):
+    """Polled by every device. Returns valid=False if the session was revoked
+    (logout on another device) or has expired, so the device can log itself out."""
+    try:
+        s = EmployeeSession.objects.get(token=token)
+    except EmployeeSession.DoesNotExist:
+        return Response({"valid": False, "reason": "not_found"}, status=status.HTTP_200_OK)
+
+    now = timezone.now()
+    valid = s.is_active and s.expires_at > now
+    if valid:
+        # Touch last_seen so admins can see active devices; auto_now handles it.
+        s.save(update_fields=["last_seen"])
+
+    return Response({
+        "valid": valid,
+        "reason": None if valid else ("expired" if s.is_active else "revoked"),
+        "expires_at": s.expires_at.isoformat(),
+        "remaining_seconds": max(0, int((s.expires_at - now).total_seconds())),
+        "server_time": now.isoformat(),
+        "employee_id": s.employee_id,
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+def logout_session(request, token):
+    """Revoke a session. Pass {"all": true} to revoke EVERY active session for
+    that employee so all of their devices are logged out on the next poll."""
+    revoke_all = str(request.data.get('all', '')).lower() in ('1', 'true', 'yes')
+    try:
+        s = EmployeeSession.objects.get(token=token)
+    except EmployeeSession.DoesNotExist:
+        # Already gone — treat as success so the client can finish logging out.
+        return Response({"success": True, "already": True}, status=status.HTTP_200_OK)
+
+    if revoke_all:
+        EmployeeSession.objects.filter(employee_id=s.employee_id, is_active=True).update(is_active=False)
+    else:
+        s.is_active = False
+        s.save(update_fields=["is_active"])
+    return Response({"success": True}, status=status.HTTP_200_OK)
+
 
 @api_view(['POST'])
 def send_test_reminder(request):

@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 
 class Attendance(models.Model):
@@ -107,6 +108,31 @@ class EmployeeGroup(models.Model):
 
     def __str__(self):
         return self.name
+
+class EmployeeSession(models.Model):
+    """Server-side login session so a session can be validated and revoked
+    across ALL of an employee's devices.
+
+    Created when an employee logs in (the browser matches credentials against the
+    Google-Sheet list, then registers the session here). Every device validates
+    and polls this record; when it is revoked (logout elsewhere) or expires, the
+    other devices see valid=False on their next poll and log themselves out.
+    """
+    token = models.CharField(max_length=100, unique=True, db_index=True)
+    employee_id = models.CharField(max_length=50, db_index=True)
+    employee_name = models.CharField(max_length=255, blank=True, default="")
+    device_label = models.CharField(max_length=255, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_active = models.BooleanField(default=True)
+    last_seen = models.DateTimeField(auto_now=True)
+
+    def is_valid(self):
+        return self.is_active and self.expires_at > timezone.now()
+
+    def __str__(self):
+        state = "active" if self.is_active else "revoked"
+        return f"{self.employee_id} session ({state})"
 
 class Holiday(models.Model):
     date = models.DateField(unique=True)

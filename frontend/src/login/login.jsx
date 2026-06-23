@@ -244,6 +244,7 @@ const GROUPS_URL = API_BASE + "groups/";
 const HEARTBEAT_URL = API_BASE + "heartbeat/";
 const CHAT_SUMMARIES_URL = API_BASE + "chat-summaries/";
 const HEALTH_CHECK_URL = API_BASE + "health/";
+const SESSIONS_URL = API_BASE + "sessions/";
 const HOLIDAYS_URL = API_BASE + "holidays/";
 
 
@@ -979,6 +980,7 @@ function ConfettiBlaster({ active, onComplete }) {
 /* ══════════════════════════════════════════════════════════════
    DASHBOARD
 ══════════════════════════════════════════════════════════════ */
+
 function Dashboard({ employee, onSignOut, showToast }) {
   const savedSession = (() => {
     try {
@@ -997,6 +999,14 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
   const [now, setNow] = useState(new Date());
   const [initialSyncDone, setInitialSyncDone] = useState(false);
+  const originalFaviconRef = useRef(null);
+
+  useEffect(() => {
+    const link = document.querySelector("link[rel~='icon']");
+    if (link) {
+      originalFaviconRef.current = link.getAttribute("href");
+    }
+  }, []);
 
   // New States for cumulative tracking
   const [totalWorkSeconds, setTotalWorkSeconds] = useState(savedSession?.totalWorkSeconds || 0);
@@ -1065,6 +1075,65 @@ function Dashboard({ employee, onSignOut, showToast }) {
       taskInput
     };
   });
+
+  // Listen for storage events from other tabs/windows to keep state in sync
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "wt_session") {
+        try {
+          const session = JSON.parse(e.newValue || "null");
+          const state = latestStateRef.current;
+          if (session) {
+            if (session.status !== state.status) {
+              setStatus(session.status || "idle");
+            }
+            const sLoginTime = session.loginTime ? new Date(session.loginTime) : null;
+            if ((sLoginTime?.getTime() || null) !== (state.loginTime?.getTime() || null)) {
+              setLT(sLoginTime);
+            }
+            const sLogoutTime = session.logoutTime ? new Date(session.logoutTime) : null;
+            if ((sLogoutTime?.getTime() || null) !== (state.logoutTime?.getTime() || null)) {
+              setLOT(sLogoutTime);
+            }
+            const sSessionStartTime = session.sessionStartTime ? new Date(session.sessionStartTime) : null;
+            if ((sSessionStartTime?.getTime() || null) !== (state.sessionStartTime?.getTime() || null)) {
+              setSessionStartTime(sSessionStartTime);
+            }
+            const sBreakStartTime = session.breakStartTime ? new Date(session.breakStartTime) : null;
+            if ((sBreakStartTime?.getTime() || null) !== (state.breakStartTime?.getTime() || null)) {
+              setBreakStartTime(sBreakStartTime);
+            }
+            if (session.taskInput !== state.taskInput) {
+              setTask(session.taskInput || "");
+            }
+            if (Math.abs((session.totalWorkSeconds || 0) - state.totalWorkSeconds) > 2) {
+              setTotalWorkSeconds(session.totalWorkSeconds || 0);
+            }
+            if (Math.abs((session.totalBreakSeconds || 0) - state.totalBreakSeconds) > 2) {
+              setTotalBreakSeconds(session.totalBreakSeconds || 0);
+            }
+            if (JSON.stringify(session.breakLogs || []) !== JSON.stringify(state.breakLogs)) {
+              setBreakLogs(session.breakLogs || []);
+            }
+          } else {
+            setStatus("idle");
+            setLT(null);
+            setLOT(null);
+            setSessionStartTime(null);
+            setBreakStartTime(null);
+            setTotalWorkSeconds(0);
+            setTotalBreakSeconds(0);
+            setBreakLogs([]);
+            setTask("");
+          }
+        } catch (err) {
+          console.error("Failed to sync session from storage event", err);
+        }
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
 
   const lastLocalStatusChangeTimeRef = useRef(0);
 
@@ -1246,13 +1315,32 @@ function Dashboard({ employee, onSignOut, showToast }) {
             if (isInitial || status !== mappedStatus || (serverLastChange && serverLastChange !== localLastChange)) {
               // Only overwrite if different to avoid jitter
               if (status !== mappedStatus || Math.abs(serverLastChange - localLastChange) > 2000) {
-                console.log(`Syncing with server: Status=${mappedStatus}, LastChange=${todayRec.last_status_change}`);
-                setTotalWorkSeconds(parseHMS(todayRec.hours));
-                setTotalBreakSeconds(parseHMS(todayRec.break_time));
+                // ── Bug Fix: Never let the server push a SMALLER hours value onto an
+                //    actively-running local timer. The background auto-sync writes a
+                //    snapshot every 5 min; if the poll fires between two syncs it would
+                //    overwrite the live counter with a stale (lower) number, making the
+                //    timer visibly jump backward.
+                //    Rule: only accept the server's hours value when:
+                //      a) status changed (different device / session), OR
+                //      b) server hours are strictly MORE than local base (other device added time)
+                const serverWorkSecs  = parseHMS(todayRec.hours);
+                const serverBreakSecs = parseHMS(todayRec.break_time);
+                const statusChanged   = status !== mappedStatus;
+                const serverHasMore   = serverWorkSecs > totalWorkSeconds + 60; // >1 min ahead
+
+                console.log(`Syncing with server: Status=${mappedStatus}, LastChange=${todayRec.last_status_change}, serverWork=${serverWorkSecs}s, localWork=${totalWorkSeconds}s, statusChanged=${statusChanged}, serverHasMore=${serverHasMore}`);
+
+                // Always sync status, login time, break logs
+                setLT(new Date(today + " " + todayRec.logint));
                 try {
                   setBreakLogs(todayRec.break_logs ? JSON.parse(todayRec.break_logs) : []);
                 } catch { setBreakLogs([]); }
-                setLT(new Date(today + " " + todayRec.logint));
+
+                // Only overwrite hours when safe to do so
+                if (statusChanged || serverHasMore || isInitial) {
+                  setTotalWorkSeconds(serverWorkSecs);
+                  setTotalBreakSeconds(serverBreakSecs);
+                }
 
                 if (todayRec.status === "Active") {
                   setStatus("working");
@@ -1466,7 +1554,40 @@ function Dashboard({ employee, onSignOut, showToast }) {
     }));
   }, [totalWorkSeconds, totalBreakSeconds, sessionStartTime, breakStartTime, loginTime, logoutTime, status, taskInput]);
 
-  useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
+  // ── Live 1-second tick ──────────────────────────────────────────────────────
+  // Uses a Web Worker so browser background-tab throttling can't freeze the
+  // displayed timer when an employee switches to another tab.
+  // Falls back to plain setInterval if the browser blocks Worker creation.
+  // Also snaps 'now' immediately whenever the tab becomes visible again so the
+  // timer recovers instantly from any freeze without waiting for the next tick.
+  useEffect(() => {
+    const syncNow = () => setNow(new Date());
+    const onVisible = () => { if (document.visibilityState === 'visible') syncNow(); };
+    document.addEventListener('visibilitychange', onVisible);
+
+    let worker;
+    let blobUrl;
+    try {
+      const code = `setInterval(() => self.postMessage('tick'), 1000);`;
+      const blob = new Blob([code], { type: 'application/javascript' });
+      blobUrl = URL.createObjectURL(blob);          // Bug fix: keep ref so we can revoke it
+      worker = new Worker(blobUrl);
+      worker.onmessage = syncNow;
+    } catch {
+      // Fallback: plain interval (will throttle in background tabs)
+      const iv = setInterval(syncNow, 1000);
+      return () => {
+        clearInterval(iv);
+        document.removeEventListener('visibilitychange', onVisible);
+      };
+    }
+
+    return () => {
+      worker.terminate();
+      if (blobUrl) URL.revokeObjectURL(blobUrl);    // Bug fix: free the blob URL to avoid a leak
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, []);
 
   // Midnight rollover check: if active session belongs to a previous day, auto-reset at midnight
   useEffect(() => {
@@ -1562,6 +1683,57 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
   const liveHrs = secondsToHMS(currentTotalWorkSeconds);
   const liveBreakHrs = secondsToHMS(currentTotalBreakSeconds);
+
+  // Dynamic Tab Title, Favicon and Taskbar Badge based on current status
+  useEffect(() => {
+    let link = document.querySelector("link[rel~='icon']");
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "icon";
+      document.getElementsByTagName("head")[0].appendChild(link);
+    }
+
+    const updateFaviconColor = (color) => {
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+          <circle cx="16" cy="16" r="12" fill="${color}" stroke="#ffffff" stroke-width="2" />
+        </svg>
+      `;
+      link.href = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+    };
+
+    if (status === "working") {
+      const hms = hmsStr(liveHrs);
+      document.title = `🟢 ${hms} | Working`;
+      updateFaviconColor("#10b981"); // green
+      // Taskbar badge dot (works when app is pinned/installed as PWA)
+      if ("setAppBadge" in navigator) navigator.setAppBadge().catch(() => {});
+    } else if (status === "break") {
+      const hms = hmsStr(liveBreakHrs);
+      document.title = `🔴 ${hms} | Break`;
+      updateFaviconColor("#ef4444"); // red
+      // Taskbar badge dot
+      if ("setAppBadge" in navigator) navigator.setAppBadge().catch(() => {});
+    } else {
+      document.title = "Employee Portal";
+      if (originalFaviconRef.current) {
+        link.href = originalFaviconRef.current;
+      } else {
+        link.href = "/favicon.ico";
+      }
+      // Clear taskbar badge
+      if ("clearAppBadge" in navigator) navigator.clearAppBadge().catch(() => {});
+    }
+
+    return () => {
+      document.title = "Employee Portal";
+      if (originalFaviconRef.current && link) {
+        link.href = originalFaviconRef.current;
+      }
+      if ("clearAppBadge" in navigator) navigator.clearAppBadge().catch(() => {});
+    };
+  }, [status, currentTotalWorkSeconds, currentTotalBreakSeconds]);
+
 
   const handleLogin = () => {
     lastLocalStatusChangeTimeRef.current = Date.now();
@@ -2444,6 +2616,9 @@ function Dashboard({ employee, onSignOut, showToast }) {
         }
 
         .pulse-soft { animation: pulseSoft 2s infinite; }
+
+
+
 
         .chat-grid .chat-back-btn {
           display: none !important;
@@ -3817,6 +3992,8 @@ function Dashboard({ employee, onSignOut, showToast }) {
           </div>
         </div>
       </div>
+
+
       <ConfettiBlaster active={triggerConfetti} onComplete={() => setTriggerConfetti(false)} />
     </div>
   );
@@ -7234,8 +7411,22 @@ export default function App() {
   const ADMIN_PASS = "Brolly@pass";
 
   // ── Restore state ──
-  const [employee, setEmployee] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  // Bug #1 fix: restore auth state SYNCHRONOUSLY from localStorage so an
+  // already-logged-in employee/admin is never shown the login page (not even a
+  // flash) when opening a new tab/window. This also prevents the Dashboard from
+  // unmounting+remounting, which was causing the work timer to briefly re-init.
+  const [employee, setEmployee] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("wt_user") || "null");
+      return saved?.role === "employee" && saved.data ? saved.data : null;
+    } catch { return null; }
+  });
+  const [isAdmin, setIsAdmin] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("wt_user") || "null");
+      return saved?.role === "admin";
+    } catch { return false; }
+  });
   const [error, setError] = useState("");
   const [creds, setCreds] = useState(FALLBACK_CREDS);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -7311,6 +7502,37 @@ export default function App() {
       });
   }, []);
 
+  // Bug #2 fix: register a SERVER-SIDE session so logout/expiry propagates to
+  // every device. Fail-soft — if the backend is unreachable the user still logs
+  // in locally; cross-device logout simply resumes once the backend is back.
+  const registeringSession = useRef(false);
+  const registerSession = async (data) => {
+    if (!data || !data.id) return;
+    if (registeringSession.current) return;            // avoid duplicate sessions on rapid re-render
+    if (localStorage.getItem("wt_session_token")) return; // already have one
+    registeringSession.current = true;
+    try {
+      const resp = await fetch(SESSIONS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          employee_id: data.id,
+          employee_name: data.name || "",
+          device_label: (navigator.userAgent || "").slice(0, 200),
+        }),
+      });
+      if (resp.ok) {
+        const s = await resp.json();
+        localStorage.setItem("wt_session_token", s.token);
+        if (s.expires_at) localStorage.setItem("wt_session_expiry", s.expires_at);
+      }
+    } catch (e) {
+      console.warn("Session registration failed (cross-device logout disabled until reconnect)", e);
+    } finally {
+      registeringSession.current = false;
+    }
+  };
+
   const handleLogin = (u, p) => {
     const userInp = u.trim().toLowerCase();
     const passInp = p.trim();
@@ -7331,20 +7553,78 @@ export default function App() {
       return (usernameMatch || emailMatch) && passwordMatch;
     });
     if (found) {
-      setEmployee(found);
+      // Security fix: never persist the plaintext password in localStorage.
+      const safeData = { ...found };
+      delete safeData.password;
+      delete safeData.Password;
+      setEmployee(safeData);
       setIsAdmin(false);
       setError("");
-      localStorage.setItem("wt_user", JSON.stringify({ role: "employee", data: found }));
+      localStorage.setItem("wt_user", JSON.stringify({ role: "employee", data: safeData }));
+      // Bug #2 fix: open a server-side session for cross-device logout/expiry.
+      registerSession(safeData);
     } else {
       setError("Invalid username or password.");
     }
   };
 
   const handleSignOut = () => {
+    // Bug #2 fix: revoke the server-side session (all devices) so signing out
+    // here logs the employee out everywhere on their next validation poll.
+    const token = localStorage.getItem("wt_session_token");
+    if (token) {
+      fetch(SESSIONS_URL + encodeURIComponent(token) + "/logout/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ all: true }),
+      }).catch(() => {}); // best-effort; local logout proceeds regardless
+    }
+    localStorage.removeItem("wt_session_token");
+    localStorage.removeItem("wt_session_expiry");
     setEmployee(null); setIsAdmin(false); setError("");
     localStorage.removeItem("wt_user");
     localStorage.removeItem("wt_session");
   };
+
+  // Bug #2 fix: validate the server-side session on load and poll it so that a
+  // logout or expiry on ANY device logs this device out too. Fail-soft: a
+  // network/server error never logs the user out — only an explicit valid=false
+  // (revoked or expired) from the server does.
+  useEffect(() => {
+    if (!employee) return; // only employees hold server sessions (admin is local)
+    let cancelled = false;
+
+    const forceLogout = (reason) => {
+      if (cancelled) return;
+      console.log("Server session ended:", reason);
+      localStorage.removeItem("wt_session_token");
+      localStorage.removeItem("wt_session_expiry");
+      handleSignOut();
+    };
+
+    const ensureAndValidate = async () => {
+      const token = localStorage.getItem("wt_session_token");
+      // New device / pre-existing login with no token yet → register one.
+      // Do NOT log out here; a missing token just means "not registered yet".
+      if (!token) { registerSession(employee); return; }
+      try {
+        const resp = await fetch(SESSIONS_URL + encodeURIComponent(token) + "/");
+        if (!resp.ok) return; // server/network issue → stay logged in (fail-soft)
+        const data = await resp.json();
+        if (data.valid === false) {
+          forceLogout(data.reason || "invalid");
+        } else if (data.expires_at) {
+          localStorage.setItem("wt_session_expiry", data.expires_at);
+        }
+      } catch {
+        // Network error → fail-soft, keep the user logged in.
+      }
+    };
+
+    ensureAndValidate();
+    const iv = setInterval(ensureAndValidate, 30000); // poll every 30s
+    return () => { cancelled = true; clearInterval(iv); };
+  }, [employee?.id]);
 
   const sendResetLink = async (email) => {
     try {
@@ -7384,8 +7664,13 @@ export default function App() {
     setTimeout(() => setToast(v => ({ ...v, show: false })), 5000);
   };
 
-  // Bind globally so internal dashboard functions can call it
-  window.showToast = showToast;
+  // Bind globally so internal dashboard functions can call it.
+  // Bug fix: do this in an effect (not during render) to avoid a render-time
+  // side effect and stale closures; clean it up on unmount.
+  useEffect(() => {
+    window.showToast = showToast;
+    return () => { if (window.showToast === showToast) delete window.showToast; };
+  });
 
   // ── Version Check (Auto-Refresh on Deploy) ──
   const currentVersion = useRef(null);
