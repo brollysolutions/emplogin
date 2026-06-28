@@ -1336,19 +1336,35 @@ function Dashboard({ employee, onSignOut, showToast }) {
                   setBreakLogs(todayRec.break_logs ? JSON.parse(todayRec.break_logs) : []);
                 } catch { setBreakLogs([]); }
 
-                // Only overwrite hours when safe to do so
+                // Only overwrite hours AND realign the running timer's start point
+                // when the server is genuinely ahead (other device) or the status
+                // changed. Otherwise leave the live local timer completely untouched.
+                //
+                // ── Bug Fix: don't let the timer tick backwards. Realigning
+                //    sessionStartTime/breakStartTime to a newer last_status_change
+                //    while leaving the base (totalWorkSeconds) unchanged silently
+                //    drops every second accumulated since the last sync, because the
+                //    display is `base + (now - start)` and we'd be pushing `start`
+                //    forward without crediting `base`. The beacon/visibility sync
+                //    writes a fresh last_status_change on every tab switch, so this
+                //    used to make the counter jump backward repeatedly.
                 if (statusChanged || serverHasMore || isInitial) {
                   setTotalWorkSeconds(serverWorkSecs);
                   setTotalBreakSeconds(serverBreakSecs);
-                }
 
-                if (todayRec.status === "Active") {
-                  setStatus("working");
-                  setSessionStartTime(todayRec.last_status_change ? new Date(todayRec.last_status_change) : new Date());
-                } else if (todayRec.status === "On Break") {
-                  setStatus("break");
-                  setBreakStartTime(todayRec.last_status_change ? new Date(todayRec.last_status_change) : new Date());
-                } else if (todayRec.logoutt && todayRec.logoutt !== "—") {
+                  if (todayRec.status === "Active") {
+                    setStatus("working");
+                    setSessionStartTime(todayRec.last_status_change ? new Date(todayRec.last_status_change) : new Date());
+                  } else if (todayRec.status === "On Break") {
+                    setStatus("break");
+                    setBreakStartTime(todayRec.last_status_change ? new Date(todayRec.last_status_change) : new Date());
+                  } else if (todayRec.logoutt && todayRec.logoutt !== "—") {
+                    setLOT(new Date(today + " " + todayRec.logoutt));
+                    setStatus("loggedOut");
+                  }
+                } else if (todayRec.logoutt && todayRec.logoutt !== "—" &&
+                           todayRec.status !== "Active" && todayRec.status !== "On Break") {
+                  // Honor a remote logout even when the hours value isn't ahead.
                   setLOT(new Date(today + " " + todayRec.logoutt));
                   setStatus("loggedOut");
                 }

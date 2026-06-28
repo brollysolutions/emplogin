@@ -283,8 +283,30 @@ def attendance_list(request):
                     # Update fields normally
                     instance.login_time = request.data.get('loginT', instance.login_time)
                     instance.logout_time = request.data.get('logoutT', instance.logout_time)
-                    instance.hours = request.data.get('hours', instance.hours)
-                    instance.total_break_time = request.data.get('breakTime', instance.total_break_time)
+
+                    # ── Guard against a stale/late client (a second tab, another
+                    #    device, or an out-of-order request) pushing a SMALLER hours
+                    #    or break value onto an active day, which would make the
+                    #    counter visibly tick backwards. Accumulated worked time on a
+                    #    live day only ever grows, so keep whichever value is larger.
+                    incoming_hours = request.data.get('hours', instance.hours)
+                    incoming_break = request.data.get('breakTime', instance.total_break_time)
+                    active_session = (instance.status in ['Active', 'On Break']) or \
+                                     (new_status in ['Active', 'On Break'])
+                    if active_session:
+                        cur_h, inc_h = hms_to_seconds(instance.hours), hms_to_seconds(incoming_hours)
+                        if cur_h is not None and inc_h is not None and inc_h < cur_h:
+                            logger.warning(
+                                f"Ignored backward hours update for {employee_id} on {date}: "
+                                f"{incoming_hours} < {instance.hours}"
+                            )
+                            incoming_hours = instance.hours
+                        cur_b, inc_b = hms_to_seconds(instance.total_break_time), hms_to_seconds(incoming_break)
+                        if cur_b is not None and inc_b is not None and inc_b < cur_b:
+                            incoming_break = instance.total_break_time
+
+                    instance.hours = incoming_hours
+                    instance.total_break_time = incoming_break
                     instance.break_logs = request.data.get('breakLogs', instance.break_logs)
                     instance.extra_hours = request.data.get('extraHours', instance.extra_hours)
                     instance.status = request.data.get('status', instance.status)
@@ -970,6 +992,20 @@ def format_seconds_to_hms(secs):
     m = int((secs % 3600) // 60)
     s = int(secs % 60)
     return f"{h:02d}:{m:02d}:{s:02d}"
+
+def hms_to_seconds(value):
+    """Parse an 'HH:MM:SS' string to seconds. Returns None for blanks/'—'/garbage."""
+    if not value or value == "—":
+        return None
+    try:
+        parts = str(value).split(':')
+        parts = [int(p) for p in parts]
+        while len(parts) < 3:
+            parts.insert(0, 0)
+        h, m, s = parts[-3], parts[-2], parts[-1]
+        return h * 3600 + m * 60 + s
+    except (ValueError, TypeError):
+        return None
 
 @api_view(['POST'])
 def heartbeat(request):
