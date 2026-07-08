@@ -1267,43 +1267,22 @@ function Dashboard({ employee, onSignOut, showToast }) {
               }
             }
 
-            const nowTime = new Date().getTime();
-            const lastActive = todayRec.last_active ? new Date(todayRec.last_active).getTime() : 0;
-            const isStale = lastActive > 0 && (nowTime - lastActive) > 3600000; // 1 hour threshold (previously 10m)
-
-            if (isStale && (todayRec.status === "Active" || todayRec.status === "On Break")) {
-              console.log("Gap detected! Resuming from stale session. Correcting hours to exclude offline gap...");
-              const workBase = parseHMS(todayRec.hours);
-              const breakBase = parseHMS(todayRec.break_time);
-              const lastChange = todayRec.last_status_change ? new Date(todayRec.last_status_change).getTime() : lastActive;
-              const elapsed = Math.max(0, Math.floor((lastActive - lastChange) / 1000));
-
-              const correctedWork = todayRec.status === "Active" ? workBase + elapsed : workBase;
-              const correctedBreak = todayRec.status === "On Break" ? breakBase + elapsed : breakBase;
-              const newStatus = todayRec.status === "Active" ? "working" : "break";
-              
-              // Synchronously update UI state so user doesn't see "Start Working" and click it
-              setTotalWorkSeconds(correctedWork);
-              setTotalBreakSeconds(correctedBreak);
-              setStatus(newStatus);
-              setLT(new Date(today + " " + todayRec.logint));
-              
-              if (newStatus === "working") {
-                setSessionStartTime(new Date());
-              } else {
-                setBreakStartTime(new Date());
-              }
-
-              triggerAutoSync(
-                new Date(today + " " + todayRec.logint),
-                null,
-                newStatus,
-                new Date(), // startTimeOverride: reset to now
-                correctedWork,
-                correctedBreak
-              );
-              return;
-            }
+            // ── Continuous time policy ──────────────────────────────────────
+            // Previously, if the heartbeat had been silent for >1h we treated the
+            // whole gap as "offline" and rewound the timer back to the last
+            // heartbeat, erasing every second in between. But Chrome freezes and
+            // discards background tabs (Memory Saver / tab-freezing) whenever the
+            // employee focuses another tab or another Chrome window, so the
+            // heartbeat stops even though they are actively working. That made the
+            // timer visibly jump backward the moment they reopened the portal and
+            // unfairly deleted real work time.
+            //
+            // We now count continuously: an Active / On-Break session simply
+            // resumes from its real last_status_change via the normal sync path
+            // below, so reopening the portal can only keep the elapsed time the
+            // same or push it higher — never lower. Genuinely abandoned sessions
+            // left running are still bounded by the midnight rollover reset and
+            // the end-of-day auto-logout, so nothing counts forever.
 
             const serverStatusMap = { "Active": "working", "On Break": "break" };
             const mappedStatus = serverStatusMap[todayRec.status] || (todayRec.logoutt && todayRec.logoutt !== "—" ? "loggedOut" : "idle");
@@ -4826,9 +4805,12 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
       const breakBase = parseHMS(r.break_time || r.breaktime || "00:00:00");
       const lastChange = new Date(r.last_status_change).getTime();
       
-      // If signal is fresh, count up to 'now'
-      // If signal is stale, count only up to 'lastActive'
-      const endTime = (!isHeartbeatStale) ? now : Math.max(lastActive, lastChange);
+      // Continuous time policy: always count up to 'now'. A stale heartbeat only
+      // means Chrome froze the employee's background tab (another tab/window is
+      // focused), not that they stopped working — so we must NOT cap their hours
+      // at the last ping. The "Offline" badge below is still shown purely as a
+      // connectivity indicator; it no longer subtracts any time.
+      const endTime = now;
       const elapsed = Math.floor((endTime - lastChange) / 1000);
       
       const liveWorkSecs = r.status === "Active" ? workBase + (elapsed > 0 ? elapsed : 0) : workBase;

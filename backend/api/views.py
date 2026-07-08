@@ -121,10 +121,66 @@ def logout_session(request, token):
     return Response({"success": True}, status=status.HTTP_200_OK)
 
 
+def send_email_reliably(to, subject, body):
+    """Send one email through whichever channel actually works in this environment.
+
+    Cloud hosts almost always block outbound SMTP (port 465/587), so Django's
+    send_mail() silently fails in production even though it works on a dev laptop.
+    Google Apps Script delivers over HTTPS (port 443), which is never blocked —
+    this is the same channel the password-reset email already uses successfully.
+
+    Order: Google Apps Script first (if GOOGLE_SCRIPT_URL is configured), then
+    fall back to SMTP for local dev where GAS may not be set up.
+
+    Returns (ok: bool, channel: str, detail: str).
+    """
+    script_url = getattr(settings, 'GOOGLE_SCRIPT_URL', '') or ''
+
+    # 1) Preferred: Google Apps Script over HTTPS (works on the cloud).
+    if script_url:
+        try:
+            resp = requests.post(
+                script_url,
+                data=json.dumps({
+                    "action": "sendEmail",
+                    "to": to,
+                    "subject": subject,
+                    "body": body,
+                }),
+                headers={"Content-Type": "text/plain"},
+                allow_redirects=True,  # Apps Script 302-redirects the POST
+                timeout=15,
+            )
+            try:
+                gs_json = resp.json()
+                if gs_json.get("success"):
+                    return True, "google_script", "sent"
+                detail = f"Apps Script error: {gs_json}"
+            except Exception:
+                if resp.status_code == 200:
+                    return True, "google_script", "sent"
+                detail = f"Apps Script returned {resp.status_code}: {resp.text[:200]}"
+            logger.error(f"GAS email to {to} failed: {detail}")
+        except Exception as e:
+            detail = f"GAS request failed: {e}"
+            logger.error(f"GAS email to {to} raised: {e}", exc_info=True)
+    else:
+        detail = "GOOGLE_SCRIPT_URL not configured"
+
+    # 2) Fallback: SMTP (works locally; usually blocked on the cloud).
+    try:
+        send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [to], fail_silently=False)
+        return True, "smtp", "sent"
+    except Exception as e:
+        logger.error(f"SMTP email to {to} failed: {e}")
+        return False, "none", f"{detail}; SMTP also failed: {e}"
+
+
 @api_view(['POST'])
 def send_test_reminder(request):
     """
-    Triggers a single test reminder using standard SMTP.
+    Triggers a single test reminder. Sends via Google Apps Script (HTTPS) so it
+    works on the cloud where outbound SMTP is blocked; falls back to SMTP locally.
     """
     email = request.data.get('email')
     if not email:
@@ -134,25 +190,19 @@ def send_test_reminder(request):
     subject = "Test Reminder: Brolly Attendance System"
     body = (
         f"Good Morning {name}!\n\n"
-        f"This is a TEST reminder from Brolly Solutions Attendance System using SMTP.\n\n"
+        f"This is a TEST reminder from Brolly Solutions Attendance System.\n\n"
         f"The scheduled login time is 10:00 AM. Please make sure to log in on time.\n\n"
         f"Regards,\n"
         f"Brolly Solutions Team"
     )
 
-    try:
-        # Using standard Django send_mail which uses SMTP credentials from .env
-        send_mail(
-            subject,
-            body,
-            settings.DEFAULT_FROM_EMAIL,
-            [email],
-            fail_silently=False,
-        )
-        return Response({"success": f"Test reminder sent to {email} via SMTP"})
-    except Exception as e:
-        logger.error(f"SMTP Test failed: {e}")
-        return Response({"error": f"SMTP Request failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    ok, channel, detail = send_email_reliably(email, subject, body)
+    if ok:
+        return Response({"success": f"Test reminder sent to {email} via {channel}"})
+    return Response(
+        {"error": f"Failed to send test reminder: {detail}"},
+        status=status.HTTP_502_BAD_GATEWAY,
+    )
 
 def _trigger_auto_logout_if_needed():
     """
