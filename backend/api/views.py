@@ -204,14 +204,29 @@ def send_test_reminder(request):
         status=status.HTTP_502_BAD_GATEWAY,
     )
 
+# In-memory per-day guards. Each gunicorn worker remembers the date it last
+# confirmed the daily auto-logout / reminder jobs were handled, so the frequent
+# attendance poll can skip the filesystem lock-file check on almost every request.
+# The on-disk lock files remain the cross-worker source of truth.
+_auto_logout_ram_date = None
+_reminders_ram_date = None
+
+
 def _trigger_auto_logout_if_needed():
     """
     Checks if the auto_logout command has been run today.
     If not, runs it asynchronously in the background using the managed thread pool.
     """
-    last_run_file = os.path.join(settings.BASE_DIR, '.auto_logout_last_run')
+    global _auto_logout_ram_date
     today_str = timezone.localtime(timezone.now()).strftime('%Y-%m-%d')
-    
+
+    # Fast path: this worker already confirmed today is handled — skip filesystem I/O
+    # so the every-5-seconds attendance poll doesn't stat a lock file on every call.
+    if _auto_logout_ram_date == today_str:
+        return
+
+    last_run_file = os.path.join(settings.BASE_DIR, '.auto_logout_last_run')
+
     should_run = True
     if os.path.exists(last_run_file):
         try:
@@ -236,8 +251,12 @@ def _trigger_auto_logout_if_needed():
                 logger.info("Background auto_logout task completed.")
             except Exception as e:
                 logger.error(f"Background auto_logout task failed: {e}", exc_info=True)
-                
+
         run_async(run_command_bg)
+
+    # Remember for this worker that today is covered; subsequent polls take the
+    # fast path above.
+    _auto_logout_ram_date = today_str
 
 
 def _trigger_morning_reminders_if_needed():
@@ -245,34 +264,65 @@ def _trigger_morning_reminders_if_needed():
     Checks if reminders have been triggered today.
     If not, runs the send_reminders command asynchronously.
     """
+    global _reminders_ram_date
     now = timezone.localtime(timezone.now())
+    today_str = now.strftime('%Y-%m-%d')
+
+    # Fast path: already handled/triggered today in this worker.
+    if _reminders_ram_date == today_str:
+        return
+
     if now.weekday() == 6:  # Sunday
         return
-        
+
     current_time_str = now.strftime('%H:%M')
     if current_time_str < "09:25":
         return
 
-    today_str = now.strftime('%Y-%m-%d')
+    # The command writes .reminders_sent_<date> only when at least one reminder
+    # actually goes out. If that exists, today is genuinely done — fast-path it.
+    sent_lock = os.path.join(settings.BASE_DIR, f'.reminders_sent_{today_str}')
+    if os.path.exists(sent_lock):
+        _reminders_ram_date = today_str
+        return
+
+    # Concurrency guard only: a short-lived lock so simultaneous poll requests
+    # don't each launch the command. Unlike before it is NOT a permanent daily
+    # block — it's removed again if the send fails, so a later request can retry
+    # the same day (e.g. the email relay was briefly down this morning).
     trigger_lock = os.path.join(settings.BASE_DIR, f'.reminders_triggered_{today_str}')
-    
-    if not os.path.exists(trigger_lock):
+    if os.path.exists(trigger_lock):
+        # An attempt is already in flight; don't launch a second one right now.
+        return
+
+    try:
+        with open(trigger_lock, 'w') as f:
+            f.write(timezone.now().isoformat())
+    except Exception as e:
+        logger.error(f"Failed to write reminders trigger lock file: {e}")
+        return
+
+    def run_command_bg():
+        global _reminders_ram_date
         try:
-            with open(trigger_lock, 'w') as f:
-                f.write(timezone.now().isoformat())
+            logger.info("Starting background send_reminders task.")
+            call_command('send_reminders')
+            logger.info("Background send_reminders task completed.")
         except Exception as e:
-            logger.error(f"Failed to write reminders trigger lock file: {e}")
-            return
-            
-        def run_command_bg():
-            try:
-                logger.info("Starting background send_reminders task.")
-                call_command('send_reminders')
-                logger.info("Background send_reminders task completed.")
-            except Exception as e:
-                logger.error(f"Background send_reminders task failed: {e}", exc_info=True)
-                
-        run_async(run_command_bg)
+            logger.error(f"Background send_reminders task failed: {e}", exc_info=True)
+        finally:
+            # If the command actually sent (sent_lock now exists), remember it for
+            # this worker so we take the fast path. Otherwise clear the concurrency
+            # lock so a later request this same day can retry the send.
+            if os.path.exists(sent_lock):
+                _reminders_ram_date = today_str
+            else:
+                try:
+                    os.remove(trigger_lock)
+                except OSError:
+                    pass
+
+    run_async(run_command_bg)
 
 
 @api_view(['GET', 'POST'])
@@ -281,7 +331,21 @@ def attendance_list(request):
         if request.method == 'GET':
             _trigger_auto_logout_if_needed()
             _trigger_morning_reminders_if_needed()
-            attendances = Attendance.objects.all().order_by('-date', '-timestamp')
+
+            qs = Attendance.objects.all().order_by('-date', '-timestamp')
+
+            # ── Scope the response so the frequent client poll doesn't download the
+            #    whole company's attendance history every few seconds. The employee
+            #    portal polls with ?employee_id=<id>&scope=today (a single row); the
+            #    admin dashboard sends no params and still receives the full list.
+            employee_id = request.GET.get('employee_id')
+            if employee_id:
+                qs = qs.filter(employee_id=employee_id)
+            if request.GET.get('scope') == 'today':
+                today_str = timezone.localtime(timezone.now()).strftime('%d %b %Y')
+                qs = qs.filter(date=today_str)
+
+            attendances = qs
             data = []
             for r in attendances:
                 data.append({

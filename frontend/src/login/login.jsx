@@ -1231,13 +1231,20 @@ function Dashboard({ employee, onSignOut, showToast }) {
         return;
       }
       try {
-        const resp = await fetch(BACKEND_URL);
+        // Only fetch THIS employee's records. The frequent 5s poll asks for just
+        // today's row (scope=today); the initial load pulls the full history once.
+        // Previously every poll downloaded the entire company's attendance table,
+        // which pinned the backend CPU and pushed tens of GB of traffic.
+        const url = isInitial
+          ? `${BACKEND_URL}?employee_id=${encodeURIComponent(employee.id)}`
+          : `${BACKEND_URL}?employee_id=${encodeURIComponent(employee.id)}&scope=today`;
+        const resp = await fetch(url);
         if (resp.ok) {
           const data = await resp.json();
           const myHistory = data.filter(r => (r.id === employee.id || r.employeeid === employee.id));
 
-          // Update local history list
-          setHistory(myHistory.map(r => ({
+          const today = fmtDate(new Date());
+          const mappedHistory = myHistory.map(r => ({
             date: r.date,
             loginT: r.logint,
             logoutT: r.logoutt,
@@ -1251,9 +1258,20 @@ function Dashboard({ employee, onSignOut, showToast }) {
             tasks: r.tasks,
             status: r.status,
             last_status_change: r.last_status_change
-          })));
+          }));
 
-          const today = fmtDate(new Date());
+          // On the initial load we receive the full history and replace it wholesale.
+          // On the light poll we only get today's row, so merge it into the existing
+          // history instead of overwriting (which would wipe past days from the UI).
+          if (isInitial) {
+            setHistory(mappedHistory);
+          } else {
+            setHistory(prev => {
+              const withoutToday = prev.filter(r => r.date !== today);
+              return [...mappedHistory, ...withoutToday];
+            });
+          }
+
           const todayRec = myHistory.find(r => r.date === today);
 
           if (todayRec) {
