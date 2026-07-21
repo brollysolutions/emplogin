@@ -1,0 +1,38 @@
+# ── Python ──────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# ── Django runtime data — NEVER commit these ────────────
+# The SQLite database and uploaded media are live data. Production keeps its
+# own populated copies (bind-mounted into the container). Committing them lets a
+# deploy overwrite production data with an empty local copy — so they are ignored.
+backend/db.sqlite3
+backend/db.sqlite3.copy
+*.sqlite3
+backend/media/
+backend/staticfiles/
+
+# Daily trigger lock files written at runtime
+backend/.auto_logout_last_run
+backend/.sheet_sync_last_run
+backend/.reminders_sent_*
+backend/.reminders_triggered_*
+
+# ── Env / secrets ───────────────────────────────────────
+# NOTE: backend/.env is currently tracked; see notes. Uncomment to ignore new envs.
+# .env
+
+# ── Node / frontend ─────────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/node_modules/
+
+# ── Editor / OS ─────────────────────────────────────────
+.DS_Store
+.idea/
+.vscode/
+*.log

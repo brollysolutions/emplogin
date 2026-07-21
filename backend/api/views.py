@@ -21,6 +21,7 @@ import json
 from django.core.management import call_command
 import logging
 from .tasks import run_async
+from .employee_sync import reconcile_employees, sync_from_sheet
 from datetime import datetime as _dt
 
 logger = logging.getLogger(__name__)
@@ -210,6 +211,7 @@ def send_test_reminder(request):
 # The on-disk lock files remain the cross-worker source of truth.
 _auto_logout_ram_date = None
 _reminders_ram_date = None
+_sheet_sync_ram_date = None
 
 
 def _trigger_auto_logout_if_needed():
@@ -257,6 +259,50 @@ def _trigger_auto_logout_if_needed():
     # Remember for this worker that today is covered; subsequent polls take the
     # fast path above.
     _auto_logout_ram_date = today_str
+
+
+def _trigger_sheet_sync_if_needed():
+    """Once per day, pull the employee roster from the Google Sheet and reconcile
+    the DB (add new hires, reactivate returns, soft-delete removed employees).
+
+    Runs off normal traffic like the reminder/auto-logout triggers, so additions
+    and deletions in the sheet propagate to the DB automatically without anyone
+    clicking the admin "Sync" button. Best-effort and fail-soft.
+    """
+    global _sheet_sync_ram_date
+    today_str = timezone.localtime(timezone.now()).strftime('%Y-%m-%d')
+
+    # Fast path: this worker already synced today.
+    if _sheet_sync_ram_date == today_str:
+        return
+
+    last_run_file = os.path.join(settings.BASE_DIR, '.sheet_sync_last_run')
+    if os.path.exists(last_run_file):
+        try:
+            with open(last_run_file, 'r') as f:
+                if f.read().strip().startswith(today_str):
+                    _sheet_sync_ram_date = today_str
+                    return
+        except Exception as e:
+            logger.error(f"Failed to read sheet sync last run file: {e}")
+
+    # Claim today's run before launching so concurrent polls don't double-run.
+    try:
+        with open(last_run_file, 'w') as f:
+            f.write(timezone.now().isoformat())
+    except Exception as e:
+        logger.error(f"Failed to write sheet sync last run file: {e}")
+
+    def run_sync_bg():
+        try:
+            logger.info("Starting background sheet-sync task.")
+            summary = sync_from_sheet()
+            logger.info(f"Background sheet-sync task completed: {summary}")
+        except Exception as e:
+            logger.error(f"Background sheet-sync task failed: {e}", exc_info=True)
+
+    run_async(run_sync_bg)
+    _sheet_sync_ram_date = today_str
 
 
 def _trigger_morning_reminders_if_needed():
@@ -330,6 +376,7 @@ def attendance_list(request):
     try:
         if request.method == 'GET':
             _trigger_auto_logout_if_needed()
+            _trigger_sheet_sync_if_needed()
             _trigger_morning_reminders_if_needed()
 
             qs = Attendance.objects.all().order_by('-date', '-timestamp')
@@ -656,44 +703,19 @@ def sync_users(request):
     if not isinstance(users_data, list):
         return Response({"error": "Invalid payload format. Expected a list of users."}, status=status.HTTP_400_BAD_REQUEST)
 
-    created_count = 0
-    updated_count = 0
-    
-    for user_item in users_data:
-        if not isinstance(user_item, dict):
-            continue
+    # Full-list reconcile: create/update/reactivate present employees and
+    # soft-delete (deactivate) those no longer in the sheet. Shared with the
+    # server-side automatic sync so behaviour is identical either way.
+    summary = reconcile_employees(users_data)
 
-        # Prioritize email field if it exists, otherwise construct one
-        username = user_item.get('username') or user_item.get('id')
-        email = user_item.get('email') or (f"{username}@example.com" if username else None)
-        password = user_item.get('password')
-        
-        if not username: continue
-        
-        try:
-            user, created = User.objects.get_or_create(username=username)
-            if created or not user.email:
-                user.email = email
-                
-            # Ensure Profile exists
-            profile, p_created = Profile.objects.get_or_create(user=user)
-            if p_created or not profile.employee_id:
-                profile.employee_id = username
-            profile.save()
-                
-            # Only set password on creation to avoid overwriting current passwords
-            if created and password:
-                user.set_password(password)
-                created_count += 1
-            else:
-                updated_count += 1
-            user.save()
-        except Exception as e:
-            logger.error(f"Failed to sync user {username}: {e}")
-            continue
-            
+    skipped = summary.get("reconcile_skipped")
     return Response({
-        "message": f"Sync complete. Created {created_count}, Updated {updated_count} users.",
+        "message": (
+            f"Sync complete. Created {summary['created']}, Updated {summary['updated']}, "
+            f"Reactivated {summary['reactivated']}, Deactivated {summary['deactivated']} users."
+            + (" (deletion reconcile skipped by safety guardrail)" if skipped else "")
+        ),
+        **summary,
         "success": True
     }, status=status.HTTP_200_OK)
 
@@ -960,7 +982,10 @@ def mark_notification_read(request, pk):
 
 @api_view(['GET'])
 def profile_list(request):
-    profiles = Profile.objects.all()
+    # Exclude profiles of employees who were removed from the Google Sheet
+    # (soft-deleted via sync -> user.is_active=False), so stale accounts don't
+    # appear in DB-driven admin views. Profiles without a linked user are kept.
+    profiles = Profile.objects.exclude(user__is_active=False)
     serializer = ProfileSerializer(profiles, many=True, context={'request': request})
     return Response(serializer.data)
 

@@ -46,6 +46,20 @@ class Command(BaseCommand):
             )
             return
 
+        # 3b. Refresh the roster from the Google Sheet BEFORE selecting who to
+        # email, so employees added to the sheet today receive their reminder
+        # even if no admin has clicked the "Sync" button yet. Fail-soft: if the
+        # sheet is unreachable we fall back to whoever is already in the DB.
+        try:
+            from api.employee_sync import sync_from_sheet
+            summary = sync_from_sheet()
+            if summary is not None:
+                self.stdout.write(f"Roster synced from sheet: {summary}")
+            else:
+                self.stdout.write("Sheet sync skipped/unavailable; using existing DB roster.")
+        except Exception as e:
+            self.stderr.write(f"Sheet sync before reminders failed (continuing): {e}")
+
         # 4. Get employees
         users = User.objects.filter(is_active=True).exclude(email='')
 
