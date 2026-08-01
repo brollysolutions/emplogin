@@ -234,6 +234,14 @@ const FALLBACK_CREDS = [
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxNHIX32g4_K2FlxAJO6g0XpEdUW7ennEEnwH-0XK_SoecTAzZ66hcRIhGh2HxCYsGj/exec";
 const API_BASE = import.meta.env.VITE_API_URL || "/login/api/v1/";
 const BACKEND_URL = API_BASE + "attendance/";
+// Normalize backend/sheet row keys to lowercase, space-free for easier mapping.
+const normalizeRecords = (rows) => rows.map(row => {
+  const o = {};
+  Object.keys(row).forEach(k => {
+    o[k.toLowerCase().replace(/ /g, "")] = String(row[k]).trim();
+  });
+  return o;
+});
 const TASKS_URL = API_BASE + "tasks/";
 const LEAVES_URL = API_BASE + "leaves/";
 const PROFILES_URL = API_BASE + "profiles/";
@@ -4365,6 +4373,11 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
     return () => clearInterval(interval);
   }, []);
   const [records, setRecords] = useState([]);
+  // Full attendance history, loaded on demand for the All-Time analysis only.
+  // The 10s poll deliberately fetches a bounded recent window instead (see
+  // fetchAttendance), because the full table grows without bound.
+  const [allTimeRecords, setAllTimeRecords] = useState([]);
+  const [allTimeLoading, setAllTimeLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [lastSync, setLastSync] = useState(null);
   const [search, setSearch] = useState("");
@@ -4582,7 +4595,10 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
     setLoading(true);
     let data = [];
 
-    // 1. Try fetching from local database first
+    // 1. Try fetching from local database first.
+    //    Only the recent window — this runs every 10s, and the full table grows
+    //    by one row per employee per day forever. All-Time analysis loads the
+    //    rest on demand via fetchAllTimeRecords().
     try {
       const resp = await fetch(BACKEND_URL);
       if (resp.ok) {
@@ -4602,16 +4618,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
     }
 
     if (Array.isArray(data)) {
-      // Normalize keys to lowercase for easier mapping
-      const norm = data.map(row => {
-        const o = {};
-        Object.keys(row).forEach(k => {
-          const cleanK = k.toLowerCase().replace(/ /g, "");
-          o[cleanK] = String(row[k]).trim();
-        });
-        return o;
-      });
-      setRecords(norm);
+      setRecords(normalizeRecords(data));
     }
     setLastSync(new Date());
     setLoading(false);
@@ -4656,6 +4663,30 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
       }
     } catch (e) { console.error("Failed to fetch groups", e); }
   };
+
+  // Full history for the All-Time analysis. Fetched once when the admin actually
+  // opens that view — never on the 10s poll — so the unbounded payload is paid
+  // for only when it's genuinely needed.
+  const fetchAllTimeRecords = async () => {
+    setAllTimeLoading(true);
+    try {
+      const resp = await fetch(`${BACKEND_URL}?days=all`);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (Array.isArray(data)) setAllTimeRecords(normalizeRecords(data));
+      }
+    } catch (e) {
+      console.warn("All-time attendance fetch failed", e);
+    } finally {
+      setAllTimeLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (analysisType === "total" && allTimeRecords.length === 0 && !allTimeLoading) {
+      fetchAllTimeRecords();
+    }
+  }, [analysisType]);
 
   const fetchHolidays = async () => {
     try {
@@ -4795,7 +4826,7 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
   const today = fmtDate(new Date());
 
   // Pre-process records to include live data
-  const processedRecords = records.map(r => {
+  const processRecord = (r) => {
     // 1. Check Heartbeat Staleness (If last_active is older than 1 hour, they are offline)
     const lastActive = r.last_active ? new Date(r.last_active).getTime() : 0;
     const isHeartbeatStale = (now - lastActive) > 3600000; // 1 hour threshold (previously 5m)
@@ -4870,7 +4901,9 @@ function AdminDashboard({ onSignOut, allEmployees = [], showToast }) {
       break_logs_parsed: (() => { try { return r.break_logs ? JSON.parse(r.break_logs) : []; } catch { return []; } })(),
       offline_logs_parsed: (() => { try { return r.offline_logs ? JSON.parse(r.offline_logs) : []; } catch { return []; } })()
     };
-  });
+  };
+
+  const processedRecords = records.map(processRecord);
 
   // Weekly aggregation logic
   const weeklyReportData = useMemo(() => {
@@ -6024,9 +6057,21 @@ Software Solutions</div>
             return false;
           };
 
-          const analysisRecords = analysisType === "monthly" 
+          // All-Time uses the on-demand full history, with the freshly-polled
+          // recent window layered on top so today's live rows stay current.
+          // Falls back to the recent window while the history is still loading.
+          const allTimeMerged = () => {
+            if (allTimeRecords.length === 0) return processedRecords;
+            const key = (r) => `${r.id || r.employeeid}|${r.date}`;
+            const merged = new Map();
+            allTimeRecords.forEach(r => merged.set(key(r), processRecord(r)));
+            processedRecords.forEach(r => merged.set(key(r), r));
+            return Array.from(merged.values());
+          };
+
+          const analysisRecords = analysisType === "monthly"
             ? processedRecords.filter(r => isCurrentMonth(r.date))
-            : processedRecords;
+            : allTimeMerged();
 
           const maxDays = Math.max(...allEmployees.map(e => analysisRecords.filter(r => r.id === e.id || r.employeeid === e.id).length), 5);
           

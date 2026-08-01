@@ -158,6 +158,11 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'your-app-password')
 EMAIL_TIMEOUT = 10  # 10 second timeout to prevent gunicorn worker from being killed
 DEFAULT_FROM_EMAIL = f"Brolly Solutions <{EMAIL_HOST_USER}>"
 
+# Office start time (Asia/Kolkata, 24h "HH:MM"). Employees with no login by this
+# time get the no-login alert; nobody else is emailed. Working days are Monday–
+# Saturday, and admin-declared Holidays are skipped.
+OFFICE_START_TIME = os.environ.get('OFFICE_START_TIME', '10:00')
+
 # Google Sheets Sync API
 GOOGLE_SCRIPT_URL = os.environ.get('GOOGLE_SCRIPT_URL', '')
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"

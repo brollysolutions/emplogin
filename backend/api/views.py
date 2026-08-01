@@ -31,6 +31,16 @@ logger = logging.getLogger(__name__)
 # to detect restarts and force employees to re-login.
 SERVER_START_TIME = _dt.utcnow().isoformat() + "Z"
 
+# How many days of company-wide attendance the list endpoint returns when the
+# caller doesn't ask for a specific window. Keeps the admin dashboard's frequent
+# poll bounded as the table grows; `?days=all` opts back into the full history.
+DEFAULT_ATTENDANCE_DAYS = 30
+
+# Largest explicit `?days=` window we express as a date-list filter. Beyond this
+# the endpoint just returns the full history instead of building an IN clause
+# that could exceed SQLite's per-statement parameter cap (999 before v3.32).
+MAX_ATTENDANCE_WINDOW_DAYS = 366
+
 
 @api_view(['GET'])
 def health_check(request):
@@ -307,8 +317,13 @@ def _trigger_sheet_sync_if_needed():
 
 def _trigger_morning_reminders_if_needed():
     """
-    Checks if reminders have been triggered today.
+    Checks whether today's no-login alerts have been triggered.
     If not, runs the send_reminders command asynchronously.
+
+    Alerts go only to employees with no login by office start time. Non-working
+    days are gated here as well as in the command: the command returns early on
+    those days without writing its sent-lock, which would otherwise leave the
+    trigger retrying on every single poll for the whole day.
     """
     global _reminders_ram_date
     now = timezone.localtime(timezone.now())
@@ -318,12 +333,25 @@ def _trigger_morning_reminders_if_needed():
     if _reminders_ram_date == today_str:
         return
 
+    # Working days are Monday–Saturday. Latch the date so the rest of the day
+    # takes the fast path above instead of re-checking on every poll.
     if now.weekday() == 6:  # Sunday
+        _reminders_ram_date = today_str
         return
 
+    # Nothing is due before office start; do NOT latch, we must re-check later.
     current_time_str = now.strftime('%H:%M')
-    if current_time_str < "09:25":
+    if current_time_str < getattr(settings, 'OFFICE_START_TIME', '10:00'):
         return
+
+    # Admin-declared holiday: one query per worker per day, then latched.
+    try:
+        if Holiday.objects.filter(date=now.date()).exists():
+            _reminders_ram_date = today_str
+            return
+    except Exception as e:
+        # Never let this check break the attendance poll that calls us.
+        logger.error(f"Holiday check before alerts failed (continuing): {e}")
 
     # The command writes .reminders_sent_<date> only when at least one reminder
     # actually goes out. If that exists, today is genuinely done — fast-path it.
@@ -384,13 +412,48 @@ def attendance_list(request):
             # ── Scope the response so the frequent client poll doesn't download the
             #    whole company's attendance history every few seconds. The employee
             #    portal polls with ?employee_id=<id>&scope=today (a single row); the
-            #    admin dashboard sends no params and still receives the full list.
+            #    admin dashboard polls with ?days=<n> for a bounded recent window.
             employee_id = request.GET.get('employee_id')
             if employee_id:
                 qs = qs.filter(employee_id=employee_id)
             if request.GET.get('scope') == 'today':
                 today_str = timezone.localtime(timezone.now()).strftime('%d %b %Y')
                 qs = qs.filter(date=today_str)
+            elif not employee_id:
+                # ── Cap the company-wide list to a recent window by default. The
+                #    admin dashboard polls this every few seconds, and the full
+                #    history grows without bound (one row per employee per day),
+                #    so an uncapped default eventually saturates the worker pool.
+                #    `?days=all` still returns everything for the All-Time analysis,
+                #    which the dashboard requests on demand rather than on the poll.
+                #    A single employee's history is small, so it stays uncapped.
+                days_param = (request.GET.get('days') or '').strip().lower()
+                if days_param != 'all':
+                    today = timezone.localtime(timezone.now()).date()
+                    # Always reach back at least to the 1st of the current month, so
+                    # the dashboard's Monthly analysis stays exact even late in a
+                    # long month (a flat 30-day window would drop the 1st on the 31st).
+                    default_days = max(DEFAULT_ATTENDANCE_DAYS, today.day)
+                    try:
+                        days = int(days_param) if days_param else default_days
+                    except ValueError:
+                        days = default_days
+                    days = max(1, days)
+                    # The window becomes one bound query parameter per day, and
+                    # SQLite caps parameters per statement (999 on builds before
+                    # 3.32). Rather than depend on the runtime's SQLite version,
+                    # treat anything past a year as "give me everything" — same
+                    # result, no oversized IN clause, no version assumption.
+                    if days > MAX_ATTENDANCE_WINDOW_DAYS:
+                        days = None
+                    if days:
+                        # `date` is a display string ("01 Aug 2026"), so it can't be
+                        # range-compared. Match the exact strings for the window.
+                        window = [
+                            (today - timedelta(days=i)).strftime('%d %b %Y')
+                            for i in range(days)
+                        ]
+                        qs = qs.filter(date__in=window)
 
             attendances = qs
             data = []

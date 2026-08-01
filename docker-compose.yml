@@ -36,12 +36,14 @@ services:
       - ./backend/media:/app/media
     ports:
       - "8001:8001"
+    # Boot path is deliberately minimal so `restart: always` brings the port back
+    # in seconds. collectstatic already runs at image build time; makemigrations
+    # must not run in production (migrations belong in the repo); and sync_sheet
+    # made every restart wait on a Google Apps Script call with a 20s timeout —
+    # traffic triggers that sync anyway (_trigger_sheet_sync_if_needed).
     command: >
-      sh -c "python manage.py collectstatic --noinput &&
-             python manage.py makemigrations &&
-             python manage.py migrate &&
-             python manage.py sync_sheet;
-             gunicorn --bind 0.0.0.0:8001 --workers 3 --threads 2 core.wsgi:application"
+      sh -c "python manage.py migrate --noinput;
+             gunicorn --bind 0.0.0.0:8001 --workers 4 --threads 4 --timeout 60 --graceful-timeout 30 --keep-alive 5 --max-requests 1000 --max-requests-jitter 100 core.wsgi:application"
     restart: always
 
   frontend:

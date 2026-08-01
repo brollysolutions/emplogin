@@ -15,14 +15,19 @@ in-memory one, and GOOGLE_SCRIPT_URL is left empty so no real network call is
 made.
 """
 
+import datetime
+import tempfile
 from datetime import date, timedelta
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
+from django.core.management import call_command
 from django.test import override_settings
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
+
+from api.management.commands.send_reminders import Command as SendRemindersCommand
 
 from .models import (
     Attendance,
@@ -127,18 +132,115 @@ class SessionEndpointTests(BaseAPITestCase):
 # attendance/
 # ─────────────────────────────────────────────────────────────────────────────
 class AttendanceEndpointTests(BaseAPITestCase):
-    @patch("api.views._trigger_morning_reminders_if_needed", lambda: None)
-    @patch("api.views._trigger_auto_logout_if_needed", lambda: None)
-    def test_list_returns_records(self):
-        Attendance.objects.create(
-            employee_id="BG000169",
+    """Note: the list endpoint returns a bounded recent window by default, so
+    these fixtures use dates relative to today rather than hard-coded ones."""
+
+    @staticmethod
+    def _date_str(days_ago=0):
+        return (timezone.localtime(timezone.now()).date()
+                - timedelta(days=days_ago)).strftime('%d %b %Y')
+
+    def _make(self, days_ago=0, employee_id="BG000169"):
+        return Attendance.objects.create(
+            employee_id=employee_id,
             name="Test Employee",
             dept="Eng",
-            date="06 Jul 2026",
+            date=self._date_str(days_ago),
             login_time="10:00:00 AM",
             status="Active",
         )
+
+    @patch("api.views._trigger_morning_reminders_if_needed", lambda: None)
+    @patch("api.views._trigger_auto_logout_if_needed", lambda: None)
+    def test_list_returns_records(self):
+        self._make(days_ago=0)
         r = self.client.get(f"{API}/attendance/")
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(r.data), 1)
+
+    @patch("api.views._trigger_morning_reminders_if_needed", lambda: None)
+    @patch("api.views._trigger_auto_logout_if_needed", lambda: None)
+    def test_list_default_excludes_old_records(self):
+        """The default company-wide window is bounded so the admin poll stays cheap."""
+        self._make(days_ago=0)
+        self._make(days_ago=400)
+        r = self.client.get(f"{API}/attendance/")
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(r.data), 1)
+
+    @patch("api.views._trigger_morning_reminders_if_needed", lambda: None)
+    @patch("api.views._trigger_auto_logout_if_needed", lambda: None)
+    def test_list_days_all_returns_full_history(self):
+        self._make(days_ago=0)
+        self._make(days_ago=400)
+        r = self.client.get(f"{API}/attendance/?days=all")
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(r.data), 2)
+
+    @patch("api.views._trigger_morning_reminders_if_needed", lambda: None)
+    @patch("api.views._trigger_auto_logout_if_needed", lambda: None)
+    def test_list_days_explicit_window(self):
+        self._make(days_ago=0)
+        self._make(days_ago=3)
+        self._make(days_ago=20)
+        r = self.client.get(f"{API}/attendance/?days=7")
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(r.data), 2)
+
+    @patch("api.views._trigger_morning_reminders_if_needed", lambda: None)
+    @patch("api.views._trigger_auto_logout_if_needed", lambda: None)
+    def test_list_default_covers_whole_current_month(self):
+        """Monthly analysis reads off the default poll, so the window must always
+        reach back to the 1st — a flat 30 days would drop it late in a long month."""
+        today = timezone.localtime(timezone.now()).date()
+        self._make(days_ago=today.day - 1)  # the 1st of the current month
+        r = self.client.get(f"{API}/attendance/")
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(r.data), 1)
+
+    @patch("api.views._trigger_morning_reminders_if_needed", lambda: None)
+    @patch("api.views._trigger_auto_logout_if_needed", lambda: None)
+    def test_list_employee_history_is_not_date_capped(self):
+        """A single employee's history is small, so the portal still gets all of it."""
+        self._make(days_ago=0)
+        self._make(days_ago=400)
+        r = self.client.get(f"{API}/attendance/?employee_id=BG000169")
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(r.data), 2)
+
+    @patch("api.views._trigger_morning_reminders_if_needed", lambda: None)
+    @patch("api.views._trigger_auto_logout_if_needed", lambda: None)
+    def test_list_scope_today_still_returns_only_today(self):
+        self._make(days_ago=0)
+        self._make(days_ago=2)
+        r = self.client.get(f"{API}/attendance/?employee_id=BG000169&scope=today")
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(r.data), 1)
+
+    @patch("api.views._trigger_morning_reminders_if_needed", lambda: None)
+    @patch("api.views._trigger_auto_logout_if_needed", lambda: None)
+    def test_list_huge_days_window_does_not_blow_sqlite_param_limit(self):
+        """A very large ?days= must degrade to the full history rather than
+        building an IN clause big enough to hit SQLite's parameter cap."""
+        self._make(days_ago=0)
+        self._make(days_ago=400)
+        r = self.client.get(f"{API}/attendance/?days=100000")
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(r.data), 2)
+
+    @patch("api.views._trigger_morning_reminders_if_needed", lambda: None)
+    @patch("api.views._trigger_auto_logout_if_needed", lambda: None)
+    def test_list_negative_days_does_not_error(self):
+        self._make(days_ago=0)
+        r = self.client.get(f"{API}/attendance/?days=-5")
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+
+    @patch("api.views._trigger_morning_reminders_if_needed", lambda: None)
+    @patch("api.views._trigger_auto_logout_if_needed", lambda: None)
+    def test_list_garbage_days_param_falls_back_to_default(self):
+        self._make(days_ago=0)
+        self._make(days_ago=400)
+        r = self.client.get(f"{API}/attendance/?days=notanumber")
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertEqual(len(r.data), 1)
 
@@ -550,3 +652,155 @@ class HolidayEndpointTests(BaseAPITestCase):
     def test_delete_missing_holiday_404(self):
         r = self.client.delete(f"{API}/holidays/999999/")
         self.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# send_reminders — no-login alerts
+# ─────────────────────────────────────────────────────────────────────────────
+class NoLoginAlertCommandTests(APITestCase):
+    """The command alerts ONLY employees with no login by office start time.
+
+    Nobody who logged in, is on approved leave, or whose day is a Sunday or an
+    admin-declared holiday should ever receive mail.
+    """
+
+    MONDAY_1030 = datetime.datetime(2026, 8, 3, 10, 30)   # working day, after 10:00
+    MONDAY_0900 = datetime.datetime(2026, 8, 3, 9, 0)     # working day, before 10:00
+    SATURDAY_1030 = datetime.datetime(2026, 8, 8, 10, 30)  # working day (Mon–Sat)
+    SUNDAY_1030 = datetime.datetime(2026, 8, 9, 10, 30)   # non-working day
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.absentee = User.objects.create_user(
+            username="BG000001", email="absent@brolly.test", first_name="Absent",
+        )
+        self.present = User.objects.create_user(
+            username="BG000002", email="present@brolly.test", first_name="Present",
+        )
+
+    def _run(self, fake_now):
+        """Run the command at a fixed time; return the set of emailed addresses."""
+        sent = []
+
+        def fake_send(self_cmd, script_url, to_email, subject, body):
+            sent.append(to_email)
+            return True
+
+        with override_settings(
+            BASE_DIR=self.tmpdir,
+            GOOGLE_SCRIPT_URL="https://script.example/exec",
+            OFFICE_START_TIME="10:00",
+        ), patch("api.management.commands.send_reminders.timezone") as tz, patch(
+            "api.employee_sync.sync_from_sheet", lambda: None
+        ), patch.object(SendRemindersCommand, "send_via_script", fake_send):
+            tz.now.return_value = fake_now
+            tz.localtime.return_value = fake_now
+            call_command("send_reminders")
+        return set(sent)
+
+    def _mark_logged_in(self, user, when):
+        Attendance.objects.create(
+            employee_id=user.username,
+            name=user.first_name,
+            dept="Eng",
+            date=when.strftime("%d %b %Y"),
+            login_time="09:55:00 AM",
+            status="Active",
+        )
+
+    def test_alerts_only_the_employee_who_did_not_log_in(self):
+        self._mark_logged_in(self.present, self.MONDAY_1030)
+        sent = self._run(self.MONDAY_1030)
+        self.assertEqual(sent, {"absent@brolly.test"})
+
+    def test_no_alert_before_office_start(self):
+        sent = self._run(self.MONDAY_0900)
+        self.assertEqual(sent, set())
+
+    def test_no_alert_on_sunday(self):
+        sent = self._run(self.SUNDAY_1030)
+        self.assertEqual(sent, set())
+
+    def test_saturday_is_a_working_day(self):
+        sent = self._run(self.SATURDAY_1030)
+        self.assertEqual(sent, {"absent@brolly.test", "present@brolly.test"})
+
+    def test_no_alert_on_admin_declared_holiday(self):
+        Holiday.objects.create(date=self.MONDAY_1030.date(), name="Company Day")
+        sent = self._run(self.MONDAY_1030)
+        self.assertEqual(sent, set())
+
+    def test_no_alert_for_employee_on_approved_leave(self):
+        LeaveRequest.objects.create(
+            employee_id=self.absentee.username,
+            employee_name="Absent",
+            leave_type="Casual Leave",
+            start_date=self.MONDAY_1030.date(),
+            end_date=self.MONDAY_1030.date(),
+            reason="personal",
+            status="Approved",
+        )
+        self._mark_logged_in(self.present, self.MONDAY_1030)
+        sent = self._run(self.MONDAY_1030)
+        self.assertEqual(sent, set())
+
+    def test_leave_spanning_today_still_exempts(self):
+        LeaveRequest.objects.create(
+            employee_id=self.absentee.username,
+            employee_name="Absent",
+            leave_type="Sick Leave",
+            start_date=self.MONDAY_1030.date() - timedelta(days=2),
+            end_date=self.MONDAY_1030.date() + timedelta(days=2),
+            reason="unwell",
+            status="Approved",
+        )
+        self._mark_logged_in(self.present, self.MONDAY_1030)
+        sent = self._run(self.MONDAY_1030)
+        self.assertEqual(sent, set())
+
+    def test_pending_leave_does_not_exempt(self):
+        LeaveRequest.objects.create(
+            employee_id=self.absentee.username,
+            employee_name="Absent",
+            leave_type="Casual Leave",
+            start_date=self.MONDAY_1030.date(),
+            end_date=self.MONDAY_1030.date(),
+            reason="personal",
+            status="Pending",
+        )
+        self._mark_logged_in(self.present, self.MONDAY_1030)
+        sent = self._run(self.MONDAY_1030)
+        self.assertEqual(sent, {"absent@brolly.test"})
+
+    def test_work_from_home_still_requires_login(self):
+        """WFH employees are working, so a missing login is still worth flagging."""
+        LeaveRequest.objects.create(
+            employee_id=self.absentee.username,
+            employee_name="Absent",
+            leave_type="Work From Home",
+            start_date=self.MONDAY_1030.date(),
+            end_date=self.MONDAY_1030.date(),
+            reason="wfh",
+            status="Approved",
+        )
+        self._mark_logged_in(self.present, self.MONDAY_1030)
+        sent = self._run(self.MONDAY_1030)
+        self.assertEqual(sent, {"absent@brolly.test"})
+
+    def test_attendance_row_without_real_login_time_still_alerts(self):
+        Attendance.objects.create(
+            employee_id=self.absentee.username,
+            name="Absent",
+            dept="Eng",
+            date=self.MONDAY_1030.strftime("%d %b %Y"),
+            login_time="—",
+            status="Absent",
+        )
+        self._mark_logged_in(self.present, self.MONDAY_1030)
+        sent = self._run(self.MONDAY_1030)
+        self.assertEqual(sent, {"absent@brolly.test"})
+
+    def test_yesterdays_login_does_not_count_as_today(self):
+        self._mark_logged_in(self.present, self.MONDAY_1030 - timedelta(days=1))
+        sent = self._run(self.MONDAY_1030)
+        self.assertEqual(sent, {"absent@brolly.test", "present@brolly.test"})
