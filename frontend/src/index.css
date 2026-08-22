@@ -1,4 +1,8 @@
 @import "tailwindcss";
+/* Tailwind v4 does not auto-load tailwind.config.js. Without this the theme
+   colours defined there (notably `gold`) never reach the build, and every
+   text-gold / bg-gold / from-gold utility in the app silently falls back. */
+@config "../tailwind.config.js";
 
 *, ::before, ::after {
   box-sizing: border-box !important;
