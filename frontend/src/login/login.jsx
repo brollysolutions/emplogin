@@ -8,6 +8,7 @@ import { GlowCard } from "@/components/ui/spotlight-card";
 import * as XLSX from "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
 import logo from '../assets/brolly_logo_new.jpeg';
 import LegalPage from '../legal/legal.jsx';
+import { initNative } from '../native/native.js';
 
 /* -- Legal doc hash routing (#/terms, #/privacy, #/acceptable-use) --
    Kept outside <App /> so the policy pages are reachable from the login
@@ -7554,6 +7555,22 @@ export default function App() {
     }
     setLegalDoc(null);
   };
+
+  // ── Android app: hardware back button ──
+  // Kept in a ref so the listener, registered once, always sees current state.
+  const backStateRef = useRef({ legalDoc: null, closeLegal: () => {} });
+  backStateRef.current = { legalDoc, closeLegal };
+  useEffect(() => {
+    let dispose;
+    initNative({
+      onBackPressed: () => {
+        const { legalDoc: doc, closeLegal: close } = backStateRef.current;
+        if (doc) { close(); return true; }  // close the policy page
+        return false;                        // otherwise background the app
+      },
+    }).then(fn => { dispose = fn; });
+    return () => { if (dispose) dispose(); };
+  }, []);
 
   // ── Admin credentials ──
   const ADMIN_USER = "brolly@admin";

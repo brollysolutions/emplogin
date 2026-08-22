@@ -6,7 +6,16 @@ import { fileURLToPath } from 'url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // https://vite.dev/config/
-export default defineConfig({
+//
+// Two build targets share this config:
+//   vite build                -> the web app, served under https://host/login/
+//   vite build --mode app     -> the Capacitor Android bundle (npm run build:app)
+//
+// The app build differs in two ways. Assets must be referenced relatively,
+// because the WebView serves them from the APK rather than from /login/; and
+// the API base must be absolute, since there is no same-origin server to fall
+// back on (see .env.app).
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
   resolve: {
     alias: {
@@ -14,5 +23,5 @@ export default defineConfig({
     },
   },
   // base: '/test_login/', // TEST
-  base: '/login/',         // PRODUCTION
-})
+  base: mode === 'app' ? './' : '/login/',   // APP : PRODUCTION
+}))
