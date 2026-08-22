@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import { BackgroundPaths } from "@/components/ui/background-paths";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,18 @@ import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/ui/spotlight-card";
 import * as XLSX from "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
 import logo from '../assets/brolly_logo_new.jpeg';
+import LegalPage from '../legal/legal.jsx';
+
+/* -- Legal doc hash routing (#/terms, #/privacy, #/acceptable-use) --
+   Kept outside <App /> so the policy pages are reachable from the login
+   screen, the employee dashboard, and the admin dashboard alike. */
+function legalDocFromHash(hash) {
+  const h = String(hash || "").replace(/^#\/?/, "").toLowerCase();
+  if (h === "terms" || h === "terms-and-conditions") return "terms";
+  if (h === "privacy" || h === "privacy-policy") return "privacy";
+  if (h === "acceptable-use" || h === "policies") return "use";
+  return null;
+}
 
 /* -- Design tokens ------------------------------------------- */
 const T = {
@@ -753,6 +765,21 @@ function LoginPage({ onLogin, error, isSyncing, onForgot }) {
               )}
             </button>
 
+            <p className="text-center text-slate-500 text-[11px] font-semibold leading-relaxed mt-1">
+              By signing in you agree to the{" "}
+              <a href="#/terms" className="font-black text-gold hover:text-amber-600 transition-colors">Terms &amp; Conditions</a>
+              {" "}and the{" "}
+              <a href="#/privacy" className="font-black text-gold hover:text-amber-600 transition-colors">Privacy Policy</a>.
+            </p>
+
+            <div className="flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
+              <a href="#/terms" className="hover:text-gold transition-colors">Terms</a>
+              <span className="text-slate-200">|</span>
+              <a href="#/privacy" className="hover:text-gold transition-colors">Privacy</a>
+              <span className="text-slate-200">|</span>
+              <a href="#/acceptable-use" className="hover:text-gold transition-colors">Acceptable Use</a>
+            </div>
+
             <p className="text-center text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-2">
               Brolly Attendance Portal v2.0
             </p>
@@ -1335,8 +1362,19 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
                 console.log(`Syncing with server: Status=${mappedStatus}, LastChange=${todayRec.last_status_change}, serverWork=${serverWorkSecs}s, localWork=${totalWorkSeconds}s, statusChanged=${statusChanged}, serverHasMore=${serverHasMore}`);
 
-                // Always sync status, login time, break logs
-                setLT(new Date(today + " " + todayRec.logint));
+                // Always sync status, login time, break logs.
+                //
+                // logint is "—" whenever a row exists but no real login was
+                // recorded (auto_logout writes those, and so does any partial
+                // sync). `new Date("22 Aug 2026 —")` is an Invalid Date, which is
+                // a truthy object, so `?.` does not stop the persist effect from
+                // calling .toISOString() on it — that throws RangeError and takes
+                // the whole dashboard down to a blank page. Only accept a value
+                // that actually parses.
+                const parsedLogin = new Date(today + " " + todayRec.logint);
+                if (!Number.isNaN(parsedLogin.getTime())) {
+                  setLT(parsedLogin);
+                }
                 try {
                   setBreakLogs(todayRec.break_logs ? JSON.parse(todayRec.break_logs) : []);
                 } catch { setBreakLogs([]); }
@@ -1561,14 +1599,19 @@ function Dashboard({ employee, onSignOut, showToast }) {
       localStorage.removeItem("wt_session");
       return;
     }
+    // An Invalid Date is a truthy object, so `d?.toISOString()` still throws
+    // RangeError on one — and a throw in this effect blanks the whole portal.
+    // Persisting null for an unparseable time is always better than that.
+    const toISO = (d) => (d instanceof Date && !Number.isNaN(d.getTime()) ? d.toISOString() : null);
+
     localStorage.setItem("wt_session", JSON.stringify({
       totalWorkSeconds,
       totalBreakSeconds,
-      sessionStartTime: sessionStartTime?.toISOString() || null,
-      breakStartTime: breakStartTime?.toISOString() || null,
+      sessionStartTime: toISO(sessionStartTime),
+      breakStartTime: toISO(breakStartTime),
       breakLogs,
-      loginTime: loginTime?.toISOString() || null,
-      logoutTime: logoutTime?.toISOString() || null,
+      loginTime: toISO(loginTime),
+      logoutTime: toISO(logoutTime),
       status,
       taskInput,
       employeeId: employee.id
@@ -4012,6 +4055,21 @@ function Dashboard({ employee, onSignOut, showToast }) {
             ))}
           </div>
         </div>
+
+        {/* Policies footer */}
+        <div style={{
+          marginTop: 16, paddingBottom: 8, display: "flex", flexWrap: "wrap",
+          alignItems: "center", justifyContent: "center", gap: 10,
+          fontSize: 11, fontWeight: 700, color: T.muted
+        }}>
+          <a href="#/terms" style={{ color: T.gold, textDecoration: "none" }}>Terms &amp; Conditions</a>
+          <span style={{ opacity: 0.4 }}>|</span>
+          <a href="#/privacy" style={{ color: T.gold, textDecoration: "none" }}>Privacy Policy</a>
+          <span style={{ opacity: 0.4 }}>|</span>
+          <a href="#/acceptable-use" style={{ color: T.gold, textDecoration: "none" }}>Acceptable Use</a>
+          <span style={{ opacity: 0.4 }}>|</span>
+          <span style={{ opacity: 0.7 }}>Brolly Software Solutions</span>
+        </div>
       </div>
 
 
@@ -5443,6 +5501,17 @@ Software Solutions</div>
             )}
           </button>
 
+          <a href="#/terms" title="Policies, Terms & Conditions"
+            style={{
+              display: "flex", alignItems: "center", gap: 8, padding: "8px 16px",
+              borderRadius: 12, border: "1.5px solid rgba(255,255,255,0.15)", background: "none",
+              color: "white", cursor: "pointer", fontSize: 13, fontWeight: 700,
+              textDecoration: "none", transition: "all 0.25s"
+            }} onMouseOver={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"} onMouseOut={e => e.currentTarget.style.background = "none"}>
+            <Icon d={icons.info} size={14} color="white" />
+            <span className="adm-btn-text">Policies</span>
+          </a>
+
           <button onClick={onSignOut}
             style={{
               display: "flex", alignItems: "center", gap: 8, padding: "8px 16px",
@@ -6540,8 +6609,8 @@ Software Solutions</div>
                   {weeklyReportData.filter(emp => !search || emp.name.toLowerCase().includes(search.toLowerCase()) || emp.id.toLowerCase().includes(search.toLowerCase())).map(r => {
                     const isExpanded = weeklyExpandedEmp === r.id;
                     return (
-                      <>
-                        <tr key={r.id} style={{ borderBottom: isExpanded ? "none" : `1px solid ${T.border}`, transition: "background 0.2s", cursor: "pointer" }}
+                      <Fragment key={r.id}>
+                        <tr style={{ borderBottom: isExpanded ? "none" : `1px solid ${T.border}`, transition: "background 0.2s", cursor: "pointer" }}
                           className="adm-row"
                           onClick={() => setWeeklyExpandedEmp(isExpanded ? null : r.id)}
                         >
@@ -6641,7 +6710,7 @@ Software Solutions</div>
                             </td>
                           </tr>
                         )}
-                      </>
+                      </Fragment>
                     );
                   })}
                   {weeklyReportData.length === 0 && (
@@ -6776,7 +6845,8 @@ Software Solutions</div>
               </div>
             </div>
             <div style={{ overflowX: "auto", maxHeight: 600, overflowY: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>                <thead>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
                   <tr style={{ background: T.surface }}>
                     {["Assigned At", "Employee", "Task Title", "Status", "Tracking"].map(h => (
                       <th key={h} style={colStyle}>{h}</th>
@@ -6785,7 +6855,8 @@ Software Solutions</div>
                 </thead>
                 <tbody>
                  {[...taskFeed].sort((a, b) => new Date(b.assigned_at).getTime() - new Date(a.assigned_at).getTime()).map((t, i) => (
-                   <tr key={i} className="adm-row">                      <td style={cellStyle}>{new Date(t.assigned_at).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
+                   <tr key={i} className="adm-row">
+                      <td style={cellStyle}>{new Date(t.assigned_at).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
                       <td style={cellStyle}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <Avatar name={allEmployees.find(e => e.id === t.employee_id)?.name || "?"} src={profiles.find(p => String(p.employee_id).toLowerCase() === String(t.employee_id).toLowerCase())?.photo} size={28} />
@@ -7467,6 +7538,23 @@ export default function App() {
   const [view, setView] = useState("login"); // login, dashboard, admin, forgot, reset
   const [resetToken, setResetToken] = useState(null);
 
+  // ── Policies / Terms & Conditions (hash-routed, works signed in or out) ──
+  const [legalDoc, setLegalDoc] = useState(() => legalDocFromHash(window.location.hash));
+  useEffect(() => {
+    const onHash = () => setLegalDoc(legalDocFromHash(window.location.hash));
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+  const closeLegal = () => {
+    // Drop the hash without leaving a bare "#" in the address bar.
+    try {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    } catch {
+      window.location.hash = "";
+    }
+    setLegalDoc(null);
+  };
+
   // ── Admin credentials ──
   const ADMIN_USER = "brolly@admin";
   const ADMIN_PASS = "Brolly@pass";
@@ -7769,6 +7857,14 @@ export default function App() {
     const interval = setInterval(checkVersion, 120000);
     return () => clearInterval(interval);
   }, [view]);
+
+  // Policies sit above every other view so they can be read while signed in.
+  if (legalDoc) return (
+    <>
+      <style>{LOGIN_STYLES}</style>
+      <LegalPage doc={legalDoc} onClose={closeLegal} />
+    </>
+  );
 
   if (isAdmin) return (
     <>
