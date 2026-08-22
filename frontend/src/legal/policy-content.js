@@ -12,7 +12,8 @@ export const POLICY = {
   version: "v2.0",
   effectiveDate: "22 August 2026",
   lastUpdated: "22 August 2026",
-  // TODO: replace with the official HR / grievance mailbox before rollout.
+  // Confirmed HR mailbox. Handles both policy questions and privacy /
+  // grievance requests; used in Terms s16, Privacy s10 and s12, and the footer.
   contactEmail: "hr@brollysolutions.in",
   jurisdiction: "India",
   timezone: "Asia/Kolkata (IST)",
