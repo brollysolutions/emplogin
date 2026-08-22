@@ -266,6 +266,7 @@ const HEARTBEAT_URL = API_BASE + "heartbeat/";
 const CHAT_SUMMARIES_URL = API_BASE + "chat-summaries/";
 const HEALTH_CHECK_URL = API_BASE + "health/";
 const SESSIONS_URL = API_BASE + "sessions/";
+const LOGIN_URL = API_BASE + "login/";
 const HOLIDAYS_URL = API_BASE + "holidays/";
 
 
@@ -7572,9 +7573,9 @@ export default function App() {
     return () => { if (dispose) dispose(); };
   }, []);
 
-  // ── Admin credentials ──
-  const ADMIN_USER = "brolly@admin";
-  const ADMIN_PASS = "Brolly@pass";
+  // Admin credentials deliberately do not live here. They are configured on the
+  // server (ADMIN_USERNAME / ADMIN_PASSWORD in Django settings) and checked by
+  // login_view, so they are never shipped in the web bundle or the APK.
 
   // ── Restore state ──
   // Bug #1 fix: restore auth state SYNCHRONOUSLY from localStorage so an
@@ -7699,38 +7700,52 @@ export default function App() {
     }
   };
 
-  const handleLogin = (u, p) => {
-    const userInp = u.trim().toLowerCase();
-    const passInp = p.trim();
+  // Credentials are verified by the server, never here.
+  //
+  // This used to compare the password against the roster the browser had
+  // downloaded, and to grant admin on a hardcoded string match. Both decisions
+  // lived entirely in the client: anyone reading the bundle — or unpacking the
+  // APK — could read every employee's password and the admin credentials, and
+  // could log themselves in while the backend was unreachable or saying no.
+  // login_view now performs the check and issues the session in one call.
+  const handleLogin = async (u, p) => {
+    setError("");
+    try {
+      const resp = await fetch(LOGIN_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: u.trim(),
+          password: p,
+          device_label: (navigator.userAgent || "").slice(0, 200),
+        }),
+      });
 
-    if (userInp === ADMIN_USER && passInp === ADMIN_PASS) {
-      setIsAdmin(true);
-      setEmployee(null);
-      setError("");
-      localStorage.setItem("wt_user", JSON.stringify({ role: "admin" }));
-      return;
-    }
+      const data = await resp.json().catch(() => ({}));
 
-    // Support login by Username OR Email
-    const found = creds.find(c => {
-      const usernameMatch = (c.username || c.UserName || "").trim().toLowerCase() === userInp;
-      const emailMatch = (c.email || c.Email || "").trim().toLowerCase() === userInp;
-      const passwordMatch = (c.password || c.Password || "").trim() === passInp;
-      return (usernameMatch || emailMatch) && passwordMatch;
-    });
-    if (found) {
-      // Security fix: never persist the plaintext password in localStorage.
-      const safeData = { ...found };
-      delete safeData.password;
-      delete safeData.Password;
-      setEmployee(safeData);
-      setIsAdmin(false);
-      setError("");
-      localStorage.setItem("wt_user", JSON.stringify({ role: "employee", data: safeData }));
-      // Bug #2 fix: open a server-side session for cross-device logout/expiry.
-      registerSession(safeData);
-    } else {
-      setError("Invalid username or password.");
+      if (!resp.ok) {
+        setError(data.error || "Invalid username or password.");
+        return;
+      }
+
+      // login_view opened the server-side session as part of this call, so
+      // there is no separate registerSession() to make here.
+      if (data.token) localStorage.setItem("wt_session_token", data.token);
+      if (data.expires_at) localStorage.setItem("wt_session_expiry", data.expires_at);
+
+      if (data.role === "admin") {
+        setIsAdmin(true);
+        setEmployee(null);
+        localStorage.setItem("wt_user", JSON.stringify({ role: "admin" }));
+      } else {
+        setEmployee(data.employee);
+        setIsAdmin(false);
+        localStorage.setItem("wt_user", JSON.stringify({ role: "employee", data: data.employee }));
+      }
+    } catch (e) {
+      // A failed request must never fall back to a local decision.
+      console.error("Login request failed", e);
+      setError("Cannot reach the server. Check your connection and try again.");
     }
   };
 
