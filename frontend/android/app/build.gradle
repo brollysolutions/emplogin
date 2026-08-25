@@ -1,5 +1,24 @@
 apply plugin: 'com.android.application'
 
+// Release signing.
+//
+// The upload keystore and its passwords belong to you and are deliberately not
+// in this repository: losing them means you can never update the app on Play,
+// and committing them means anyone who clones this can publish as you.
+//
+// Create the key yourself with the keytool command in PLAY_STORE.md, then write
+// android/keystore.properties (gitignored) with storeFile, storePassword,
+// keyAlias and keyPassword.
+//
+// When that file is absent the release build still runs and simply produces an
+// unsigned artifact, so CI and anyone without the key are not blocked.
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+def hasReleaseKeystore = keystorePropertiesFile.exists()
+if (hasReleaseKeystore) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace = "in.brollysolutions.attendance"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,8 +35,21 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (hasReleaseKeystore) {
+            release {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
+            if (hasReleaseKeystore) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
