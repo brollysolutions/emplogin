@@ -36,6 +36,12 @@ CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOWED_ORIGINS = [
     "https://brollysolutions.in",
+    # The Capacitor Android app. Its WebView serves the bundle from inside the
+    # APK and reports this as its origin (androidScheme: "https" in
+    # capacitor.config.json), so API calls from the app are cross-origin.
+    "https://localhost",
+    # iOS, if the app is ever built for it — harmless to allow now.
+    "capacitor://localhost",
     "http://localhost:5173",    # Vite local dev server
     "http://127.0.0.1:5173",    # Vite local dev server IP
     "http://localhost:3000",    # React local dev server
@@ -165,6 +171,29 @@ OFFICE_START_TIME = os.environ.get('OFFICE_START_TIME', '10:00')
 
 # Google Sheets Sync API
 GOOGLE_SCRIPT_URL = os.environ.get('GOOGLE_SCRIPT_URL', '')
+
+# ── Admin credentials ─────────────────────────────────────────
+# login.jsx still has these hardcoded, which puts them in the shipped bundle.
+# /api/v1/login/ reads them from here instead so no client ever carries them.
+# The defaults match the current hardcoded pair so nothing breaks on deploy —
+# set both in .env, then delete them from login.jsx.
+ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'brolly@admin')
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'Brolly@pass')
+
+REST_FRAMEWORK = {
+    # Authentication only: this identifies the caller when a bearer token is
+    # sent and leaves the request anonymous when one isn't, so it changes no
+    # existing behaviour on its own.
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "api.authentication.EmployeeSessionAuthentication",
+    ],
+    # Deliberately NOT default-deny yet. Enabling this rejects every request
+    # without a token — which is every request the current web client makes.
+    # Flip it only once login.jsx sends `Authorization: Bearer <token>` on all
+    # calls, and after adding @permission_classes([AllowAny]) to health_check,
+    # login_view, request_password_reset and reset_password.
+    # "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+}
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # Always use the exact API proxy path so Nginx guarantees forwarding it to Django.

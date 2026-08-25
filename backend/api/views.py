@@ -1,7 +1,7 @@
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import Attendance, PasswordResetToken, Task, Profile, LeaveRequest, ChatMessage, EmployeeGroup, Holiday, EmployeeSession
+from .models import Attendance, PasswordResetToken, Task, Profile, LeaveRequest, ChatMessage, EmployeeGroup, Holiday, EmployeeSession, DailyJobRun
 import secrets
 from .serializers import (
     AttendanceSerializer, TaskSerializer, ProfileSerializer, 
@@ -21,7 +21,8 @@ import json
 from django.core.management import call_command
 import logging
 from .tasks import run_async
-from .employee_sync import reconcile_employees, sync_from_sheet
+from .employee_sync import reconcile_employees, sync_from_sheet, fetch_sheet_employees, pick
+from .authentication import ADMIN_EMPLOYEE_ID
 from datetime import datetime as _dt
 
 logger = logging.getLogger(__name__)
@@ -57,6 +58,27 @@ def health_check(request):
 SESSION_DURATION_HOURS = 12
 
 
+def _issue_session(employee_id, employee_name="", device_label="", is_admin=False):
+    """Create an EmployeeSession and return the token payload clients expect."""
+    token = secrets.token_urlsafe(32)
+    now = timezone.now()
+    expires = now + timedelta(hours=SESSION_DURATION_HOURS)
+
+    EmployeeSession.objects.create(
+        token=token,
+        employee_id=employee_id,
+        employee_name=str(employee_name).strip()[:255],
+        device_label=str(device_label).strip()[:255],
+        expires_at=expires,
+        is_admin=is_admin,
+    )
+    return {
+        "token": token,
+        "expires_at": expires.isoformat(),
+        "server_time": now.isoformat(),
+    }
+
+
 @api_view(['POST'])
 def create_session(request):
     """Register a server-side session after the client has matched credentials.
@@ -64,28 +86,199 @@ def create_session(request):
     Returns a token that every device validates. Fail-soft by design: if this
     call fails the client still logs in locally, but cross-device logout/expiry
     only works once a session is registered here.
+
+    DEPRECATED: this trusts a caller-supplied employee_id, so anyone can mint a
+    session for anyone. Use `/api/v1/login/`, which verifies credentials before
+    issuing the token. Kept only until login.jsx has moved over.
     """
     employee_id = str(request.data.get('employee_id', '')).strip()
     if not employee_id:
         return Response({"error": "employee_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-    name = str(request.data.get('employee_name', '')).strip()[:255]
-    device = str(request.data.get('device_label', '')).strip()[:255]
-    token = secrets.token_urlsafe(32)
-    expires = timezone.now() + timedelta(hours=SESSION_DURATION_HOURS)
-
-    EmployeeSession.objects.create(
-        token=token,
-        employee_id=employee_id,
-        employee_name=name,
-        device_label=device,
-        expires_at=expires,
+    payload = _issue_session(
+        employee_id,
+        request.data.get('employee_name', ''),
+        request.data.get('device_label', ''),
     )
-    return Response({
-        "token": token,
-        "expires_at": expires.isoformat(),
-        "server_time": timezone.now().isoformat(),
-    }, status=status.HTTP_201_CREATED)
+    return Response(payload, status=status.HTTP_201_CREATED)
+
+
+def _constant_time_equals(a, b):
+    """Compare two secrets without leaking a match through timing."""
+    return secrets.compare_digest(str(a).encode('utf-8'), str(b).encode('utf-8'))
+
+
+def _employee_payload(user, sheet_row=None):
+    """Build the employee object the client needs in order to operate.
+
+    `dept` matters most: the client sends it when creating an attendance row, and
+    today it comes from the sheet row sitting in the browser. `id` must be the
+    sheet's id, because Attendance, Task, LeaveRequest and EmployeeSession all
+    key on that value rather than on the Django username.
+    """
+    profile = getattr(user, 'profile', None)
+    row = sheet_row or {}
+
+    return {
+        "id": (
+            pick(row, 'id', 'employee_id')
+            or (profile.sheet_employee_id if profile else '')
+            or (profile.employee_id if profile else '')
+            or user.username
+        ),
+        "name": (
+            pick(row, 'name', 'full_name')
+            or user.get_full_name().strip()
+            or user.username
+        ),
+        "username": user.username,
+        "email": user.email or pick(row, 'email'),
+        "dept": pick(row, 'dept', 'department') or (profile.dept if profile else '') or "Unknown",
+        "role": pick(row, 'role', 'designation') or (profile.designation if profile else '') or "",
+    }
+
+
+def _verify_against_sheet(login_input, password):
+    """Verify credentials straight against the sheet roster.
+
+    Needed because reconcile_employees() only sets a Django password when it
+    first creates the user, so a password later edited directly into the sheet
+    leaves the mirrored hash stale and check_password() would reject a password
+    the sheet — which owns the roster — considers current.
+
+    The roster never leaves the server; only this function ever sees it.
+
+    Returns (matching_row_or_None, sheet_was_reachable).
+    """
+    rows = fetch_sheet_employees()
+    if not rows:
+        return None, False
+
+    for row in rows:
+        username = (pick(row, 'username', 'user_name') or pick(row, 'id')).lower()
+        email = pick(row, 'email').lower()
+        if login_input not in {c for c in (username, email) if c}:
+            continue
+        if _constant_time_equals(pick(row, 'password'), password):
+            return row, True
+    return None, True
+
+
+def _sync_user_from_sheet(row, password):
+    """Create or repair the Django mirror of a sheet employee after a sheet login.
+
+    Rewrites the stored hash so subsequent logins are a pure DB check that never
+    waits on the sheet, and marks the profile roster-backed.
+    """
+    username = pick(row, 'username', 'user_name') or pick(row, 'id')
+    email = pick(row, 'email') or f"{username}@example.com"
+
+    with transaction.atomic():
+        user, created = User.objects.get_or_create(username=username)
+        if created or not user.email:
+            user.email = email
+        user.is_active = True
+        user.set_password(password)
+        user.save()
+
+        profile, _ = Profile.objects.get_or_create(user=user)
+        # employee_id is unique; never steal it from another profile.
+        if not profile.employee_id and not Profile.objects.filter(
+            employee_id__iexact=username
+        ).exclude(pk=profile.pk).exists():
+            profile.employee_id = username
+
+        sheet_id = pick(row, 'id', 'employee_id')
+        if sheet_id:
+            profile.sheet_employee_id = sheet_id
+        profile.dept = pick(row, 'dept', 'department') or profile.dept
+        profile.designation = pick(row, 'role', 'designation') or profile.designation
+        profile.sheet_synced = True
+        profile.save()
+
+    return user
+
+
+def _employee_login_response(user, device_label, sheet_row=None):
+    """Issue a session keyed to the same employee id the client will send back."""
+    employee = _employee_payload(user, sheet_row)
+    payload = _issue_session(employee["id"], employee["name"], device_label)
+    return {**payload, "role": "employee", "employee": employee}
+
+
+@api_view(['POST'])
+def login_view(request):
+    """Authenticate an employee or admin and issue a session token.
+
+    Replaces the credential check login.jsx still performs in the browser, where
+    the entire roster — plaintext passwords included — is downloaded to the
+    client and compared there. Verification has to move here before any of this
+    ships as an app binary that anyone can unpack.
+
+    Checks run cheapest-first:
+      1. Admin credentials, from the environment rather than a client bundle.
+      2. The mirrored Django password hash — the normal path, no network call.
+      3. The sheet, which owns the roster, healing the stale hash on a match.
+
+    Request:  {"username": ..., "password": ..., "device_label": ...}
+    Response: {"token", "expires_at", "server_time", "role", "employee"}
+    """
+    login_input = str(request.data.get('username', '')).strip().lower()
+    password = str(request.data.get('password', '')).strip()
+    device_label = str(request.data.get('device_label', '')).strip()
+
+    if not login_input or not password:
+        return Response({"error": "Username and password are required."},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    # 1) Admin.
+    admin_username = str(getattr(settings, 'ADMIN_USERNAME', '') or '').strip().lower()
+    admin_password = str(getattr(settings, 'ADMIN_PASSWORD', '') or '')
+    if (admin_username and admin_password
+            and _constant_time_equals(login_input, admin_username)
+            and _constant_time_equals(password, admin_password)):
+        payload = _issue_session(ADMIN_EMPLOYEE_ID, "Administrator", device_label, is_admin=True)
+        logger.info("Admin session issued to device %r", device_label[:80])
+        return Response({**payload, "role": "admin", "employee": None}, status=status.HTTP_200_OK)
+
+    # 2) The mirrored hash. order_by prefers an active row if an email is shared.
+    user = User.objects.filter(
+        Q(username__iexact=login_input) | Q(email__iexact=login_input)
+    ).order_by('-is_active').first()
+
+    if user and user.is_active and user.check_password(password):
+        profile = getattr(user, 'profile', None)
+        if profile and profile.sheet_synced:
+            return Response(_employee_login_response(user, device_label),
+                            status=status.HTTP_200_OK)
+        # A correct password against a profile that has never been reconciled
+        # with the sheet is NOT trusted. employee_profile auto-creates users
+        # whose password is set to their own employee_id, and those must not
+        # become a login path — defer to the sheet to confirm or reject.
+        logger.warning(
+            "Password matched an unsynced profile for %r; deferring to the sheet",
+            login_input,
+        )
+
+    # 3) The sheet.
+    row, sheet_reachable = _verify_against_sheet(login_input, password)
+    if row:
+        user = _sync_user_from_sheet(row, password)
+        logger.info("Sheet-verified login for %r; mirrored password refreshed", login_input)
+        return Response(_employee_login_response(user, device_label, row),
+                        status=status.HTTP_200_OK)
+
+    if not sheet_reachable:
+        # Don't call valid credentials invalid because the roster was unreachable.
+        logger.error("Login for %r could not be verified: sheet unreachable", login_input)
+        return Response(
+            {"error": "Unable to verify credentials right now. Please try again shortly."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    logger.warning("Failed login attempt for %r", login_input)
+    return Response({"error": "Invalid username or password."},
+                    status=status.HTTP_401_UNAUTHORIZED)
 
 
 @api_view(['GET'])
@@ -353,12 +546,23 @@ def _trigger_morning_reminders_if_needed():
         # Never let this check break the attendance poll that calls us.
         logger.error(f"Holiday check before alerts failed (continuing): {e}")
 
-    # The command writes .reminders_sent_<date> only when at least one reminder
-    # actually goes out. If that exists, today is genuinely done — fast-path it.
-    sent_lock = os.path.join(settings.BASE_DIR, f'.reminders_sent_{today_str}')
-    if os.path.exists(sent_lock):
-        _reminders_ram_date = today_str
-        return
+    # The command records a DailyJobRun row only when today is genuinely done.
+    # This marker is in the DB (bind-mounted, survives container rebuilds) rather
+    # than a lock file under BASE_DIR — the container filesystem is discarded on
+    # every redeploy, which is why restarting the server used to re-send the
+    # morning alerts to employees who had already been mailed.
+    def _sent_today():
+        return DailyJobRun.objects.filter(
+            job_name=DailyJobRun.MORNING_REMINDERS, run_date=now.date()
+        ).exists()
+
+    try:
+        if _sent_today():
+            _reminders_ram_date = today_str
+            return
+    except Exception as e:
+        # Never let this check break the attendance poll that calls us.
+        logger.error(f"Reminder sent-marker check failed (continuing): {e}")
 
     # Concurrency guard only: a short-lived lock so simultaneous poll requests
     # don't each launch the command. Unlike before it is NOT a permanent daily
@@ -385,10 +589,14 @@ def _trigger_morning_reminders_if_needed():
         except Exception as e:
             logger.error(f"Background send_reminders task failed: {e}", exc_info=True)
         finally:
-            # If the command actually sent (sent_lock now exists), remember it for
-            # this worker so we take the fast path. Otherwise clear the concurrency
+            # If the command actually marked today done, remember it for this
+            # worker so we take the fast path. Otherwise clear the concurrency
             # lock so a later request this same day can retry the send.
-            if os.path.exists(sent_lock):
+            try:
+                done = _sent_today()
+            except Exception:
+                done = False
+            if done:
                 _reminders_ram_date = today_str
             else:
                 try:

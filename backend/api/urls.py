@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     path('health/', views.health_check, name='health_check'),
+    path('login/', views.login_view, name='login'),
     path('sessions/', views.create_session, name='create_session'),
     path('sessions/<str:token>/logout/', views.logout_session, name='logout_session'),
     path('sessions/<str:token>/', views.validate_session, name='validate_session'),

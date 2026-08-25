@@ -21,6 +21,24 @@ from .models import Profile
 logger = logging.getLogger(__name__)
 
 
+def pick(row, *names):
+    """First non-empty value among `names`, matched case-insensitively.
+
+    `fetch_sheet_employees()` lowercases its keys, but `/sync-users/` is handed
+    the sheet rows straight from the browser with whatever capitalisation the
+    sheet's header row uses (which is why login.jsx reads `c.username ||
+    c.UserName`). Anything reading a sheet column needs to tolerate both.
+    """
+    if not isinstance(row, dict):
+        return ""
+    lowered = {str(k).strip().lower(): v for k, v in row.items()}
+    for name in names:
+        value = lowered.get(name.lower())
+        if value not in (None, ""):
+            return str(value).strip()
+    return ""
+
+
 def reconcile_employees(users_data):
     """Reconcile the Django user roster against a FULL employee list.
 
@@ -71,6 +89,22 @@ def reconcile_employees(users_data):
             profile, p_created = Profile.objects.get_or_create(user=user)
             if p_created or not profile.employee_id:
                 profile.employee_id = username
+
+            # Mirror the columns the client needs at login. Unlike the password
+            # these track the sheet on every sync — the sheet owns them.
+            sheet_id = pick(user_item, 'id', 'employee_id', 'empid')
+            if sheet_id:
+                profile.sheet_employee_id = sheet_id
+            dept = pick(user_item, 'dept', 'department')
+            if dept:
+                profile.dept = dept
+            designation = pick(user_item, 'role', 'designation', 'title')
+            if designation:
+                profile.designation = designation
+
+            # Marks this profile as roster-backed, which is what lets
+            # /api/v1/login/ trust its stored password hash.
+            profile.sheet_synced = True
             profile.save()
 
             # Only set password on creation to avoid overwriting current passwords

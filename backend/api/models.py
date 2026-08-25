@@ -54,6 +54,23 @@ class Task(models.Model):
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     employee_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    # The sheet's `id` column (e.g. "EMP001"). Stored separately from
+    # `employee_id` because the two are not reliably the same value: the sheet
+    # sync sets `employee_id` from the sheet's `username` column, while
+    # `employee_profile` auto-creation sets it from whatever id the client sent.
+    # Every other table (Attendance, Task, LeaveRequest, EmployeeSession) keys on
+    # the sheet id, so login has to be able to return it unambiguously.
+    sheet_employee_id = models.CharField(max_length=50, db_index=True, null=True, blank=True)
+    # Mirrored from the sheet; the client needs both at login to create
+    # attendance rows and render the dashboard header.
+    dept = models.CharField(max_length=100, null=True, blank=True)
+    designation = models.CharField(max_length=255, null=True, blank=True)
+    # True once this profile has been reconciled against the sheet roster.
+    # `/api/v1/login/` refuses to accept a stored password hash for profiles
+    # where this is False, because `employee_profile` auto-creates placeholder
+    # users whose password is set to their own employee_id — those must never
+    # become a login path.
+    sheet_synced = models.BooleanField(default=False)
     total_leaves = models.IntegerField(default=16)
     photo = models.ImageField(upload_to='profile_photos/', null=True, blank=True)
     aadhar_number = models.CharField(max_length=20, null=True, blank=True)
@@ -122,6 +139,9 @@ class EmployeeSession(models.Model):
     employee_id = models.CharField(max_length=50, db_index=True)
     employee_name = models.CharField(max_length=255, blank=True, default="")
     device_label = models.CharField(max_length=255, blank=True, default="")
+    # Set only by an admin login. Gates the company-wide endpoints (approvals,
+    # roster, groups) once those are moved behind IsAdminSession.
+    is_admin = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
     is_active = models.BooleanField(default=True)
@@ -142,3 +162,31 @@ class Holiday(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.date}"
+
+
+class DailyJobRun(models.Model):
+    """Marks a once-per-day background job as already done for a given date.
+
+    This lives in the database rather than in a lock file under BASE_DIR because
+    the container filesystem is NOT persisted: docker-compose bind-mounts only
+    db.sqlite3 and media/, so anything written to /app is discarded whenever the
+    container is rebuilt or recreated. A restart therefore wiped the
+    ".reminders_sent_<date>" lock and the morning no-login alerts went out a
+    second time to people who had already received them.
+
+    The unique constraint also makes claiming a day atomic across the 4 gunicorn
+    workers, which per-worker in-memory guards cannot do on their own.
+    """
+
+    MORNING_REMINDERS = "morning_reminders"
+
+    job_name = models.CharField(max_length=50, db_index=True)
+    run_date = models.DateField(db_index=True)
+    completed_at = models.DateTimeField(auto_now_add=True)
+    detail = models.CharField(max_length=255, blank=True, default="")
+
+    class Meta:
+        unique_together = ("job_name", "run_date")
+
+    def __str__(self):
+        return f"{self.job_name} @ {self.run_date}"

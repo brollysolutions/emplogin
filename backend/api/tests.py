@@ -32,6 +32,7 @@ from api.management.commands.send_reminders import Command as SendRemindersComma
 from .models import (
     Attendance,
     ChatMessage,
+    DailyJobRun,
     EmployeeGroup,
     EmployeeSession,
     Holiday,
@@ -804,3 +805,271 @@ class NoLoginAlertCommandTests(APITestCase):
         self._mark_logged_in(self.present, self.MONDAY_1030 - timedelta(days=1))
         sent = self._run(self.MONDAY_1030)
         self.assertEqual(sent, {"absent@brolly.test", "present@brolly.test"})
+
+
+# -----------------------------------------------------------------------------
+# send_reminders - regressions for the two production bugs
+# -----------------------------------------------------------------------------
+class NoLoginAlertIdentityTests(NoLoginAlertCommandTests):
+    """Employees who HAD logged in were still being emailed.
+
+    In production `User.username` comes from the sheet's `username` column, which
+    holds the person's NAME ("Gundlapalli Lokeswar Raju"), while every attendance
+    row keys on the sheet id ("BG000169"). The old check compared attendance
+    against `username`, so it never matched and mailed the entire active roster
+    every morning regardless of who had actually logged in.
+    """
+
+    def setUp(self):
+        super().setUp()
+        # Rebuild the two users in the real production shape: username is a NAME,
+        # and the sheet id lives on the profile.
+        User.objects.all().delete()
+        self.absentee = User.objects.create_user(
+            username="Absent Person Name", email="absent@brolly.test", first_name="Absent",
+        )
+        Profile.objects.create(
+            user=self.absentee, employee_id="Absent Person Name",
+            sheet_employee_id="BG000001", sheet_synced=True,
+        )
+        self.present = User.objects.create_user(
+            username="Present Person Name", email="present@brolly.test", first_name="Present",
+        )
+        Profile.objects.create(
+            user=self.present, employee_id="Present Person Name",
+            sheet_employee_id="BG000002", sheet_synced=True,
+        )
+
+    def _mark_logged_in(self, user, when):
+        """Attendance keys on the SHEET id, not the username - as production does."""
+        Attendance.objects.create(
+            employee_id=user.profile.sheet_employee_id,
+            name=user.first_name,
+            dept="Eng",
+            date=when.strftime("%d %b %Y"),
+            login_time="09:55:00 AM",
+            status="Active",
+        )
+
+    def test_logged_in_employee_is_not_emailed_when_keyed_by_sheet_id(self):
+        """The core bug: a present employee must NOT receive a no-login alert."""
+        self._mark_logged_in(self.present, self.MONDAY_1030)
+        sent = self._run(self.MONDAY_1030)
+        self.assertNotIn("present@brolly.test", sent)
+        self.assertEqual(sent, {"absent@brolly.test"})
+
+    def test_leave_keyed_by_sheet_id_also_exempts(self):
+        """LeaveRequest keys on the sheet id too, so approved leave must match."""
+        LeaveRequest.objects.create(
+            employee_id="BG000001",
+            employee_name="Absent",
+            leave_type="Casual Leave",
+            start_date=self.MONDAY_1030.date(),
+            end_date=self.MONDAY_1030.date(),
+            reason="personal",
+            status="Approved",
+        )
+        self._mark_logged_in(self.present, self.MONDAY_1030)
+        sent = self._run(self.MONDAY_1030)
+        self.assertEqual(sent, set())
+
+    def test_case_and_whitespace_differences_still_match(self):
+        Attendance.objects.create(
+            employee_id="  bg000002  ",
+            name="Present", dept="Eng",
+            date=self.MONDAY_1030.strftime("%d %b %Y"),
+            login_time="09:55:00 AM", status="Active",
+        )
+        sent = self._run(self.MONDAY_1030)
+        self.assertEqual(sent, {"absent@brolly.test"})
+
+    def test_name_match_works_before_any_sheet_sync(self):
+        """sheet_employee_id is NULL until a sync runs; the name must still match.
+
+        Migration 0020 adds sheet_employee_id empty, so on the first deploy every
+        profile has NULL there. If the id join were the only key, the command
+        would still mail the whole roster. The attendance row's `name` column
+        carries the same value as `username`, so it covers that window.
+        """
+        Profile.objects.filter(user=self.present).update(sheet_employee_id=None)
+        Attendance.objects.create(
+            employee_id="SOME-UNKNOWN-ID",
+            name=self.present.username,          # the only usable link
+            dept="Eng",
+            date=self.MONDAY_1030.strftime("%d %b %Y"),
+            login_time="09:55:00 AM",
+            status="Active",
+        )
+        sent = self._run(self.MONDAY_1030)
+        self.assertNotIn("present@brolly.test", sent)
+        self.assertEqual(sent, {"absent@brolly.test"})
+
+    def test_leave_matched_by_employee_name(self):
+        Profile.objects.filter(user=self.absentee).update(sheet_employee_id=None)
+        LeaveRequest.objects.create(
+            employee_id="SOME-UNKNOWN-ID",
+            employee_name=self.absentee.username,
+            leave_type="Casual Leave",
+            start_date=self.MONDAY_1030.date(),
+            end_date=self.MONDAY_1030.date(),
+            reason="personal",
+            status="Approved",
+        )
+        self._mark_logged_in(self.present, self.MONDAY_1030)
+        sent = self._run(self.MONDAY_1030)
+        self.assertEqual(sent, set())
+
+    def test_broken_join_aborts_instead_of_mailing_everyone(self):
+        """The blast-radius guard: logins exist but match nobody -> send nothing.
+
+        This is the shape of the original outage. Rather than tell the whole
+        company they never logged in, the command refuses and leaves the day
+        unmarked so a later run can succeed once the roster is consistent.
+        """
+        Attendance.objects.create(
+            employee_id="ZZ999999",
+            name="Nobody At All",
+            dept="Eng",
+            date=self.MONDAY_1030.strftime("%d %b %Y"),
+            login_time="09:55:00 AM",
+            status="Active",
+        )
+        sent = self._run(self.MONDAY_1030)
+        self.assertEqual(sent, set(), "must not mail anyone when the join is broken")
+        self.assertFalse(
+            DailyJobRun.objects.filter(
+                job_name=DailyJobRun.MORNING_REMINDERS,
+                run_date=self.MONDAY_1030.date(),
+            ).exists(),
+            "an aborted run must leave the day open for a retry",
+        )
+
+    def test_guard_ignores_unmailable_accounts_when_judging_the_join(self):
+        """A roster of placeholder emails must not look like a broken join.
+
+        Invalid/@example.com addresses are skipped before any mail goes out. If
+        the guard only counted mailable employees, a seeded or placeholder roster
+        where someone HAD logged in would count zero matches and abort a run that
+        is actually working correctly.
+        """
+        placeholder = User.objects.create_user(
+            username="BG000500", email="BG000500@example.com", first_name="Placeholder",
+        )
+        Attendance.objects.create(
+            employee_id=placeholder.username,
+            name="Placeholder", dept="Eng",
+            date=self.MONDAY_1030.strftime("%d %b %Y"),
+            login_time="09:50:00 AM", status="Active",
+        )
+        # The only login today belongs to an unmailable account, but it DOES
+        # match a real user, so the join is healthy and the run must proceed.
+        sent = self._run(self.MONDAY_1030)
+        self.assertEqual(sent, {"absent@brolly.test", "present@brolly.test"})
+
+    def test_guard_does_not_fire_when_genuinely_nobody_logged_in(self):
+        """No attendance rows at all is legitimate - everyone really is late."""
+        sent = self._run(self.MONDAY_1030)
+        self.assertEqual(sent, {"absent@brolly.test", "present@brolly.test"})
+
+    def test_legacy_accounts_keyed_by_username_still_match(self):
+        """Placeholder accounts whose username IS the employee id must still work."""
+        legacy = User.objects.create_user(
+            username="BG000099", email="legacy@brolly.test", first_name="Legacy",
+        )
+        Attendance.objects.create(
+            employee_id=legacy.username,
+            name="Legacy", dept="Eng",
+            date=self.MONDAY_1030.strftime("%d %b %Y"),
+            login_time="09:50:00 AM", status="Active",
+        )
+        self._mark_logged_in(self.present, self.MONDAY_1030)
+        sent = self._run(self.MONDAY_1030)
+        self.assertEqual(sent, {"absent@brolly.test"})
+
+
+class NoLoginAlertRestartTests(NoLoginAlertCommandTests):
+    """Restarting the server re-sent alerts that had already gone out.
+
+    The "already sent today" marker used to be a lock file under BASE_DIR. Only
+    db.sqlite3 and media/ are bind-mounted, so the container writable layer - and
+    the lock with it - was discarded on every rebuild/recreate, and the next run
+    mailed everyone a second time. The marker now lives in the database.
+    """
+
+    def test_second_run_same_day_sends_nothing(self):
+        first = self._run(self.MONDAY_1030)
+        self.assertEqual(first, {"absent@brolly.test", "present@brolly.test"})
+        second = self._run(self.MONDAY_1030)
+        self.assertEqual(second, set())
+
+    def test_marker_survives_loss_of_the_container_filesystem(self):
+        """Simulate a redeploy: BASE_DIR is wiped, the DB persists."""
+        first = self._run(self.MONDAY_1030)
+        self.assertTrue(first)
+
+        # A fresh container == a brand-new empty BASE_DIR with no lock files.
+        self.tmpdir = tempfile.mkdtemp()
+        after_restart = self._run(self.MONDAY_1030)
+        self.assertEqual(
+            after_restart, set(),
+            "restarting the server must not re-send the morning alerts",
+        )
+
+    def test_day_is_marked_in_the_database(self):
+        self._run(self.MONDAY_1030)
+        self.assertTrue(
+            DailyJobRun.objects.filter(
+                job_name=DailyJobRun.MORNING_REMINDERS,
+                run_date=self.MONDAY_1030.date(),
+            ).exists()
+        )
+
+    def test_a_new_day_sends_again(self):
+        self._run(self.MONDAY_1030)
+        tuesday = self.MONDAY_1030 + timedelta(days=1)
+        sent = self._run(tuesday)
+        self.assertEqual(sent, {"absent@brolly.test", "present@brolly.test"})
+
+    def test_total_relay_failure_does_not_mark_the_day(self):
+        """If every send fails the day must stay open so a later run retries."""
+        def all_fail(self_cmd, script_url, to_email, subject, body):
+            return False
+
+        with override_settings(
+            BASE_DIR=self.tmpdir,
+            GOOGLE_SCRIPT_URL="https://script.example/exec",
+            OFFICE_START_TIME="10:00",
+        ), patch("api.management.commands.send_reminders.timezone") as tz, patch(
+            "api.employee_sync.sync_from_sheet", lambda: None
+        ), patch.object(SendRemindersCommand, "send_via_script", all_fail):
+            tz.now.return_value = self.MONDAY_1030
+            tz.localtime.return_value = self.MONDAY_1030
+            call_command("send_reminders")
+
+        self.assertFalse(
+            DailyJobRun.objects.filter(
+                job_name=DailyJobRun.MORNING_REMINDERS,
+                run_date=self.MONDAY_1030.date(),
+            ).exists()
+        )
+        # ...and the retry then succeeds.
+        self.assertEqual(
+            self._run(self.MONDAY_1030), {"absent@brolly.test", "present@brolly.test"}
+        )
+
+    def test_legacy_lock_file_is_honoured_once_then_backfilled(self):
+        """Deploy day: a lock written by the old version must not be ignored."""
+        import os
+        today_str = self.MONDAY_1030.strftime("%Y-%m-%d")
+        with open(os.path.join(self.tmpdir, ".reminders_sent_" + today_str), "w") as f:
+            f.write("sent by the previous version")
+
+        sent = self._run(self.MONDAY_1030)
+        self.assertEqual(sent, set(), "legacy lock must suppress a duplicate send")
+        self.assertTrue(
+            DailyJobRun.objects.filter(
+                job_name=DailyJobRun.MORNING_REMINDERS,
+                run_date=self.MONDAY_1030.date(),
+            ).exists(),
+            "legacy lock should be backfilled into the DB",
+        )
