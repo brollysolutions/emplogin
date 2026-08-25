@@ -822,7 +822,7 @@ function StatCard({ label, value, sub, icon, color, bg, isLive, index = 0 }) {
           </div>
         )}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 9, fontWeight: 500, color: T.ink, textTransform: "uppercase", fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em' }}>{label}</span>
+          <span className="stat-label" style={{ fontSize: 9, fontWeight: 500, color: T.ink, textTransform: "uppercase", fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em' }}>{label}</span>
           <div style={{
             width: 24, height: 24, borderRadius: 6, background: finalBg,
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -833,7 +833,7 @@ function StatCard({ label, value, sub, icon, color, bg, isLive, index = 0 }) {
         </div>
         <div>
           <div className="stat-value" style={{ fontSize: 18, fontWeight: 600, color: T.ink, marginBottom: 1, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.5px", fontFamily: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"', letterSpacing: '0.01em' }}>{value}</div>
-          {sub && <div style={{ fontSize: 10, color: T.ink, fontWeight: 700, opacity: 0.7 }}>{sub}</div>}
+          {sub && <div className="stat-sub" style={{ fontSize: 10, color: T.ink, fontWeight: 700, opacity: 0.7 }}>{sub}</div>}
         </div>
       </div>
     </GlowCard>
@@ -2834,6 +2834,206 @@ function Dashboard({ employee, onSignOut, showToast }) {
         }
       `}</style>
 
+      {/* ── Phone layout ──────────────────────────────────────────────────────
+          Everything here is inside one `max-width: 768px` query, so the desktop
+          web app renders exactly as it did before.
+
+          `!important` is not defensive styling: the components carry ~800 inline
+          `style={{}}` objects, and an inline declaration outranks every normal
+          rule in the cascade no matter how specific. An important author
+          declaration is the only thing that beats it, so it is what a media
+          query needs in order to reach this markup at all.
+      ─────────────────────────────────────────────────────────────────────── */}
+      <style>{`
+        @media (max-width: 768px) {
+          /* The page scrolls behind a fixed bottom bar; reserve its height plus
+             the home-indicator inset so the last card is never trapped under it. */
+          .dashboard-content {
+            display: flex !important;
+            flex-direction: column !important;
+            max-width: 100% !important;
+            padding: 12px 14px calc(84px + env(safe-area-inset-bottom)) !important;
+            gap: 14px !important;
+          }
+
+          /* Source order is greeting → progress → tabs → stats → panel → footer.
+             On a phone the panel holds the one control anybody opens this app
+             for, so it is promoted above the six stat tiles instead of sitting
+             ~700px below them. Reordering here rather than in JSX keeps a single
+             DOM for both layouts.
+
+             Every child is given an explicit slot, and unlisted children default
+             to last. Without that default they would inherit order 0 and jump
+             ahead of the greeting — which is exactly what the profile footer and
+             the legal links did. Each rule is scoped by the child combinator so
+             it outranks the catch-all rather than tying with it.
+
+             (No backticks in here: this whole stylesheet is a template literal,
+             so one would end the string mid-comment.) */
+          .dashboard-content > *                        { order: 9 !important; }
+          .dashboard-content > .greeting-row            { order: 1 !important; margin-bottom: 0 !important; }
+          .dashboard-content > .progress-card           { order: 2 !important; margin-bottom: 0 !important; }
+          .dashboard-content > .main-grid,
+          .dashboard-content > .history-panel,
+          .dashboard-content > .leaves-grid,
+          .dashboard-content > .profile-panel,
+          .dashboard-content > .holidays-panel,
+          .dashboard-content > .messages-panel          { order: 3 !important; }
+          .dashboard-content > .stat-grid               { order: 4 !important; margin-bottom: 0 !important; }
+          .dashboard-content > .profile-footer          { order: 5 !important; }
+
+          /* Greeting: one compact line, not a 40px headline plus a boxed clock. */
+          .greeting-row {
+            flex-direction: row !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            gap: 10px !important;
+          }
+          .greeting-row h1 { font-size: 17px !important; letter-spacing: -0.2px !important; }
+          .greeting-row p  { font-size: 11px !important; }
+          /* The phone's own status bar already shows the time. */
+          .time-display    { display: none !important; }
+          /* On a sub-tab the panel states what you are looking at, so the
+             greeting is 100px of screen saying nothing. Workspace keeps it. */
+          .dashboard-content:not([data-tab="today"]) > .greeting-row { display: none !important; }
+
+          /* The masthead repeats on every screen; trim it to what identifies
+             the app, and let the tagline go. */
+          .top-bar { padding: 8px 14px !important; gap: 8px !important; }
+          .top-bar-logo .top-bar-title div:last-child { display: none !important; }
+          .top-bar-logo img { width: 28px !important; height: 28px !important; }
+
+          /* ── Bottom tab bar ───────────────────────────────────────────────
+             Six destinations pinned within thumb reach, each a 56px target. */
+          .tabs-container {
+            position: fixed !important;
+            left: 0 !important; right: 0 !important; bottom: 0 !important;
+            z-index: 900 !important;
+            display: grid !important;
+            grid-template-columns: repeat(6, 1fr) !important;
+            gap: 0 !important;
+            margin: 0 !important;
+            padding: 6px 2px calc(6px + env(safe-area-inset-bottom)) !important;
+            border-radius: 0 !important;
+            background: rgba(255,255,255,0.94) !important;
+            backdrop-filter: saturate(180%) blur(12px);
+            -webkit-backdrop-filter: saturate(180%) blur(12px);
+            border-top: 1px solid rgba(0,0,0,0.08) !important;
+            box-shadow: 0 -2px 16px rgba(0,0,0,0.07) !important;
+          }
+          .tabs-container .tab {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 3px !important;
+            min-height: 52px !important;
+            padding: 4px 2px !important;
+            border: none !important;
+            border-radius: 10px !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            color: #94a3b8 !important;
+            font-size: 9px !important;
+            font-weight: 700 !important;
+            line-height: 1.1 !important;
+            letter-spacing: 0 !important;
+          }
+          .tabs-container .tab.active {
+            background: rgba(212,175,55,0.12) !important;
+            color: #b45309 !important;
+          }
+          /* The long desktop wording ("My Workspace") cannot fit a 68px cell. */
+          .tab-label-full  { display: none !important; }
+          .tab-label-short { display: block !important; }
+          .tab-icon        { display: block !important; }
+          .tabs-container .tab .tab-badge {
+            top: 2px !important; right: 12px !important;
+            padding: 1px 5px !important; font-size: 9px !important;
+          }
+
+          /* ── Stat tiles ───────────────────────────────────────────────────
+             Six tiles are ~700px of chrome. On the workspace they are the point;
+             above a table of past logs they are just something to scroll past,
+             so on a phone they appear on the workspace tab only. */
+          .dashboard-content:not([data-tab="today"]) .stat-grid { display: none !important; }
+          .stat-grid { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+          .stat-grid > * { padding: 12px !important; border-radius: 14px !important; }
+          .stat-grid .stat-value { font-size: 19px !important; }
+          .stat-grid .stat-label { font-size: 9px !important; }
+          .stat-grid .stat-sub   { font-size: 10px !important; }
+
+          /* Cards: less padding, so content gets the screen instead of margins. */
+          .premium-card { padding: 16px !important; border-radius: 16px !important; }
+
+          /* Any control the thumb must hit clears the 44px accessible minimum. */
+          .main-grid button, .leaves-grid button, .profile-panel button {
+            min-height: 46px !important;
+            font-size: 14px !important;
+          }
+
+          /* ── Tables become cards ──────────────────────────────────────────
+             A 9-column table cannot reflow; at 412px it just clips. Each row is
+             restacked into a labelled card, with the label coming from the
+             data-label attribute on each cell. */
+          .card-table thead { display: none !important; }
+          .card-table, .card-table tbody, .card-table tr, .card-table td {
+            display: block !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+          }
+          .card-table tr {
+            margin-bottom: 10px !important;
+            border: 1px solid rgba(0,0,0,0.08) !important;
+            border-radius: 14px !important;
+            background: #fff !important;
+            padding: 4px 12px !important;
+            box-shadow: 0 1px 6px rgba(0,0,0,0.05) !important;
+          }
+          .card-table td {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            gap: 12px !important;
+            padding: 8px 0 !important;
+            border-bottom: 1px solid rgba(0,0,0,0.05) !important;
+            text-align: right !important;
+            white-space: normal !important;
+            max-width: none !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+          }
+          .card-table tr td:last-child { border-bottom: none !important; }
+          .card-table td::before {
+            content: attr(data-label);
+            flex: 0 0 auto;
+            color: #94a3b8;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            text-align: left;
+          }
+          /* A cell with no label is an action cell — let the button fill it. */
+          .card-table td[data-label=""]::before { content: none; }
+          .card-table td[data-label=""] { justify-content: stretch !important; }
+          .card-table td[data-label=""] button {
+            width: 100% !important;
+            justify-content: center !important;
+            min-height: 46px !important;
+          }
+          .card-table-wrap { overflow-x: visible !important; max-height: none !important; }
+
+          /* Modals sat flush against the screen edges on a phone. */
+          .premium-modal, .modal-card {
+            width: calc(100vw - 24px) !important;
+            max-width: calc(100vw - 24px) !important;
+            max-height: 88vh !important;
+            border-radius: 18px !important;
+          }
+        }
+      `}</style>
+
       {/* ── Toast ── */}
       {toast && (
         <div style={{
@@ -3156,7 +3356,10 @@ function Dashboard({ employee, onSignOut, showToast }) {
       </div>
 
       {/* ── Main content ── */}
-      <div className="dashboard-content" style={{ width: "100%", maxWidth: "96%", margin: "0 auto", padding: "20px 24px", boxSizing: "border-box" }}>
+      {/* data-tab lets the phone stylesheet scope rules to the open tab without
+          duplicating the render tree — e.g. the stat tiles are workspace-only
+          on a phone, but stay visible on every tab on desktop as before. */}
+      <div className="dashboard-content" data-tab={activeTab} style={{ width: "100%", maxWidth: "96%", margin: "0 auto", padding: "20px 24px", boxSizing: "border-box" }}>
 
         {/* Greeting row */}
         <div className="greeting-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
@@ -3184,7 +3387,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
         {/* Progress bar */}
         {(status !== "idle") && (
-          <div className="premium-card" style={{ padding: "12px 20px", borderRadius: 20, marginBottom: 16 }}>
+          <div className="premium-card progress-card" style={{ padding: "12px 20px", borderRadius: 20, marginBottom: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <span className="h-font" style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>Daily Performance Goal</span>
               <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
@@ -3230,22 +3433,30 @@ function Dashboard({ employee, onSignOut, showToast }) {
           display: "flex", gap: 4, background: "rgba(0, 0, 0, 0.05)", borderRadius: 12,
           padding: 4, marginBottom: 16, width: "100%", boxSizing: "border-box"
         }}>
+          {/* `short` and `icon` are rendered for every viewport but only shown
+              below 768px, where the bar is fixed to the bottom and each cell is
+              ~68px wide — far too narrow for wording like "Profile Details". */}
           {[
-            { k: "today", label: "My Workspace" }, 
-            { k: "history", label: "Logs & History" }, 
-            { k: "leaves", label: "Requests" }, 
-            { k: "profile", label: "Profile Details" }, 
-            { k: "holidays", label: "Holidays", badge: newHolidaysCount },
-            { k: "messages", label: "Support Chat", badge: unreadCount }
+            { k: "today", label: "My Workspace", short: "Work", icon: icons.home },
+            { k: "history", label: "Logs & History", short: "Logs", icon: icons.calendar },
+            { k: "leaves", label: "Requests", short: "Requests", icon: icons.tasks },
+            { k: "profile", label: "Profile Details", short: "Profile", icon: icons.user },
+            { k: "holidays", label: "Holidays", short: "Holidays", icon: icons.chart, badge: newHolidaysCount },
+            { k: "messages", label: "Support Chat", short: "Chat", icon: icons.message, badge: unreadCount }
           ].map(t => (
             <button key={t.k} className={`tab${activeTab === t.k ? " active" : ""}`}
-              onClick={() => setTab(t.k)} style={{ position: "relative" }}>
-              {t.label}
+              onClick={() => setTab(t.k)} style={{ position: "relative" }}
+              aria-label={t.label} aria-current={activeTab === t.k ? "page" : undefined}>
+              <span className="tab-icon" style={{ display: "none", lineHeight: 0 }}>
+                <Icon d={t.icon} size={19} />
+              </span>
+              <span className="tab-label-full">{t.label}</span>
+              <span className="tab-label-short" style={{ display: "none" }}>{t.short}</span>
               {t.badge > 0 && (
-                <span style={{
+                <span className="tab-badge" style={{
                   position: "absolute", top: -8, right: -4, background: T.red, color: "white",
                   fontSize: 10, padding: "2px 8px", borderRadius: 12, border: "2px solid white",
-                  fontWeight: 700, boxShadow: "0 4px 10px rgba(239, 68, 68, 0.3)" 
+                  fontWeight: 700, boxShadow: "0 4px 10px rgba(239, 68, 68, 0.3)"
                 }}>{t.badge}</span>
               )}
             </button>
@@ -3461,7 +3672,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
 
         {/* History tab */}
         {activeTab === "history" && (
-          <div style={{ background: T.white, borderRadius: 16, border: `1px solid ${T.border}`, overflow: "hidden" }}>
+          <div className="history-panel" style={{ background: T.white, borderRadius: 16, border: `1px solid ${T.border}`, overflow: "hidden" }}>
             <div style={{
               padding: "20px 24px", borderBottom: `2px solid ${T.gold}`,
               display: "flex", alignItems: "center", justifyContent: "space-between"
@@ -3493,8 +3704,12 @@ function Dashboard({ employee, onSignOut, showToast }) {
                 </div>
               </div>
             ) : (
-              <div style={{ overflowX: "auto", maxHeight: 600, overflowY: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              /* card-table: below 768px the CSS restacks every row into a
+                 labelled card, reading each cell's heading from data-label.
+                 Nine columns cannot reflow on a 412px screen — untreated, the
+                 last ones are simply clipped off the edge. */
+              <div className="card-table-wrap" style={{ overflowX: "auto", maxHeight: 600, overflowY: "auto" }}>
+                <table className="card-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>
                     <tr style={{ background: T.surface }}>
                       {["Date", "Clock In", "Clock Out", "Hours", "Break Time", "Over Time", "Status", "Tasks", ""].map(h => (
@@ -3510,25 +3725,25 @@ function Dashboard({ employee, onSignOut, showToast }) {
                     {[...history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((r, i) => (
                       <tr key={i} className="hist-row"
                         style={{ borderBottom: `2px solid ${T.gold}`, transition: "background 0.1s" }}>
-                        <td style={{ padding: "12px 16px", color: T.ink, fontWeight: 700 }}>{r.date}</td>
-                        <td style={{ padding: "12px 16px", color: T.green, fontWeight: 700 }}>{r.loginT}</td>
-                        <td style={{ padding: "12px 16px", color: T.red, fontWeight: 700 }}>{r.logoutT}</td>
-                        <td style={{ padding: "12px 16px", fontWeight: 700, color: T.ink, fontVariantNumeric: "tabular-nums" }}>{r.hours}</td>
-                        <td style={{ padding: "12px 16px", fontWeight: 700, color: T.amber, fontVariantNumeric: "tabular-nums" }}>{r.breakTime || r.break_time || ""}</td>
-                        <td style={{
+                        <td data-label="Date" style={{ padding: "12px 16px", color: T.ink, fontWeight: 700 }}>{r.date}</td>
+                        <td data-label="Clock In" style={{ padding: "12px 16px", color: T.green, fontWeight: 700 }}>{r.loginT}</td>
+                        <td data-label="Clock Out" style={{ padding: "12px 16px", color: T.red, fontWeight: 700 }}>{r.logoutT}</td>
+                        <td data-label="Hours" style={{ padding: "12px 16px", fontWeight: 700, color: T.ink, fontVariantNumeric: "tabular-nums" }}>{r.hours}</td>
+                        <td data-label="Break Time" style={{ padding: "12px 16px", fontWeight: 700, color: T.amber, fontVariantNumeric: "tabular-nums" }}>{r.breakTime || r.break_time || ""}</td>
+                        <td data-label="Over Time" style={{
                           padding: "12px 16px", fontWeight: 700,
                           color: r.extraHours && r.extraHours !== "" ? T.amber : T.faint,
                           fontVariantNumeric: "tabular-nums"
                         }}>
                           {r.extraHours || "—"}
                         </td>
-                        <td style={{ padding: "12px 16px" }}><Badge status={r.status || "Incomplete"} /></td>
-                        <td style={{
+                        <td data-label="Status" style={{ padding: "12px 16px" }}><Badge status={r.status || "Incomplete"} /></td>
+                        <td data-label="Tasks" style={{
                           padding: "12px 16px", color: T.muted, maxWidth: 180,
                           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"
                         }}
                           title={r.tasks}>{r.tasks}</td>
-                        <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                        <td data-label="" style={{ padding: "12px 16px", textAlign: "right" }}>
                           <button
                             onClick={() => setSelectedRecord(r)}
                             style={{
@@ -3736,7 +3951,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
         )}
 
         {activeTab === "profile" && (
-          <div className="profile-grid" style={{ animation: "fadeIn 0.3s ease", display: "grid", gridTemplateColumns: "1fr 2fr", gap: 28 }}>
+          <div className="profile-grid profile-panel" style={{ animation: "fadeIn 0.3s ease", display: "grid", gridTemplateColumns: "1fr 2fr", gap: 28 }}>
             {/* Left Column: Photo & Main Info */}
             <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
               <div className="premium-card" style={{ padding: 36, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", position: "relative", overflow: "hidden" }}>
@@ -3919,7 +4134,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
         )}
 
         {activeTab === "messages" && (
-          <div className={`chat-grid mobile-view-${mobileChatView}`} style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: 20, height: "75vh" }}>
+          <div className={`chat-grid messages-panel mobile-view-${mobileChatView}`} style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: 20, height: "75vh" }}>
             <div className="chat-sidebar" style={{ background: "white", borderRadius: 20, border: `1px solid ${T.border}`, padding: 10, display: "flex", flexDirection: "column", gap: 4 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", padding: "10px 12px" }}>Direct Message</div>
               <button onClick={() => { setActiveChat({ type: 'admin', id: 'admin', name: 'Admin Chat' }); setMobileChatView('chat'); }} style={{
@@ -3964,7 +4179,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
         )}
 
         {activeTab === "holidays" && (
-          <div className="premium-card" style={{ padding: "32px 36px" }}>
+          <div className="premium-card holidays-panel" style={{ padding: "32px 36px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28, borderBottom: `2px solid ${T.gold}`, paddingBottom: 16 }}>
               <div>
                 <h2 className="h-font" style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.ink }}>Holidays List</h2>
