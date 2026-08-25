@@ -27,9 +27,21 @@ const GlowCard = ({
   const cardRef = useRef(null);
 
   useEffect(() => {
+    // The spotlight tracks a mouse cursor, so it has nothing to follow on a
+    // touch device — but the listener still ran there, and touch scrolling
+    // streams pointermove events. Every card holds its own document-level
+    // listener, so six cards on the workspace meant 24 CSS-variable writes per
+    // event, each invalidating paint mid-scroll. Skip it where there is no
+    // cursor; nothing changes for mouse users.
+    const hasCursor =
+      typeof window !== 'undefined' &&
+      window.matchMedia &&
+      window.matchMedia('(pointer: fine)').matches;
+    if (!hasCursor) return;
+
     const syncPointer = (e) => {
       const { clientX: x, clientY: y } = e;
-      
+
       if (cardRef.current) {
         cardRef.current.style.setProperty('--x', x.toFixed(2));
         cardRef.current.style.setProperty('--xp', (x / window.innerWidth).toFixed(2));
@@ -38,7 +50,7 @@ const GlowCard = ({
       }
     };
 
-    document.addEventListener('pointermove', syncPointer);
+    document.addEventListener('pointermove', syncPointer, { passive: true });
     return () => document.removeEventListener('pointermove', syncPointer);
   }, []);
 

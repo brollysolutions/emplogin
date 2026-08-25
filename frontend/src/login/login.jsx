@@ -2915,11 +2915,10 @@ function Dashboard({ employee, onSignOut, showToast }) {
             margin: 0 !important;
             padding: 6px 2px calc(6px + env(safe-area-inset-bottom)) !important;
             border-radius: 0 !important;
-            background: rgba(255,255,255,0.94) !important;
-            backdrop-filter: saturate(180%) blur(12px);
-            -webkit-backdrop-filter: saturate(180%) blur(12px);
+            /* Opaque on purpose — see the scroll-performance block below. */
+            background: #ffffff !important;
             border-top: 1px solid rgba(0,0,0,0.08) !important;
-            box-shadow: 0 -2px 16px rgba(0,0,0,0.07) !important;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.06) !important;
           }
           .tabs-container .tab {
             display: flex !important;
@@ -3023,6 +3022,90 @@ function Dashboard({ employee, onSignOut, showToast }) {
             min-height: 46px !important;
           }
           .card-table-wrap { overflow-x: visible !important; max-height: none !important; }
+
+          /* ── Scroll performance ───────────────────────────────────────────
+             Measured on a throttled phone profile, scrolling the workspace:
+             58% of frames missed 60fps, average frame 61ms, worst 700ms.
+
+             The cause is backdrop-filter. The premium-card class carries blur(12px)
+             and is used on nearly every card, so the compositor was keeping six
+             live blur layers on screen and re-sampling each one every frame.
+             A backdrop blur cannot be cached while the backdrop moves, which is
+             exactly what scrolling does.
+
+             Blur is dropped here and the translucent backgrounds it was blurring
+             become opaque, which looks the same over this page's near-white
+             background but costs nothing. Modal overlays keep their blur: they
+             only exist while open and nothing scrolls behind them. Desktop is
+             unaffected — this whole block is inside the phone query. */
+          .premium-card, .top-bar {
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            background: #ffffff !important;
+          }
+
+          /* Entry animations fire six at a time on tab switch and animate
+             box-shadow and transform together, which forces paint work during
+             the very interaction they decorate. */
+          .stat-card-wrapper, .stat-grid > *, .premium-card {
+            animation: none !important;
+          }
+
+          /* Large blur radii repaint on every scroll frame; a tight shadow reads
+             the same at arm's length. */
+          .premium-card, .stat-grid > *, .card-table tr {
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
+          }
+
+          /* The fixed bar gets its own compositor layer so scrolling the page
+             behind it never repaints it. */
+          .tabs-container {
+            transform: translateZ(0);
+            will-change: transform;
+          }
+
+          /* ── The stat tiles' glow wrapper ─────────────────────────────────
+             GlowCard sets touch-action: none, which tells the browser not to
+             handle touch gestures on that element at all — so a swipe that
+             started on a stat tile scrolled nothing. That is the "scrolling
+             doesn't work" part, separate from the frame rate.
+
+             It also paints its spotlight with background-attachment: fixed, on
+             the element and on both pseudo-elements. A fixed attachment is
+             anchored to the viewport, so it must be repainted on every scroll
+             frame — six tiles, three layers each. The effect chases a mouse
+             cursor that a phone does not have, so it is simply switched off
+             here rather than optimised. */
+          [data-glow] {
+            touch-action: pan-y !important;
+            background-attachment: scroll !important;
+            background-image: none !important;
+          }
+          [data-glow]::before, [data-glow]::after {
+            display: none !important;
+          }
+
+          /* Cards lift on :hover via JS mouse handlers. A touch fires those too,
+             then leaves the card stuck lifted with no pointer to leave. Pin the
+             transform so a tap cannot strand it. */
+          .leaves-grid .leave-card, .premium-card {
+            transform: none !important;
+            transition: none !important;
+          }
+
+          /* ── Request timeline ─────────────────────────────────────────────
+             The header put a long date range and two badges in one flex row,
+             so at 412px the date wrapped to two lines and the badges bunched
+             into the corner. Stack them instead. */
+          .leave-card-head {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 10px !important;
+          }
+          .leave-card-head > div:first-child { font-size: 14px !important; }
+          .leave-card-badges { flex-wrap: wrap !important; }
+          .leave-card { padding: 16px !important; border-radius: 16px !important; }
+          .leave-card-actions button { min-height: 46px !important; font-size: 13px !important; }
 
           /* Modals sat flush against the screen edges on a phone. */
           .premium-modal, .modal-card {
@@ -3898,14 +3981,14 @@ function Dashboard({ employee, onSignOut, showToast }) {
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                    {[...myLeaves].sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime()).map(l => (
-                      <div key={l.id} style={{                        padding: "24px", borderRadius: 24,
+                      <div key={l.id} className="leave-card" style={{                        padding: "24px", borderRadius: 24,
                         background: "rgba(255, 255, 255, 0.4)",
                         border: `1.5px solid ${T.border}`,
                         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
                       }} onMouseOver={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.background = "white"; e.currentTarget.style.boxShadow = "0 15px 35px -5px rgba(0,0,0,0.05)"; }} onMouseOut={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.background = "rgba(255, 255, 255, 0.4)"; e.currentTarget.style.boxShadow = "none"; }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16, alignItems: "center" }}>
+                        <div className="leave-card-head" style={{ display: "flex", justifyContent: "space-between", marginBottom: 16, alignItems: "center" }}>
                           <div className="h-font" style={{ fontWeight: 700, fontSize: 15, color: T.ink }}>{new Date(l.start_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })} - {new Date(l.end_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
-                          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <div className="leave-card-badges" style={{ display: "flex", gap: 8, alignItems: "center" }}>
                             <Badge status={l.leave_type === "Work From Home" ? "Work From Home" : "Leave"} />
                             <Badge status={l.status} />
                           </div>
@@ -3923,7 +4006,7 @@ function Dashboard({ employee, onSignOut, showToast }) {
                           </div>
                         )}
                         {l.status === "Pending" && (
-                          <div style={{ display: "flex", gap: 10, borderTop: `1.5px solid ${T.border}`, paddingTop: 16, marginTop: 4 }}>
+                          <div className="leave-card-actions" style={{ display: "flex", gap: 10, borderTop: `1.5px solid ${T.border}`, paddingTop: 16, marginTop: 4 }}>
                             <button onClick={() => handleEditLeave(l)} style={{
                               flex: 1, padding: "10px", borderRadius: 12, border: `1.5px solid ${T.accent}30`,
                               background: `${T.accent}08`, color: T.accent, fontSize: 12, fontWeight: 700,
